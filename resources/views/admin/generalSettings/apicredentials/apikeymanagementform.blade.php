@@ -21,9 +21,14 @@
                                     aria-hidden="true"></i>Verified</span>)</span>
                     </div>
 
-                    <form id="api_credentials" method="post" action="{{ route('admin.apiauthenticationadd') }}"
-                        class="form-horizontal" enctype="multipart/form-data" novalidate="novalidate">
-                        {{ csrf_field() }}
+	                    <form id="api_credentials" method="post" action="{{ route('admin.apiauthenticationadd') }}"
+	                        class="form-horizontal" enctype="multipart/form-data" novalidate="novalidate">
+	                        {{ csrf_field() }}
+                            @php
+                                $settingValue = function ($setting) {
+                                    return is_object($setting) ? ($setting->meta_value ?? '') : ($setting ?? '');
+                                };
+                            @endphp
 
                         <div class="form-group google_client_secret">
 
@@ -32,9 +37,9 @@
                             <label for="inputEmail3" class="col-sm-3 control-label">{{ trans('global.google_mao_browser') }}
                                 <span class="text-danger">*</span></label>
                             <div class="col-sm-6">
-                                <input type="password" name="api_google_map_key" class="form-control" id="google_map_key"
-                                    value="{{ $api_google_map_key->meta_value ?? '' }}"
-                                    placeholder="Google Map Browser Key">
+	                                <input type="password" name="api_google_map_key" class="form-control" id="google_map_key"
+	                                    value="{{ $settingValue($api_google_map_key ?? '') }}"
+	                                    placeholder="Google Map Browser Key">
                                 <span class="text-danger"></span>
                             </div>
                             <div class="col-sm-3">
@@ -46,14 +51,14 @@
                             <label for="general_captcha" class="col-sm-3 control-label">{{ trans('global.captcha') }} <span
                                     class="text-danger">*</span></label>
                             <div class="col-sm-6">
-                                <select name="general_captcha" id="general_captcha" class="form-control">
-                                    <option value="yes"
-                                        {{ $general_captcha && $general_captcha->meta_value == 'yes' ? 'selected' : '' }}>
-                                        Yes</option>
-                                    <option value="no"
-                                        {{ $general_captcha && $general_captcha->meta_value == 'no' ? 'selected' : '' }}>No
-                                    </option>
-                                </select>
+	                                <select name="general_captcha" id="general_captcha" class="form-control">
+	                                    <option value="yes"
+	                                        {{ $settingValue($general_captcha ?? '') == 'yes' ? 'selected' : '' }}>
+	                                        Yes</option>
+	                                    <option value="no"
+	                                        {{ $settingValue($general_captcha ?? '') == 'no' ? 'selected' : '' }}>No
+	                                    </option>
+	                                </select>
                                 <span class="text-danger"></span>
                             </div>
                             <div class="col-sm-3">
@@ -64,8 +69,8 @@
                             <label for="site_key" class="col-sm-3 control-label">{{ trans('global.site_key') }} <span
                                     class="text-danger">*</span></label>
                             <div class="col-sm-6">
-                                <input type="password" name="site_key" id="site_key" class="form-control"
-                                    value="{{ $site_key->meta_value ?? '' }}" required>
+	                                <input type="password" name="site_key" id="site_key" class="form-control"
+	                                    value="{{ $settingValue($site_key ?? '') }}" required>
                                 <span class="text-danger"></span>
                             </div>
                             <div class="col-sm-3">
@@ -77,14 +82,80 @@
                             <label for="private_key" class="col-sm-3 control-label">{{ trans('global.private_key') }} <span
                                     class="text-danger">*</span></label>
                             <div class="col-sm-6">
-                                <input type="password" name="private_key" id="private_key" class="form-control"
-                                    value="{{ $private_key->meta_value ?? '' }}" required>
-                                <span class="text-danger"></span>
+	                                <input type="password" name="private_key" id="private_key" class="form-control"
+	                                    value="{{ $settingValue($private_key ?? '') }}" required>
+	                                <span class="text-danger"></span>
+	                            </div>
+	                            <div class="col-sm-3">
+	                                <small></small>
+	                            </div>
+	                        </div>
+
+                            <hr>
+                            <h4 class="text-center" style="margin-bottom:20px;">Exotel (Call Masking)</h4>
+
+                            <div class="form-group">
+                                <label for="exotel_sid" class="col-sm-3 control-label">Exotel SID</label>
+                                <div class="col-sm-6">
+                                    <input type="text" name="exotel_sid" id="exotel_sid" class="form-control"
+                                        value="{{ $settingValue($exotel_sid ?? '') }}" placeholder="your-exotel-sid">
+                                    <span class="text-danger"></span>
+                                </div>
+                                <div class="col-sm-3">
+                                    <small></small>
+                                </div>
                             </div>
-                            <div class="col-sm-3">
-                                <small></small>
+
+                            <div class="form-group">
+                                <label for="exotel_token" class="col-sm-3 control-label">Exotel Token</label>
+                                <div class="col-sm-6">
+                                    <input type="password" name="exotel_token" id="exotel_token" class="form-control"
+                                        value="{{ $settingValue($exotel_token ?? '') }}" placeholder="exotel-token">
+                                    <span class="text-danger"></span>
+                                </div>
+                                <div class="col-sm-3">
+                                    <small></small>
+                                </div>
                             </div>
-                        </div>
+
+                            <div class="form-group">
+                                <label for="exotel_virtual_number" class="col-sm-3 control-label">Virtual Number</label>
+                                <div class="col-sm-6">
+                                    <input type="text" name="exotel_virtual_number" id="exotel_virtual_number"
+                                        class="form-control" value="{{ $settingValue($exotel_virtual_number ?? '') }}"
+                                        placeholder="Exophone / caller id">
+                                    <span class="text-danger"></span>
+                                </div>
+                                <div class="col-sm-3">
+                                    <small></small>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="exotel_base_url" class="col-sm-3 control-label">Exotel Base URL</label>
+                                <div class="col-sm-6">
+                                    <input type="text" name="exotel_base_url" id="exotel_base_url" class="form-control"
+                                        value="{{ $settingValue($exotel_base_url ?? '') }}"
+                                        placeholder="https://api.exotel.com/v1/Accounts">
+                                    <span class="text-danger"></span>
+                                </div>
+                                <div class="col-sm-3">
+                                    <small></small>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="exotel_callback_token" class="col-sm-3 control-label">Callback Token</label>
+                                <div class="col-sm-6">
+                                    <input type="password" name="exotel_callback_token" id="exotel_callback_token"
+                                        class="form-control" value="{{ $settingValue($exotel_callback_token ?? '') }}"
+                                        placeholder="Long random secret">
+                                    <span class="text-danger"></span>
+                                </div>
+                                <div class="col-sm-3">
+                                    <small></small>
+                                </div>
+                            </div>
                         <div class="text-center" id="error-message"></div>
                         <div class="box-footer">
                             <button type="submit" class="btn btn-info btn-space">{{ trans('global.save') }}</button>

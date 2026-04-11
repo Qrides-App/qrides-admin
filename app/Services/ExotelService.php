@@ -2,12 +2,57 @@
 
 namespace App\Services;
 
+use App\Models\GeneralSetting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 
 class ExotelService
 {
+    private function getSettingValue(string $metaKey, string $envFallback = '', bool $encrypted = false): string
+    {
+        $value = GeneralSetting::where('meta_key', $metaKey)->value('meta_value');
+        if (! empty($value)) {
+            if ($encrypted) {
+                try {
+                    return (string) Crypt::decryptString((string) $value);
+                } catch (\Throwable $e) {
+                    // Backward compatibility for previously plain values.
+                }
+            }
+
+            return (string) $value;
+        }
+
+        return trim((string) $envFallback);
+    }
+
+    private function sid(): string
+    {
+        return $this->getSettingValue('exotel_sid', config('exotel.sid'));
+    }
+
+    private function token(): string
+    {
+        return $this->getSettingValue('exotel_token', config('exotel.token'), true);
+    }
+
+    private function fromNumber(): string
+    {
+        return $this->getSettingValue('exotel_virtual_number', config('exotel.from'));
+    }
+
+    private function baseUrl(): string
+    {
+        return rtrim($this->getSettingValue('exotel_base_url', config('exotel.base_url', 'https://api.exotel.com/v1/Accounts')), '/');
+    }
+
+    private function callbackToken(): string
+    {
+        return $this->getSettingValue('exotel_callback_token', config('exotel.callback_token'), true);
+    }
+
     public function isConfigured(): bool
     {
         return count($this->missingConfigFields()) === 0;
@@ -16,9 +61,9 @@ class ExotelService
     public function missingConfigFields(): array
     {
         $required = [
-            'EXOTEL_SID' => config('exotel.sid'),
-            'EXOTEL_TOKEN' => config('exotel.token'),
-            'EXOTEL_VIRTUAL_NUMBER' => config('exotel.from'),
+            'EXOTEL_SID' => $this->sid(),
+            'EXOTEL_TOKEN' => $this->token(),
+            'EXOTEL_VIRTUAL_NUMBER' => $this->fromNumber(),
         ];
 
         return array_keys(array_filter($required, static fn ($value) => empty($value)));
@@ -26,11 +71,11 @@ class ExotelService
 
     public function connectMaskedCall(string $caller, string $callee, ?string $recordingUrl = null)
     {
-        $sid = config('exotel.sid');
-        $token = config('exotel.token');
-        $from = config('exotel.from');
-        $base = rtrim(config('exotel.base_url'), '/');
-        $callbackToken = config('exotel.callback_token');
+        $sid = $this->sid();
+        $token = $this->token();
+        $from = $this->fromNumber();
+        $base = $this->baseUrl();
+        $callbackToken = $this->callbackToken();
 
         if (! $this->isConfigured()) {
             return [

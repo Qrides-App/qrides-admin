@@ -3,15 +3,31 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\GeneralSetting;
 use App\Services\ExotelService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class ExotelController extends Controller
 {
     private ExotelService $exotel;
+
+    private function callbackToken(): string
+    {
+        $value = GeneralSetting::where('meta_key', 'exotel_callback_token')->value('meta_value');
+        if (! empty($value)) {
+            try {
+                return (string) Crypt::decryptString((string) $value);
+            } catch (\Throwable $e) {
+                return (string) $value;
+            }
+        }
+
+        return (string) config('exotel.callback_token', '');
+    }
 
     public function __construct(ExotelService $exotel)
     {
@@ -56,7 +72,7 @@ class ExotelController extends Controller
     // Exotel webhook for call status
     public function callback(Request $request)
     {
-        $expected = (string) config('exotel.callback_token', '');
+        $expected = $this->callbackToken();
         $received = (string) $request->input('StatusCallbackToken', $request->header('X-Exotel-Token', ''));
         if ($expected !== '' && ! hash_equals($expected, $received)) {
             Log::warning('Exotel callback rejected due to invalid token', [

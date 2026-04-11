@@ -27,6 +27,7 @@ use App\Models\VehicleOdometer;
 use Gate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\HttpFoundation\Response;
@@ -631,11 +632,31 @@ class GeneralSettingController extends Controller
             'general_captcha',
             'site_key',
             'private_key',
+            'exotel_sid',
+            'exotel_token',
+            'exotel_virtual_number',
+            'exotel_base_url',
+            'exotel_callback_token',
         ];
         $settings = GeneralSetting::whereIn('meta_key', $meta_keys)->get()->keyBy('meta_key');
+        $sensitiveKeys = ['exotel_token', 'exotel_callback_token'];
         $data = [];
         foreach ($meta_keys as $key) {
-            $data[$key] = $settings->has($key) ? $settings->get($key) : '';
+            if (! $settings->has($key)) {
+                $data[$key] = '';
+                continue;
+            }
+
+            $setting = $settings->get($key);
+            if (in_array($key, $sensitiveKeys, true) && ! empty($setting->meta_value)) {
+                try {
+                    $setting->meta_value = Crypt::decryptString($setting->meta_value);
+                } catch (\Throwable $e) {
+                    // Backward compatibility if old values are not encrypted.
+                }
+            }
+
+            $data[$key] = $setting;
         }
 
         return view('admin.generalSettings.apicredentials.apikeymanagementform', $data);
@@ -646,9 +667,30 @@ class GeneralSettingController extends Controller
         if (Gate::denies('general_setting_edit')) {
             return redirect()->back()->with('error', 'Form submission is disabled in demo mode.');
         }
-        $formData = $request->except('_token');
+        $allowedMetaKeys = [
+            'api_facebook_client_id',
+            'api_facebook_client_secret',
+            'api_google_client_id',
+            'api_google_client_secret',
+            'api_google_map_key',
+            'general_captcha',
+            'site_key',
+            'private_key',
+            'exotel_sid',
+            'exotel_token',
+            'exotel_virtual_number',
+            'exotel_base_url',
+            'exotel_callback_token',
+        ];
+        $sensitiveKeys = ['exotel_token', 'exotel_callback_token'];
+
+        $formData = $request->only($allowedMetaKeys);
         foreach ($formData as $metaKey => $metaValue) {
             if (! empty($metaValue)) {
+                if (in_array($metaKey, $sensitiveKeys, true)) {
+                    $metaValue = Crypt::encryptString((string) $metaValue);
+                }
+
                 GeneralSetting::updateOrCreate(
                     ['meta_key' => $metaKey],
                     ['meta_value' => $metaValue]
