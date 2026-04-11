@@ -1,0 +1,60 @@
+services:
+  - type: web
+    name: qrides-backend
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_URL
+        sync: false
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        fromService: qrides-mysql
+        name: MYSQL_HOST
+      - key: DB_PORT
+        value: 3306
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: CACHE_DRIVER
+        value: file
+      - key: SESSION_DRIVER
+        value: file
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: GOOGLE_MAP_KEY
+        sync: false
+      - key: FIREBASE_SERVER_KEY
+        sync: false
+
+  - type: pserv
+    name: qrides-mysql
+    env: docker
+    plan: starter
+    dockerCommand: |
+      mysqld --default-authentication-plugin=mysql_native_password
+    dockerfilePath: 
+    image: mysql:8.0
+    autoDeploy: false
+    envVars:
+      - key: MYSQL_DATABASE
+        sync: false
+      - key: MYSQL_USER
+        sync: false
+      - key: MYSQL_PASSWORD
+        sync: false
+      - key: MYSQL_ROOT_PASSWORD
+        generateValue: true

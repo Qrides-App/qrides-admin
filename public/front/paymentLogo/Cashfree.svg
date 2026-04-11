@@ -1,0 +1,13 @@
+<svg width="220" height="64" viewBox="0 0 220 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cashfree">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop stop-color="#6ef6c8" offset="0%"/>
+      <stop stop-color="#3cd2c4" offset="50%"/>
+      <stop stop-color="#7b5bff" offset="100%"/>
+    </linearGradient>
+  </defs>
+  <rect rx="12" ry="12" width="220" height="64" fill="#0f1220" stroke="#1f2638"/>
+  <path d="M36 18h20c6.6 0 12 5.4 12 12s-5.4 12-12 12H36" fill="none" stroke="url(#g)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M34 18l-12 12 12 12" fill="none" stroke="url(#g)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="78" y="38" fill="#eef2ff" font-family="'Inter', 'Segoe UI', sans-serif" font-size="20" font-weight="700" letter-spacing="0.4">Cashfree</text>
+</svg>
