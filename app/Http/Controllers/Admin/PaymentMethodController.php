@@ -199,10 +199,9 @@ class PaymentMethodController extends Controller
         }
 
         $config = $this->paymentMethods[$method];
-        $optionsField = $config['options_field'];
-        $options = $optionsField ? $request->input($optionsField) : null;
-        $excludedKeys = [];
-        $formData = $request->except(array_merge(['_token'], $excludedKeys));
+        $allowedKeys = $config['meta_keys'] ?? [];
+        $formData = $request->only($allowedKeys);
+
         foreach ($formData as $metaKey => $metaValue) {
             if (! empty($metaValue)) {
                 GeneralSetting::updateOrCreate(
@@ -218,6 +217,10 @@ class PaymentMethodController extends Controller
     public function updateStatus(Request $request, $method)
     {
         abort_if(Gate::denies('general_setting_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden'); //
+        $request->validate([
+            'status' => 'required|in:0,1',
+        ]);
+
         if (! isset($this->paymentMethods[$method])) {
             return response()->json([
                 'status' => 400,
@@ -251,6 +254,10 @@ class PaymentMethodController extends Controller
         if (Gate::denies('general_setting_edit')) {
             return response()->json(['error' => 'Form submission is disabled in demo mode.'], 403);
         }
+
+        $request->validate([
+            'status' => 'required|in:0,1',
+        ]);
 
         $status = $request->input('status');
 

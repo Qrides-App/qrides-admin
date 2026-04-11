@@ -19,6 +19,7 @@ Route::post('/webhooks/cashfree', [\App\Http\Controllers\Webhook\PaymentWebhookC
     ->name('webhooks.cashfree');
 
 Route::post('/generateToken', [TokenController::class, 'issueSanctumToken'])
+    ->middleware('throttle:token-issue')
     ->name('token.generate');
 // 'auth:sanctum'
 

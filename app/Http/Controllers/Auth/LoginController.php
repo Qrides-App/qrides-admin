@@ -43,15 +43,20 @@ class LoginController extends Controller
 
     protected function validateLogin(Request $request)
     {
-        $general_captcha = GeneralSetting::where('meta_key', 'general_captcha')->first();
-        $site_key = GeneralSetting::where('meta_key', 'site_key')->first();
-        $private_key = GeneralSetting::where('meta_key', 'private_key')->first();
-        if ($general_captcha == 'yes') {
+        $general_captcha = GeneralSetting::where('meta_key', 'general_captcha')->value('meta_value');
+        $private_key = GeneralSetting::where('meta_key', 'private_key')->value('meta_value');
+        if ($general_captcha === 'yes') {
             $request->validate([
                 'email' => 'required|email',
                 'password' => 'required',
                 'g-recaptcha-response' => 'required',
             ]);
+
+            if (empty($private_key)) {
+                return redirect()->back()
+                    ->withErrors(['g-recaptcha-response' => 'reCAPTCHA is not configured correctly.'])
+                    ->withInput();
+            }
 
             $recaptchaResponse = $request->input('g-recaptcha-response');
             $response = Http::post('https://www.google.com/recaptcha/api/siteverify', [
@@ -60,7 +65,7 @@ class LoginController extends Controller
                 'remoteip' => $request->ip(),
             ]);
 
-            if (! $response->json()['success']) {
+            if (! ($response->json()['success'] ?? false)) {
                 return redirect()->back()
                     ->withErrors(['g-recaptcha-response' => 'reCAPTCHA verification failed.'])
                     ->withInput();

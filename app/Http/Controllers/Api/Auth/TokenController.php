@@ -14,7 +14,12 @@ class TokenController extends Controller
 
     public function issueSanctumToken(Request $request)
     {
-        $sanctumSecret = '49382716504938271650493827165049';
+        $sanctumSecret = (string) env('SANCTUM_ISSUE_SECRET', '');
+        $allowGuestTokens = filter_var(env('ALLOW_GUEST_TOKENS', false), FILTER_VALIDATE_BOOL);
+
+        if ($sanctumSecret === '') {
+            return $this->addSuccessResponse(503, 'Token service is not configured.', []);
+        }
 
         $validator = Validator::make($request->all(), [
             'secret' => 'required|string',
@@ -25,8 +30,8 @@ class TokenController extends Controller
             return $this->errorComputing($validator);
         }
 
-        if ($request->secret !== $sanctumSecret) {
-            return $this->addSuccessResponse(498, trans('front.Unauthorized'), $request->all());
+        if (! hash_equals($sanctumSecret, (string) $request->secret)) {
+            return $this->addSuccessResponse(498, trans('front.Unauthorized'), []);
 
         }
         $isRealUser = false;
@@ -39,6 +44,9 @@ class TokenController extends Controller
             $user->tokens()->delete();
             $isRealUser = true;
         } else {
+            if (! $allowGuestTokens) {
+                return $this->addSuccessResponse(403, 'Guest token flow is disabled.', []);
+            }
             $user = AppUser::firstOrCreate(
                 ['email' => 'guest@unibooker.app'],// Never delete this user
                 ['first_name' => 'Guest User', 'user_type' => 'guest', 'password' => bcrypt('f07c02db6c1c42289f58')]

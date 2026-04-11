@@ -104,9 +104,15 @@ class RazorpayStrategy implements PaymentStrategy
     {
         $razorpayResponse = $request->all();
 
+        $orderId = $request['razorpay_order_id'] ?? null;
         $paymentId = $request['razorpay_payment_id'] ?? null;
+        $signature = $request['razorpay_signature'] ?? null;
 
-        if (! $paymentId) {
+        if (! $orderId || ! $paymentId || ! $signature) {
+            return view('Front.Fail');
+        }
+
+        if (! $this->verifySignature($orderId, $paymentId, $signature)) {
             return view('Front.Fail');
         }
 
@@ -115,13 +121,15 @@ class RazorpayStrategy implements PaymentStrategy
 
     public function callback($bookingId, $request)
     {
-
         $paymentId = $request->query('paymentId');
+        if (! $paymentId) {
+            return '/payment_fail';
+        }
 
-        return $this->handlePaymentStatus($bookingId, $paymentId);
+        return $this->handlePaymentStatus($bookingId, $paymentId, $request->all());
     }
 
-    private function handlePaymentStatus($bookingId, $paymentId, $razorpayResponse)
+    private function handlePaymentStatus($bookingId, $paymentId, $razorpayResponse = [])
     {
 
         if (isset($razorpayResponse['razorpay_payment_id'])) {
@@ -146,7 +154,7 @@ class RazorpayStrategy implements PaymentStrategy
             }
         } else {
             // Payment failed
-            return view('Front.Fail', ['error' => $errorMessage]);
+            return view('Front.Fail');
         }
     }
 
