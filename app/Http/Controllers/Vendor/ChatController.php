@@ -11,8 +11,6 @@ use App\Http\Controllers\Traits\ResponseTrait;
 use App\Http\Controllers\Traits\SMSTrait;
 use App\Http\Controllers\Traits\UserWalletTrait;
 use App\Http\Controllers\Traits\VendorWalletTrait;
-use App\Models\GeneralSetting;
-
 class ChatController extends Controller
 {
     use EmailTrait, MediaUploadingTrait, NotificationTrait, PushNotificationTrait, ResponseTrait, SMSTrait, UserWalletTrait, VendorWalletTrait;
@@ -23,15 +21,7 @@ class ChatController extends Controller
             $user = auth()->user();
             $vendorId = $user->id;
         }
-        $settings = GeneralSetting::whereIn('meta_key', [
-            'push_notification_status',
-            'pushnotification_key',
-            'firebase_server_key',
-        ])->get()->pluck('meta_value', 'meta_key')->toArray();
-
-        $onesignalAppId = '';
-
-        return view('vendor.chat.chat', compact('onesignalAppId'));
+        return view('vendor.chat.chat');
 
     }
 }

@@ -549,111 +549,15 @@ $('#imageFileInput').change(function() {
          });
 </script>
 
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-
 <script>
-  // Initialize OneSignal
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    const onesignalAppId = @json($onesignalAppId);
-      OneSignalDeferred.push(async function(OneSignal) {
-         const chatList = document.getElementById('chat-list');
-         try {
-               if (onesignalAppId) {
-                     await OneSignal.init({
-                        appId: onesignalAppId,
-                     });
-                     console.log("OneSignal initialized successfully.");
-               } else {
-                     throw new Error("OneSignal App ID is missing.");
-               }
-            } catch (error) {
-               
-               if (error && error.message) {
-                     Swal.fire('Initialization Failed', `Error: ${error.message}`, 'error');
-                     disableChatList(chatList);
-                     
-               } else {
-                     Swal.fire('Initialization Failed', 'An unknown error occurred during OneSignal initialization.', 'error');
-               }
-               
-               console.error("OneSignal initialization error:", error);
-            }
-
-            OneSignal.push(function() {
-         // Check if the user has opted in for push notifications
-         if (OneSignal.User.PushSubscription.optedIn) {
-            console.log("User has opted in for push notifications.");
-         
-         } else {
-            console.log("User has not opted in for push notifications.");
-            OneSignal.Notifications.requestPermission()
-         }
-         });
-      OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
-         console.log("Push notification permission changed:", permission);
-
-         // If permission is granted, capture the subscription ID
-         if (permission === true) {
-         console.log("User granted permission for push notifications.");
-
-         var pushSubscriptionId = OneSignal.User.PushSubscription.id;
-         document.getElementById("playerid_vendor").value = pushSubscriptionId;
-      console.log("User's Push Subscription ID:", pushSubscriptionId);
-      
-         }
-         else{
-            document.getElementById("playerid_vendor").value ="null";
-         }
-      });
-      OneSignal.push(function() {
-      // Check if the user has opted in for push notifications
-      if (OneSignal.User.PushSubscription.optedIn) {
-         // Retrieve the push subscription ID
-         var pushSubscriptionId = OneSignal.User.PushSubscription.id;
-         document.getElementById("playerid_vendor").value = pushSubscriptionId;
-         console.log("User's Push Subscription ID:", pushSubscriptionId);
-      } else {
-         console.log("User has not opted in for push notifications.");
-      }
-      });
-
-  });
+// OneSignal web chat push is intentionally disabled for QRIDES.
+// Mobile apps use Firebase (FCM) as the single push provider.
 
 </script>
 
 
 
-<!-- Register the service worker -->
-<script>
-//   if ('serviceWorker' in navigator) {
-//     navigator.serviceWorker.register('/OneSignalSDK.sw.js')
-//       .then(function (registration) {
-//         console.log('Service Worker registered with scope:', registration.scope);
-//       })
-//       .catch(function (error) {
-//         console.error('Service Worker registration failed:', error);
-//       });
-//   }
-
-if ('serviceWorker' in navigator) {
-    
-    navigator.serviceWorker.register('/OneSignalSDKWorker.js')
-      .then(function (registration) {
-        console.log('Service Worker registered with scope:', registration.scope);
-      })
-      .catch(function (error) {
-        console.warn('Service Worker registration for OneSignalSDKWorker.js failed, falling back to OneSignalSDK.sw.js:', error);
- 
-        navigator.serviceWorker.register('/OneSignalSDK.sw.js')
-          .then(function (registration) {
-            console.log('Fallback Service Worker registered with scope:', registration.scope);
-          })
-          .catch(function (error) {
-            console.error('Fallback Service Worker registration failed:', error);
-          });
-      });
-}
-</script>
+<!-- OneSignal worker registration disabled for QRIDES -->
 
 
 

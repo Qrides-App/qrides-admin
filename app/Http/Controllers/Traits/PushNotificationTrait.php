@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Traits;
 
 use App\Models\GeneralSetting;
+use Google\Client;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -18,6 +19,139 @@ trait PushNotificationTrait
         $envKey = env('FCM_SERVER_KEY');
 
         return empty($envKey) ? null : trim((string) $envKey);
+    }
+
+    private function getFirebaseCredentialsPath(): string
+    {
+        return storage_path('firebase/firebase_credentials.json');
+    }
+
+    private function getFirebaseProjectId(): ?string
+    {
+        $envProject = trim((string) env('FIREBASE_PROJECT_ID', ''));
+        if ($envProject !== '') {
+            return $envProject;
+        }
+
+        $credentialsPath = $this->getFirebaseCredentialsPath();
+        if (! is_readable($credentialsPath)) {
+            return null;
+        }
+
+        try {
+            $json = json_decode((string) file_get_contents($credentialsPath), true, 512, JSON_THROW_ON_ERROR);
+            $projectId = trim((string) ($json['project_id'] ?? ''));
+
+            return $projectId !== '' ? $projectId : null;
+        } catch (\Throwable $e) {
+            Log::warning('Unable to parse Firebase credentials for project id.', ['error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    private function shouldUseFcmHttpV1(): bool
+    {
+        $mode = strtolower((string) env('FCM_PREFERRED_API', 'auto')); // auto|v1|legacy
+
+        if ($mode === 'legacy') {
+            return false;
+        }
+
+        $hasCredentials = is_readable($this->getFirebaseCredentialsPath());
+        $hasProjectId = ! empty($this->getFirebaseProjectId());
+
+        if ($mode === 'v1') {
+            return $hasCredentials && $hasProjectId;
+        }
+
+        return $hasCredentials && $hasProjectId;
+    }
+
+    private function normalizeDataPayload(array $data): array
+    {
+        $normalized = [];
+
+        foreach ($data as $key => $value) {
+            if (is_null($value)) {
+                $normalized[(string) $key] = '';
+            } elseif (is_scalar($value)) {
+                $normalized[(string) $key] = (string) $value;
+            } else {
+                $normalized[(string) $key] = json_encode($value);
+            }
+        }
+
+        return $normalized;
+    }
+
+    private function sendWithFcmHttpV1(array $message): bool
+    {
+        $credentialsPath = $this->getFirebaseCredentialsPath();
+        $projectId = $this->getFirebaseProjectId();
+        if (! is_readable($credentialsPath) || empty($projectId)) {
+            return false;
+        }
+
+        try {
+            $client = new Client;
+            $client->setAuthConfig($credentialsPath);
+            $client->setScopes(['https://www.googleapis.com/auth/firebase.messaging']);
+            $tokenData = $client->fetchAccessTokenWithAssertion();
+            $accessToken = $tokenData['access_token'] ?? null;
+
+            if (empty($accessToken)) {
+                Log::error('FCM HTTP v1 token generation failed.', ['token_response' => $tokenData]);
+
+                return false;
+            }
+
+            $url = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+            $response = Http::withToken($accessToken)->post($url, [
+                'message' => $message,
+            ]);
+
+            if ($response->failed()) {
+                Log::error('FCM HTTP v1 send failed', [
+                    'status' => $response->status(),
+                    'response' => $response->body(),
+                ]);
+
+                return false;
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('FCM HTTP v1 send exception', ['error' => $e->getMessage()]);
+
+            return false;
+        }
+    }
+
+    private function sendWithFcmLegacy(array $payload): bool
+    {
+        $serverKey = $this->getFirebaseServerKey();
+        if (empty($serverKey)) {
+            Log::warning('FCM legacy send skipped: missing firebase server key.');
+
+            return false;
+        }
+
+        $response = Http::withHeaders([
+            'Authorization' => 'key='.$serverKey,
+            'Content-Type' => 'application/json',
+        ])->post('https://fcm.googleapis.com/fcm/send', $payload);
+
+        if ($response->failed()) {
+            Log::error('FCM legacy send failed', [
+                'status' => $response->status(),
+                'response' => $response->body(),
+            ]);
+
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -37,19 +171,37 @@ trait PushNotificationTrait
             return false;
         }
 
-        $serverKey = $this->getFirebaseServerKey();
-        if (empty($serverKey)) {
-            Log::warning('FCM single send skipped: missing firebase server key.');
-
-            return false;
-        }
-
         $payloadData = $this->parseBookingData($data);
         $payloadData['vendorNotification'] = $vendorNotification;
+        $payloadData = $this->normalizeDataPayload($payloadData);
 
-        $url = 'https://fcm.googleapis.com/fcm/send';
-        $payload = [
-            'to' => $deviceToken,
+        if ($this->shouldUseFcmHttpV1()) {
+            $sent = $this->sendWithFcmHttpV1([
+                'token' => (string) $deviceToken,
+                'notification' => [
+                    'title' => (string) $subject,
+                    'body' => (string) $message,
+                ],
+                'data' => $payloadData,
+                'android' => [
+                    'priority' => 'high',
+                ],
+            ]);
+
+            if ($sent) {
+                Log::info('FCM HTTP v1 single notification sent', [
+                    'subject' => $subject,
+                    'user_type' => $userType,
+                ]);
+
+                return true;
+            }
+
+            Log::warning('FCM HTTP v1 failed; attempting legacy fallback for single notification.');
+        }
+
+        $legacyPayload = [
+            'to' => (string) $deviceToken,
             'notification' => [
                 'title' => (string) $subject,
                 'body' => (string) $message,
@@ -58,22 +210,12 @@ trait PushNotificationTrait
             'priority' => 'high',
         ];
 
-        $headers = [
-            'Authorization' => 'key='.$serverKey,
-            'Content-Type' => 'application/json',
-        ];
-
-        $response = Http::withHeaders($headers)->post($url, $payload);
-        if ($response->failed()) {
-            Log::error('FCM single notification failed', [
-                'status' => $response->status(),
-                'response' => $response->body(),
-            ]);
-
+        $sent = $this->sendWithFcmLegacy($legacyPayload);
+        if (! $sent) {
             return false;
         }
 
-        Log::info('FCM single notification sent', [
+        Log::info('FCM legacy single notification sent', [
             'subject' => $subject,
             'user_type' => $userType,
         ]);
@@ -95,33 +237,47 @@ trait PushNotificationTrait
             return;
         }
 
-        $url = 'https://fcm.googleapis.com/fcm/send';
-        $serverKey = $this->getFirebaseServerKey();
-        if (empty($serverKey)) {
-            Log::warning('FCM batch send skipped: missing firebase server key.');
-
+        $normalizedTokens = array_values(array_filter(array_unique(array_map('strval', $deviceTokens))));
+        if (empty($normalizedTokens)) {
             return;
         }
 
-        $payload = [
-            'registration_ids' => $deviceTokens,
+        $normalizedData = $this->normalizeDataPayload((array) $data);
+
+        if ($this->shouldUseFcmHttpV1()) {
+            $allOk = true;
+            foreach ($normalizedTokens as $token) {
+                $ok = $this->sendWithFcmHttpV1([
+                    'token' => $token,
+                    'notification' => [
+                        'title' => (string) $title,
+                        'body' => (string) $body,
+                    ],
+                    'data' => $normalizedData,
+                    'android' => [
+                        'priority' => 'high',
+                    ],
+                ]);
+                $allOk = $allOk && $ok;
+            }
+
+            if ($allOk) {
+                return;
+            }
+
+            Log::warning('FCM HTTP v1 batch send partially failed; attempting legacy fallback.');
+        }
+
+        $legacyPayload = [
+            'registration_ids' => $normalizedTokens,
             'notification' => [
                 'title' => $title,
                 'body' => $body,
             ],
-            'data' => $data,
+            'data' => $normalizedData,
         ];
 
-        $headers = [
-            'Authorization' => 'key='.$serverKey,
-            'Content-Type' => 'application/json',
-        ];
-
-        $response = Http::withHeaders($headers)->post($url, $payload);
-
-        if ($response->failed()) {
-            Log::error('Failed to send push notifications', ['response' => $response->body()]);
-        }
+        $this->sendWithFcmLegacy($legacyPayload);
     }
 
     /**
@@ -135,33 +291,38 @@ trait PushNotificationTrait
      */
     public function sendPushNotificationToTopic($topic, $title, $body, $data = [])
     {
-        $url = 'https://fcm.googleapis.com/fcm/send';
-        $serverKey = $this->getFirebaseServerKey();
-        if (empty($serverKey)) {
-            Log::warning('FCM topic send skipped: missing firebase server key.');
+        $normalizedData = $this->normalizeDataPayload((array) $data);
 
-            return;
+        if ($this->shouldUseFcmHttpV1()) {
+            $sent = $this->sendWithFcmHttpV1([
+                'topic' => (string) $topic,
+                'notification' => [
+                    'title' => (string) $title,
+                    'body' => (string) $body,
+                ],
+                'data' => $normalizedData,
+                'android' => [
+                    'priority' => 'high',
+                ],
+            ]);
+
+            if ($sent) {
+                return;
+            }
+
+            Log::warning('FCM HTTP v1 topic send failed; attempting legacy fallback.');
         }
 
-        $payload = [
+        $legacyPayload = [
             'to' => '/topics/'.$topic,
             'notification' => [
                 'title' => $title,
                 'body' => $body,
             ],
-            'data' => $data,
+            'data' => $normalizedData,
         ];
 
-        $headers = [
-            'Authorization' => 'key='.$serverKey,
-            'Content-Type' => 'application/json',
-        ];
-
-        $response = Http::withHeaders($headers)->post($url, $payload);
-
-        if ($response->failed()) {
-            Log::error('Failed to send push notification to topic', ['response' => $response->body()]);
-        }
+        $this->sendWithFcmLegacy($legacyPayload);
     }
 
     private function parseBookingData($data)
