@@ -26,6 +26,7 @@ class EnsureAuthSchema extends Command
         $this->ensureGeneralSettingsTable();
         $this->ensureAppUsersTable();
         $this->ensureAppUserOtpsTable();
+        $this->ensureLegacyVehicleMakesTable();
         $this->ensureLegacyItemTypesTable();
         $this->ensureLegacyItemsTable();
         $this->ensureRentalItemsTable();
@@ -420,6 +421,23 @@ class EnsureAuthSchema extends Command
             $table->unsignedBigInteger('place_id')->nullable();
             $table->integer('module')->nullable()->default(2);
             $table->boolean('status')->nullable()->default(false);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureLegacyVehicleMakesTable(): void
+    {
+        if (Schema::hasTable('vehicle_makes')) {
+            return;
+        }
+
+        Schema::create('vehicle_makes', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name', 50)->nullable();
+            $table->integer('module')->default(1);
+            $table->string('description')->nullable();
+            $table->boolean('status')->default(false);
             $table->timestamps();
             $table->softDeletes();
         });
