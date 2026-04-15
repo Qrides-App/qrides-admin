@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "73f9effb48f497a4ccb93710103b2dd5",
+    "content-hash": "1cab4fa848e6ac9c3a4efd2384c546c1",
     "packages": [
         {
             "name": "beste/clock",
@@ -773,12 +773,12 @@
             "version": "v6.11.1",
             "source": {
                 "type": "git",
-                "url": "https://github.com/firebase/php-jwt.git",
+                "url": "https://github.com/googleapis/php-jwt.git",
                 "reference": "d1e91ecf8c598d073d0995afa8cd5c75c6e19e66"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/firebase/php-jwt/zipball/d1e91ecf8c598d073d0995afa8cd5c75c6e19e66",
+                "url": "https://api.github.com/repos/googleapis/php-jwt/zipball/d1e91ecf8c598d073d0995afa8cd5c75c6e19e66",
                 "reference": "d1e91ecf8c598d073d0995afa8cd5c75c6e19e66",
                 "shasum": ""
             },
@@ -2111,12 +2111,12 @@
             "version": "7.18.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/kreait/firebase-php.git",
+                "url": "https://github.com/beste/firebase-php.git",
                 "reference": "f43bc2509721ae2bff77f5232e5f56225440393b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kreait/firebase-php/zipball/f43bc2509721ae2bff77f5232e5f56225440393b",
+                "url": "https://api.github.com/repos/beste/firebase-php/zipball/f43bc2509721ae2bff77f5232e5f56225440393b",
                 "reference": "f43bc2509721ae2bff77f5232e5f56225440393b",
                 "shasum": ""
             },
@@ -2210,12 +2210,12 @@
             "version": "5.2.1",
             "source": {
                 "type": "git",
-                "url": "https://github.com/kreait/firebase-tokens-php.git",
+                "url": "https://github.com/beste/firebase-tokens-php.git",
                 "reference": "df6f9d153f3bbe671c3247576d2a45cbd0a79620"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kreait/firebase-tokens-php/zipball/df6f9d153f3bbe671c3247576d2a45cbd0a79620",
+                "url": "https://api.github.com/repos/beste/firebase-tokens-php/zipball/df6f9d153f3bbe671c3247576d2a45cbd0a79620",
                 "reference": "df6f9d153f3bbe671c3247576d2a45cbd0a79620",
                 "shasum": ""
             },
@@ -4306,103 +4306,6 @@
                 "source": "https://github.com/paydunyadev/paydunya-php-composer/tree/1.0.7"
             },
             "time": "2021-12-09T13:15:09+00:00"
-        },
-        {
-            "name": "paypal/paypal-checkout-sdk",
-            "version": "1.0.2",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/paypal/Checkout-PHP-SDK.git",
-                "reference": "19992ce7051ff9e47e643f28abb8cc1b3e5f1812"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/paypal/Checkout-PHP-SDK/zipball/19992ce7051ff9e47e643f28abb8cc1b3e5f1812",
-                "reference": "19992ce7051ff9e47e643f28abb8cc1b3e5f1812",
-                "shasum": ""
-            },
-            "require": {
-                "paypal/paypalhttp": "1.0.1"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "^5.7"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Sample\\": "samples/",
-                    "PayPalCheckoutSdk\\": "lib/PayPalCheckoutSdk"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "https://github.com/paypal/Checkout-PHP-SDK/blob/master/LICENSE"
-            ],
-            "authors": [
-                {
-                    "name": "PayPal",
-                    "homepage": "https://github.com/paypal/Checkout-PHP-SDK/contributors"
-                }
-            ],
-            "description": "PayPal's PHP SDK for Checkout REST APIs",
-            "homepage": "http://github.com/paypal/Checkout-PHP-SDK/",
-            "keywords": [
-                "checkout",
-                "orders",
-                "payments",
-                "paypal",
-                "rest",
-                "sdk"
-            ],
-            "support": {
-                "source": "https://github.com/paypal/Checkout-PHP-SDK/tree/1.0.2"
-            },
-            "abandoned": "paypal/paypal-server-sdk",
-            "time": "2021-09-21T20:57:38+00:00"
-        },
-        {
-            "name": "paypal/paypalhttp",
-            "version": "1.0.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/paypal/paypalhttp_php.git",
-                "reference": "7b09c89c80828e842c79230e7f156b61fbb68d25"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/paypal/paypalhttp_php/zipball/7b09c89c80828e842c79230e7f156b61fbb68d25",
-                "reference": "7b09c89c80828e842c79230e7f156b61fbb68d25",
-                "shasum": ""
-            },
-            "require": {
-                "ext-curl": "*"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "^5.7",
-                "wiremock-php/wiremock-php": "1.43.2"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "PayPalHttp\\": "lib/PayPalHttp"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "PayPal",
-                    "homepage": "https://github.com/paypal/paypalhttp_php/contributors"
-                }
-            ],
-            "support": {
-                "issues": "https://github.com/paypal/paypalhttp_php/issues",
-                "source": "https://github.com/paypal/paypalhttp_php/tree/1.0.1"
-            },
-            "abandoned": true,
-            "time": "2021-09-14T21:35:26+00:00"
         },
         {
             "name": "phpoption/phpoption",
@@ -8422,12 +8325,12 @@
             "version": "v3.15.4",
             "source": {
                 "type": "git",
-                "url": "https://github.com/barryvdh/laravel-debugbar.git",
+                "url": "https://github.com/fruitcake/laravel-debugbar.git",
                 "reference": "c0667ea91f7185f1e074402c5788195e96bf8106"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/barryvdh/laravel-debugbar/zipball/c0667ea91f7185f1e074402c5788195e96bf8106",
+                "url": "https://api.github.com/repos/fruitcake/laravel-debugbar/zipball/c0667ea91f7185f1e074402c5788195e96bf8106",
                 "reference": "c0667ea91f7185f1e074402c5788195e96bf8106",
                 "shasum": ""
             },

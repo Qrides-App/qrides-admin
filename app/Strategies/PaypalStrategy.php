@@ -4,65 +4,78 @@ namespace App\Strategies;
 
 use App\Http\Controllers\Traits\MiscellaneousTrait;
 use App\Http\Controllers\Traits\PaymentStatusUpdaterTrait;
-use App\Models\GeneralSetting;
-use PayPalCheckoutSdk\Core\PayPalHttpClient;
-use PayPalCheckoutSdk\Core\ProductionEnvironment;
-use PayPalCheckoutSdk\Core\SandboxEnvironment;
-use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
-use PayPalCheckoutSdk\Orders\OrdersCreateRequest;
+use GuzzleHttp\Client;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class PaypalStrategy implements PaymentStrategy
 {
-    use MiscellaneousTrait,PaymentStatusUpdaterTrait;
+    use MiscellaneousTrait, PaymentStatusUpdaterTrait;
 
-    private $client;
+    private Client $client;
+
+    private string $clientId;
+
+    private string $clientSecret;
 
     public function __construct()
     {
-        $generalSettings = GeneralSetting::all();
-        $paypalClientId = $this->getGeneralSettingValue('live_paypal_client_id');
-        $paypalClientSecret = $this->getGeneralSettingValue('live_paypal_secret_key');
+        $paypalClientId = (string) $this->getGeneralSettingValue('live_paypal_client_id');
+        $paypalClientSecret = (string) $this->getGeneralSettingValue('live_paypal_secret_key');
 
-        $paypalTestClientId = $this->getGeneralSettingValue('test_paypal_client_id');
-        $paypalTestClientSecret = $this->getGeneralSettingValue('test_paypal_secret_key');
+        $paypalTestClientId = (string) $this->getGeneralSettingValue('test_paypal_client_id');
+        $paypalTestClientSecret = (string) $this->getGeneralSettingValue('test_paypal_secret_key');
 
         $paypalMode = $this->getGeneralSettingValue('paypal_options');
-        $environment = $paypalMode === 'test'
-            ? new SandboxEnvironment($paypalTestClientId, $paypalTestClientSecret)
-            : new ProductionEnvironment($paypalClientId, $paypalClientSecret);
+        $isTestMode = $paypalMode === 'test';
 
-        $this->client = new PayPalHttpClient($environment);
+        $this->clientId = $isTestMode ? $paypalTestClientId : $paypalClientId;
+        $this->clientSecret = $isTestMode ? $paypalTestClientSecret : $paypalClientSecret;
+
+        $this->client = new Client([
+            'base_uri' => $isTestMode ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com',
+            'timeout' => 30,
+        ]);
     }
 
     public function process($bookingId, $bookingData, $request)
     {
-        $request = new OrdersCreateRequest;
-        $request->prefer('return=representation');
-        $request->body = [
-            'intent' => 'CAPTURE',
-            'purchase_units' => [
-                [
-                    'amount' => [
-                        'currency_code' => 'USD',
-                        'value' => $bookingData->amount_to_pay,
-                    ],
-                    'description' => 'Payment for booking: '.$bookingId,
-                ],
-            ],
-            'application_context' => [
-                'return_url' => route('handleReturn', ['booking' => $bookingId, 'method' => 'paypal']),
-                'cancel_url' => route('handleCancel', ['booking' => $bookingId, 'method' => 'paypal']),
-                'notification_url' => route('paypal.ipn'),
-            ],
-        ];
-
         try {
-            $response = $this->client->execute($request);
-            $approvalUrl = $response->result->links[1]->href;
+            $response = $this->paypalRequest('POST', '/v2/checkout/orders', [
+                'intent' => 'CAPTURE',
+                'purchase_units' => [
+                    [
+                        'amount' => [
+                            'currency_code' => 'USD',
+                            'value' => (string) $bookingData->amount_to_pay,
+                        ],
+                        'custom_id' => (string) $bookingId,
+                        'description' => 'Payment for booking: '.$bookingId,
+                    ],
+                ],
+                'application_context' => [
+                    'return_url' => route('handleReturn', ['booking' => $bookingId, 'method' => 'paypal']),
+                    'cancel_url' => route('handleCancel', ['booking' => $bookingId, 'method' => 'paypal']),
+                ],
+            ]);
+
+            $approvalUrl = null;
+            foreach (($response['links'] ?? []) as $link) {
+                if (($link['rel'] ?? null) === 'approve') {
+                    $approvalUrl = $link['href'] ?? null;
+                    break;
+                }
+            }
+
+            if (! $approvalUrl) {
+                return redirect('/invalid-order')->with('error', 'Invalid booking ID');
+            }
 
             return redirect($approvalUrl)->with('success', 'Please make payment');
 
-        } catch (HttpException $ex) {
+        } catch (\Throwable $e) {
+            Log::error('PayPal create order failed', ['error' => $e->getMessage(), 'bookingId' => $bookingId]);
+
             return redirect('/invalid-order')->with('error', 'Invalid booking ID');
         }
     }
@@ -74,19 +87,24 @@ class PaypalStrategy implements PaymentStrategy
 
     public function return($bookingId, $requestData)
     {
-        $request = new OrdersCaptureRequest($requestData['token']);
-        $request->prefer('return=representation');
+        $token = $requestData instanceof Request
+            ? $requestData->input('token')
+            : ($requestData['token'] ?? null);
+
+        if (! $token) {
+            return '/payment_fail';
+        }
 
         try {
-            $response = $this->client->execute($request);
-            $result = $response->result;
+            $result = $this->paypalRequest('POST', "/v2/checkout/orders/{$token}/capture");
 
-            if ($result->status === 'COMPLETED') {
+            if (($result['status'] ?? null) === 'COMPLETED') {
                 $transactionData = new \stdClass;
                 $transactionData->response_data = json_encode($result);
                 $transactionData->gateway_name = 'paypal';
                 $transactionData->payment_status = 'completed';
-                $transactionData->transaction_id = $result->id;
+                $transactionData->transaction_id = $result['purchase_units'][0]['payments']['captures'][0]['id']
+                    ?? ($result['id'] ?? $token);
 
                 $saveStatus = $this->updateBookingStatus($bookingId, $transactionData);
                 $saveStatusData = json_decode($saveStatus, true);
@@ -99,7 +117,9 @@ class PaypalStrategy implements PaymentStrategy
             } else {
                 return '/payment_fail';
             }
-        } catch (HttpException $ex) {
+        } catch (\Throwable $e) {
+            Log::error('PayPal capture failed', ['error' => $e->getMessage(), 'bookingId' => $bookingId, 'token' => $token]);
+
             return '/payment_fail';
         }
     }
@@ -113,14 +133,8 @@ class PaypalStrategy implements PaymentStrategy
 
     public function handleWebhook(Request $request)
     {
-        echo 'yes';
-        exit;
         $webhookData = $request->all();
-        $eventType = $webhookData['event_type'];
-
-        //     $filename = 'ipn_' . date('Y-m-d_H-i-s') . '.txt';
-        // $content = json_encode($webhookData, JSON_PRETTY_PRINT);
-        // file_put_contents(storage_path('app/ipn/' . $filename), $content);
+        $eventType = $webhookData['event_type'] ?? null;
 
         switch ($eventType) {
             case 'PAYMENT.CAPTURE.COMPLETED':
@@ -164,5 +178,47 @@ class PaypalStrategy implements PaymentStrategy
         $transactionData->transaction_id = $paymentId;
 
         $this->updateBookingStatus($bookingId, $transactionData);
+    }
+
+    private function paypalRequest(string $method, string $uri, array $payload = []): array
+    {
+        $accessToken = $this->getAccessToken();
+        if (! $accessToken) {
+            throw new \RuntimeException('Unable to generate PayPal access token');
+        }
+
+        $options = [
+            'headers' => [
+                'Authorization' => 'Bearer '.$accessToken,
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ],
+        ];
+
+        if (! empty($payload)) {
+            $options['json'] = $payload;
+        }
+
+        $response = $this->client->request($method, $uri, $options);
+
+        return json_decode((string) $response->getBody(), true) ?? [];
+    }
+
+    private function getAccessToken(): ?string
+    {
+        $response = $this->client->post('/v1/oauth2/token', [
+            'auth' => [$this->clientId, $this->clientSecret],
+            'form_params' => [
+                'grant_type' => 'client_credentials',
+            ],
+            'headers' => [
+                'Accept' => 'application/json',
+                'Accept-Language' => 'en_US',
+            ],
+        ]);
+
+        $payload = json_decode((string) $response->getBody(), true);
+
+        return $payload['access_token'] ?? null;
     }
 }

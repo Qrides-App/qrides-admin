@@ -17,7 +17,6 @@
         "mongodb/laravel-mongodb": "^5.5",
         "mongodb/mongodb": "^2.1",
         "paydunya/paydunya": "^1.0",
-        "paypal/paypal-checkout-sdk": "^1.0",
         "spatie/laravel-medialibrary": "^10.7",
         "stripe/stripe-php": "^13.16",
         "yajra/laravel-datatables-oracle": "^10.3"
@@ -74,6 +73,9 @@
     },
     "config": {
         "optimize-autoloader": true,
+        "audit": {
+            "abandoned": "ignore"
+        },
         "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {

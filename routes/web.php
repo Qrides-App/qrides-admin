@@ -54,7 +54,9 @@ Route::get('/home', function () {
     return redirect()->route('admin.home');
 });
 
-Auth::routes(['register' => false]);
+if (class_exists(\Laravel\Ui\UiServiceProvider::class)) {
+    Auth::routes(['register' => false]);
+}
 
 /*********** Front End ****/
 
