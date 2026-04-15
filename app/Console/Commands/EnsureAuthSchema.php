@@ -25,6 +25,7 @@ class EnsureAuthSchema extends Command
         $this->ensureModuleTable();
         $this->ensureGeneralSettingsTable();
         $this->ensureAppUsersTable();
+        $this->ensureAppUsersBankAccountsTable();
         $this->ensureAppUserOtpsTable();
         $this->ensureLegacyVehicleMakesTable();
         $this->ensureLegacyItemTypesTable();
@@ -389,6 +390,26 @@ class EnsureAuthSchema extends Command
             $table->timestamp('expires_at')->nullable();
             $table->index('phone');
             $table->index('otp_code');
+        });
+    }
+
+    private function ensureAppUsersBankAccountsTable(): void
+    {
+        if (Schema::hasTable('app_users_bank_accounts')) {
+            return;
+        }
+
+        Schema::create('app_users_bank_accounts', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('account_name')->nullable();
+            $table->string('bank_name')->nullable();
+            $table->string('branch_name')->nullable();
+            $table->string('account_number')->nullable();
+            $table->string('iban')->nullable();
+            $table->string('swift_code')->nullable();
+            $table->timestamp('created_at')->nullable()->useCurrent();
+            $table->timestamp('updated_at')->nullable()->useCurrentOnUpdate();
         });
     }
 
