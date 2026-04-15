@@ -24,7 +24,9 @@ class EnsureAuthSchema extends Command
         $this->ensurePersonalAccessTokensTable();
         $this->ensureModuleTable();
         $this->ensureGeneralSettingsTable();
+        $this->ensureAllPackagesTable();
         $this->ensureAppUsersTable();
+        $this->ensureAppUsersPackageColumn();
         $this->ensureAppUserMetaTable();
         $this->normalizeAppUserMetaForeignKeyColumns();
         $this->ensureAppUsersBankAccountsTable();
@@ -298,6 +300,7 @@ class EnsureAuthSchema extends Command
             $table->string('user_type')->default('user');
             $table->enum('host_status', ['0', '1', '2'])->nullable()->default('0');
             $table->boolean('status')->nullable()->default(true);
+            $table->unsignedBigInteger('package_id')->nullable()->default(1);
             $table->decimal('wallet', 15)->nullable();
             $table->decimal('ave_host_rate', 15)->default(0);
             $table->decimal('avr_guest_rate', 15)->default(0);
@@ -305,6 +308,47 @@ class EnsureAuthSchema extends Command
             $table->timestamps();
             $table->softDeletes();
         });
+    }
+
+    private function ensureAllPackagesTable(): void
+    {
+        if (Schema::hasTable('all_packages')) {
+            return;
+        }
+
+        Schema::create('all_packages', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name')->nullable();
+            $table->string('title')->nullable();
+            $table->text('description')->nullable();
+            $table->string('price')->nullable();
+            $table->integer('days')->nullable();
+            $table->tinyInteger('status')->default(1);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureAppUsersPackageColumn(): void
+    {
+        if (! Schema::hasTable('app_users')) {
+            return;
+        }
+
+        if (! Schema::hasColumn('app_users', 'package_id')) {
+            Schema::table('app_users', function (Blueprint $table) {
+                $table->unsignedBigInteger('package_id')->nullable()->default(1)->after('status');
+            });
+        }
+
+        try {
+            $appUsersIdType = $this->getColumnType('all_packages', 'id');
+            if ($appUsersIdType) {
+                DB::statement("ALTER TABLE `app_users` MODIFY `package_id` {$appUsersIdType} NULL");
+            }
+        } catch (\Throwable $e) {
+            // Ignore type normalization failures at bootstrap.
+        }
     }
 
     private function ensureAppUserMetaTable(): void
