@@ -32,6 +32,7 @@ class EnsureAuthSchema extends Command
         $this->ensureLegacyItemsTable();
         $this->ensureRentalItemsTable();
         $this->ensureBookingsTable();
+        $this->ensureBookingMetaTable();
         $this->ensureLanguagesTable();
         $this->ensureSupportTicketsTable();
         $this->ensureSupportTicketRepliesTable();
@@ -538,6 +539,22 @@ class EnsureAuthSchema extends Command
             $table->boolean('status')->default(false);
             $table->timestamps();
             $table->softDeletes();
+        });
+    }
+
+    private function ensureBookingMetaTable(): void
+    {
+        if (Schema::hasTable('booking_meta')) {
+            return;
+        }
+
+        Schema::create('booking_meta', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('booking_id')->nullable();
+            $table->string('meta_key')->nullable();
+            $table->longText('meta_value')->nullable();
+            $table->timestamp('created_at')->nullable()->useCurrent();
+            $table->timestamp('updated_at')->nullable()->useCurrentOnUpdate();
         });
     }
 }
