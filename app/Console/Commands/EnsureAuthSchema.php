@@ -25,6 +25,7 @@ class EnsureAuthSchema extends Command
         $this->ensureModuleTable();
         $this->ensureGeneralSettingsTable();
         $this->ensureAppUsersTable();
+        $this->ensureAppUserOtpsTable();
         $this->ensureLegacyItemTypesTable();
         $this->ensureLegacyItemsTable();
         $this->ensureRentalItemsTable();
@@ -364,6 +365,26 @@ class EnsureAuthSchema extends Command
             $table->string('cancelled_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
+        });
+    }
+
+    private function ensureAppUserOtpsTable(): void
+    {
+        if (Schema::hasTable('app_user_otps')) {
+            return;
+        }
+
+        Schema::create('app_user_otps', function (Blueprint $table) {
+            $table->id();
+            $table->string('phone', 15);
+            $table->string('country_code', 5);
+            $table->string('otp_code', 10);
+            $table->timestamp('created_at')->nullable()->useCurrent();
+            $table->timestamp('updated_at')->nullable();
+            // MySQL 8+ safe (avoid invalid zero-datetime defaults)
+            $table->timestamp('expires_at')->nullable();
+            $table->index('phone');
+            $table->index('otp_code');
         });
     }
 
