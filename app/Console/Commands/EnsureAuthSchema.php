@@ -29,6 +29,10 @@ class EnsureAuthSchema extends Command
         $this->ensureAppUsersPackageColumn();
         $this->ensureAppUserMetaTable();
         $this->normalizeAppUserMetaForeignKeyColumns();
+        $this->ensureEmailTypeTable();
+        $this->ensureEmailSmsNotificationTable();
+        $this->ensureEmailNotificationMappingsTable();
+        $this->normalizeEmailNotificationMappingForeignKeyColumns();
         $this->ensureAppUsersBankAccountsTable();
         $this->ensureAppUserOtpsTable();
         $this->ensureLegacyVehicleMakesTable();
@@ -379,6 +383,74 @@ class EnsureAuthSchema extends Command
                 $appUserIdColumnType = $this->getColumnType('app_users', 'id');
                 if ($appUserIdColumnType) {
                     DB::statement("ALTER TABLE `app_user_meta` MODIFY `user_id` {$appUserIdColumnType} NULL");
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore normalization failures; startup should continue.
+        }
+    }
+
+    private function ensureEmailTypeTable(): void
+    {
+        if (Schema::hasTable('email_type')) {
+            return;
+        }
+
+        Schema::create('email_type', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('name')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    private function ensureEmailSmsNotificationTable(): void
+    {
+        if (Schema::hasTable('email_sms_notification')) {
+            return;
+        }
+
+        Schema::create('email_sms_notification', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('temp_name', 250)->nullable();
+            $table->tinyInteger('module')->default(1);
+            $table->string('role', 250)->nullable();
+            $table->string('subject', 191)->nullable();
+            $table->text('body')->nullable();
+            $table->string('lang', 10)->nullable();
+            $table->timestamps();
+        });
+    }
+
+    private function ensureEmailNotificationMappingsTable(): void
+    {
+        if (Schema::hasTable('email_notification_mappings')) {
+            return;
+        }
+
+        Schema::create('email_notification_mappings', function (Blueprint $table) {
+            $table->unsignedInteger('email_type_id');
+            $table->unsignedInteger('email_sms_notification_id')->index('email_sms_notification_id');
+            $table->unsignedInteger('module')->default(1);
+            $table->primary(['email_type_id', 'email_sms_notification_id', 'module']);
+        });
+    }
+
+    private function normalizeEmailNotificationMappingForeignKeyColumns(): void
+    {
+        if (! Schema::hasTable('email_notification_mappings') || ! Schema::hasTable('email_sms_notification')) {
+            return;
+        }
+
+        try {
+            $smsIdType = $this->getColumnType('email_sms_notification', 'id');
+            if ($smsIdType && Schema::hasColumn('email_notification_mappings', 'email_sms_notification_id')) {
+                DB::statement("ALTER TABLE `email_notification_mappings` MODIFY `email_sms_notification_id` {$smsIdType} NOT NULL");
+            }
+
+            if (Schema::hasTable('email_type') && Schema::hasColumn('email_notification_mappings', 'email_type_id')) {
+                $emailTypeIdType = $this->getColumnType('email_type', 'id');
+                if ($emailTypeIdType) {
+                    DB::statement("ALTER TABLE `email_notification_mappings` MODIFY `email_type_id` {$emailTypeIdType} NOT NULL");
                 }
             }
         } catch (\Throwable $e) {
