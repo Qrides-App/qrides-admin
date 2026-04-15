@@ -24,6 +24,9 @@ class EnsureAuthSchema extends Command
         $this->ensurePersonalAccessTokensTable();
         $this->ensureModuleTable();
         $this->ensureGeneralSettingsTable();
+        $this->ensureAppUsersTable();
+        $this->ensureRentalItemsTable();
+        $this->ensureBookingsTable();
         $this->ensureLanguagesTable();
         $this->ensureRentalItemTypesTable();
         $this->ensureItemCityFareTable();
@@ -262,6 +265,103 @@ class EnsureAuthSchema extends Command
             $table->decimal('admin_commission', 5)->default(0);
             $table->timestamp('created_at')->nullable()->useCurrent();
             $table->timestamp('updated_at')->nullable()->useCurrentOnUpdate();
+        });
+    }
+
+    private function ensureAppUsersTable(): void
+    {
+        if (Schema::hasTable('app_users')) {
+            return;
+        }
+
+        Schema::create('app_users', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('firestore_id')->nullable()->index('firestore_id');
+            $table->string('first_name')->nullable();
+            $table->string('middle1')->nullable();
+            $table->string('last_name')->nullable();
+            $table->string('email')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('phone_country')->nullable();
+            $table->string('password')->nullable();
+            $table->string('user_type')->default('user');
+            $table->enum('host_status', ['0', '1', '2'])->nullable()->default('0');
+            $table->boolean('status')->nullable()->default(true);
+            $table->decimal('wallet', 15)->nullable();
+            $table->decimal('ave_host_rate', 15)->default(0);
+            $table->decimal('avr_guest_rate', 15)->default(0);
+            $table->text('fcm')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureRentalItemsTable(): void
+    {
+        if (Schema::hasTable('rental_items')) {
+            return;
+        }
+
+        Schema::create('rental_items', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('token', 191)->nullable()->index('token');
+            $table->string('title')->nullable();
+            $table->double('item_rating', 15, 2)->nullable()->default(0);
+            $table->decimal('average_speed_kmph', 15)->default(40);
+            $table->double('longitude', null, 0)->nullable();
+            $table->double('latitude', null, 0)->nullable();
+            $table->unsignedBigInteger('userid_id')->nullable()->index('userid_fk_8656820');
+            $table->unsignedBigInteger('item_type_id')->nullable()->index('property_type_fk_8657403');
+            $table->unsignedBigInteger('place_id')->nullable()->index('place_fk_8657368');
+            $table->string('make')->nullable();
+            $table->string('model')->nullable();
+            $table->string('registration_number')->nullable();
+            $table->string('service_type', 25)->nullable();
+            $table->integer('module')->nullable()->default(2);
+            $table->tinyInteger('is_featured')->nullable()->default(0);
+            $table->boolean('is_verified')->nullable()->default(false);
+            $table->boolean('status')->nullable()->default(false);
+            $table->integer('views_count')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureBookingsTable(): void
+    {
+        if (Schema::hasTable('bookings')) {
+            return;
+        }
+
+        Schema::create('bookings', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('token', 10)->nullable()->index('token');
+            $table->string('itemid')->nullable()->index('itemid');
+            $table->string('userid')->nullable()->index('userid');
+            $table->bigInteger('host_id')->nullable()->index('host_id');
+            $table->date('ride_date')->nullable()->index('check_in');
+            $table->enum('status', ['Pending', 'Ongoing', 'Arrived', 'Accepted', 'Cancelled', 'Confirmed', 'Declined', 'Expired', 'Refunded', 'Completed', 'Rejected'])->default('Pending')->index('status');
+            $table->decimal('price_per_km', 15)->default(0);
+            $table->decimal('base_price', 15)->default(0);
+            $table->decimal('service_charge', 15)->nullable()->default(0);
+            $table->decimal('iva_tax', 15)->nullable()->default(0);
+            $table->double('amount_to_pay', 15, 2)->nullable()->default(0);
+            $table->decimal('total', 15)->nullable()->default(0);
+            $table->decimal('admin_commission', 24)->default(0);
+            $table->decimal('vendor_commission', 24)->default(0);
+            $table->tinyInteger('vendor_commission_given')->default(0);
+            $table->string('currency_code')->nullable();
+            $table->string('cancellation_reasion')->nullable();
+            $table->string('transaction')->nullable();
+            $table->string('payment_method')->nullable();
+            $table->enum('payment_status', ['notpaid', 'pending', 'paid', 'offline', ''])->nullable();
+            $table->longText('firebase_json')->nullable();
+            $table->decimal('wall_amt', 15)->nullable()->default(0);
+            $table->integer('rating')->default(0);
+            $table->tinyInteger('module')->default(2);
+            $table->string('cancelled_by')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
         });
     }
 }
