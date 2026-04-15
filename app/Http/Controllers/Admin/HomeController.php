@@ -9,46 +9,61 @@ use App\Models\Modern\Item;
 use App\Models\Module;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class HomeController
 {
     public function index()
     {
+        try {
+            $module = Cache::remember('default_module', 3600, function () {
+                if (! Schema::hasTable('module')) {
+                    return null;
+                }
 
-        $module = Cache::remember('default_module', 3600, function () {
-            if (! Schema::hasTable('module')) {
-                return null;
+                return Module::where('default_module', '1')->first() ?? Module::first();
+            });
+
+            $moduleId = $module->id ?? 1;
+            $moduleName = $module->name ?? 'Qrides';
+            $currency = Cache::remember('general_default_currency', 3600, function () {
+                if (! Schema::hasTable('general_settings')) {
+                    return null;
+                }
+
+                return GeneralSetting::where('meta_key', 'general_default_currency')->first();
+            });
+
+            $installerWarning = installerExists();
+            $metrics = $this->fetchDashboardMetrics($moduleId);
+            $latestBookings = collect();
+            if (Schema::hasTable('bookings')) {
+                $latestBookings = Booking::with(['host', 'user', 'item'])
+                    ->where('module', $moduleId)
+                    ->where('payment_status', 'paid')
+                    ->where('created_at', '>=', Carbon::now()->startOfYear())
+                    ->latest()
+                    ->take(5)
+                    ->get();
             }
 
-            return Module::where('default_module', '1')->first() ?? Module::first();
-        });
+            $latestUsersData = $this->getLatestUsersData();
+            $latestBookingsData = $this->getLatestBookingsData($moduleId);
+        } catch (\Throwable $e) {
+            Log::error('Admin dashboard bootstrap failed, serving fallback view', [
+                'error' => $e->getMessage(),
+            ]);
 
-        $moduleId = $module->id ?? 1;
-        $moduleName = $module->name ?? 'Qrides';
-        $currency = Cache::remember('general_default_currency', 3600, function () {
-            if (! Schema::hasTable('general_settings')) {
-                return null;
-            }
-
-            return GeneralSetting::where('meta_key', 'general_default_currency')->first();
-        });
-
-        $installerWarning = installerExists();
-        $metrics = $this->fetchDashboardMetrics($moduleId);
-        $latestBookings = collect();
-        if (Schema::hasTable('bookings')) {
-            $latestBookings = Booking::with(['host', 'user', 'item'])
-                ->where('module', $moduleId)
-                ->where('payment_status', 'paid')
-                ->where('created_at', '>=', Carbon::now()->startOfYear())
-                ->latest()
-                ->take(5)
-                ->get();
+            $moduleId = 1;
+            $moduleName = 'Qrides';
+            $currency = null;
+            $installerWarning = installerExists();
+            $metrics = $this->defaultMetrics();
+            $latestBookings = collect();
+            $latestUsersData = collect();
+            $latestBookingsData = collect();
         }
-
-        $latestUsersData = $this->getLatestUsersData();
-        $latestBookingsData = $this->getLatestBookingsData($moduleId);
 
         return view('home', compact(
             'metrics',
