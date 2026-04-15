@@ -25,6 +25,8 @@ class EnsureAuthSchema extends Command
         $this->ensureModuleTable();
         $this->ensureGeneralSettingsTable();
         $this->ensureAppUsersTable();
+        $this->ensureAppUserMetaTable();
+        $this->normalizeAppUserMetaForeignKeyColumns();
         $this->ensureAppUsersBankAccountsTable();
         $this->ensureAppUserOtpsTable();
         $this->ensureLegacyVehicleMakesTable();
@@ -303,6 +305,41 @@ class EnsureAuthSchema extends Command
             $table->timestamps();
             $table->softDeletes();
         });
+    }
+
+    private function ensureAppUserMetaTable(): void
+    {
+        if (Schema::hasTable('app_user_meta')) {
+            return;
+        }
+
+        Schema::create('app_user_meta', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('user_id')->nullable()->index('user_id');
+            $table->string('meta_key')->nullable()->index('meta_key');
+            $table->longText('meta_value')->nullable();
+            $table->timestamp('created_at')->nullable()->useCurrent();
+            $table->timestamp('updated_at')->nullable()->useCurrentOnUpdate();
+            $table->unique(['user_id', 'meta_key'], 'user_id_2');
+        });
+    }
+
+    private function normalizeAppUserMetaForeignKeyColumns(): void
+    {
+        if (! Schema::hasTable('app_user_meta') || ! Schema::hasTable('app_users')) {
+            return;
+        }
+
+        try {
+            if (Schema::hasColumn('app_user_meta', 'user_id') && Schema::hasColumn('app_users', 'id')) {
+                $appUserIdColumnType = $this->getColumnType('app_users', 'id');
+                if ($appUserIdColumnType) {
+                    DB::statement("ALTER TABLE `app_user_meta` MODIFY `user_id` {$appUserIdColumnType} NULL");
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore normalization failures; startup should continue.
+        }
     }
 
     private function ensureRentalItemsTable(): void
