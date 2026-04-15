@@ -40,6 +40,12 @@ Route::get('password/reset/{token}', 'App\Http\Controllers\Auth\ResetPasswordCon
 Route::post('password/reset', 'App\Http\Controllers\Auth\ResetPasswordController@reset')->name('password.update');
 
 Route::redirect('/', '/login');
+Route::get('/healthz', function () {
+    return response()->json([
+        'status' => 'ok',
+        'service' => 'qrides-admin',
+    ], 200);
+});
 Route::get('/home', function () {
     if (session('status')) {
         return redirect()->route('admin.home')->with('status', session('status'));
