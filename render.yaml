@@ -66,10 +66,10 @@ services:
       sizeGB: 20
     envVars:
       - key: MYSQL_DATABASE
-        sync: false
+        value: qridesdb
       - key: MYSQL_USER
-        sync: false
+        value: qridesuser
       - key: MYSQL_PASSWORD
-        sync: false
+        generateValue: true
       - key: MYSQL_ROOT_PASSWORD
         generateValue: true
