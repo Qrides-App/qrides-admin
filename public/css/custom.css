@@ -1,14 +1,14 @@
 :root {
-  --primary-color: #FFC91F;
+  --primary-color: #3E6BCB;
   /* Main theme color */
-  --primary-text-color: #222;
+  --primary-text-color: #FFFFFF;
   /* Text color for on-primary backgrounds */
-  --secondary-color: #f4f4f4;
-  --hover-background: #E6B51C;
+  --secondary-color: #F5F7FA;
+  --hover-background: #2F57A6;
   /* Darker shade of primary for hover */
-  --dark-background: #3A3A3A;
+  --dark-background: #1A1A1A;
   /* Dark background for sidebars/panels */
-  --required-color: red;
+  --required-color: #F47C48;
 }
 
 * {
@@ -135,7 +135,7 @@ table.dataTable thead .sorting_desc {
 .alert-error,
 .label-danger,
 .modal-danger .modal-body {
-  background-color: #ff9933 !important;
+  background-color: #F47C48 !important;
 }
 
 .skin-purple .wrapper,
@@ -1116,13 +1116,13 @@ select.input-sm {
 
 /* --- Root Variables for Theme --- */
 :root {
-  --primary-color: #FFC91F;
-  --dark-bg: #212529;
-  --light-bg: #f8f9fa;
+  --primary-color: #3E6BCB;
+  --dark-bg: #2F57A6;
+  --light-bg: #F5F7FA;
   --white: #ffffff;
-  --text-dark: #333;
-  --text-light: #f8f9fa;
-  --border-color: #dee2e6;
+  --text-dark: #1A1A1A;
+  --text-light: #FFFFFF;
+  --border-color: #E5E7EB;
   --font-family: 'Poppins', sans-serif;
 }
 
@@ -1208,7 +1208,7 @@ select.input-sm {
 .form-control:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 4px rgba(255, 201, 31, 0.3);
+  box-shadow: 0 0 0 4px rgba(62, 107, 203, 0.22);
 }
 
 /* Styling the original .form-control-feedback */
@@ -1263,7 +1263,7 @@ select.input-sm {
 .btn-primary.btn-block {
   background-color: var(--primary-color);
   border: none;
-  color: var(--dark-bg);
+  color: #FFFFFF;
   padding: 14px;
   font-size: 1.1rem;
   font-weight: 600;
@@ -1272,7 +1272,7 @@ select.input-sm {
 }
 
 .btn-primary.btn-block:hover {
-  background-color: #e6b30f;
+  background-color: var(--hover-background);
   transform: translateY(-2px);
 }
 
@@ -1280,8 +1280,8 @@ select.input-sm {
 .copy-container {
   margin-top: 30px;
   padding: 15px;
-  background-color: #fef8e3;
-  border: 1px dashed #f0c340;
+  background-color: #F5F7FA;
+  border: 1px dashed #D1D5DB;
   border-radius: 8px;
   font-size: 0.9rem;
   display: flex;
@@ -1305,7 +1305,7 @@ select.input-sm {
 /* --- Right Side (Branding) --- */
 .right {
   flex-basis: 50%;
-  background-color: var(--dark-bg);
+  background: linear-gradient(165deg, #5C84D6 0%, #2F57A6 100%);
   color: var(--text-light);
   display: flex;
   justify-content: center;
@@ -1368,11 +1368,11 @@ select.input-sm {
 
 /* --- Root Variables for Theme --- */
 :root {
-  --primary-color: #FFC91F;
-  --dark-text: #212529;
-  --secondary-text: #6c757d;
-  --border-color: #dee2e6;
-  --page-bg: #f4f7f6;
+  --primary-color: #3E6BCB;
+  --dark-text: #1A1A1A;
+  --secondary-text: #6B7280;
+  --border-color: #E5E7EB;
+  --page-bg: #F5F7FA;
   --card-bg: #ffffff;
   --font-family: 'Poppins', sans-serif;
 }
@@ -1401,7 +1401,7 @@ select.input-sm {
 }
 
 .contact .form-control::placeholder {
-  color: #999;
+  color: #9CA3AF;
 }
 
 /* Focus state for the input field */
@@ -1409,7 +1409,7 @@ select.input-sm {
   outline: none;
   border-color: var(--primary-color);
   background-color: var(--card-bg);
-  box-shadow: 0 0 0 4px rgba(255, 201, 31, 0.25);
+  box-shadow: 0 0 0 4px rgba(62, 107, 203, 0.22);
 }
 
 /* --- Icon Styling (using existing classes) --- */
@@ -1491,7 +1491,7 @@ select.input-sm {
   margin-top: 10px;
   background-color: var(--primary-color);
   border: none;
-  color: var(--dark-text);
+  color: #FFFFFF;
   font-size: 14px;
   font-weight: 600;
   border-radius: 8px;
@@ -1501,18 +1501,17 @@ select.input-sm {
 }
 
 .contact .btn.btn-primary.btn-block:hover {
-  background-color: #e6b30f;
-  /* Darker yellow */
+  background-color: var(--hover-background);
   transform: translateY(-3px);
-  box-shadow: 0 4px 15px rgba(255, 201, 31, 0.4);
+  box-shadow: 0 4px 15px rgba(62, 107, 203, 0.35);
 }
 
 /* --- Demo Credentials Box --- */
 .contact .copy-container {
   margin-top: 30px;
   padding: 15px;
-  background-color: #fef8e3;
-  border: 1px dashed #f0c340;
+  background-color: #F5F7FA;
+  border: 1px dashed #D1D5DB;
   border-radius: 8px;
   font-size: 0.9rem;
   display: flex;
@@ -1540,7 +1539,7 @@ select.input-sm {
 
 
 .login-page .right {
-  background: #e6b30f !important
+  background: linear-gradient(165deg, #5C84D6 0%, #2F57A6 100%) !important
 }
 
 .login-box br {
@@ -1639,7 +1638,7 @@ iframe {
 
 
 .drivers-card {
-  border-left: 4px solid #E6B51C !important;
+  border-left: 4px solid #3E6BCB !important;
 }
 
 .drivers-card {
@@ -1647,7 +1646,7 @@ iframe {
 }
 
 .main-header .logo .logo-lg {
-  background: #ffc91f !important
+  background: #3E6BCB !important
 }
 
 .main-header .logo {

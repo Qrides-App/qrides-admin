@@ -275,8 +275,8 @@
     <style>
         .login-page .right {
             background: linear-gradient(212.38deg,
-                    rgba(255, 56, 92, 0.7) 0%,
-                    rgba(252, 29, 69, 0.71) 100%),
+                    rgba(92, 132, 214, 0.86) 0%,
+                    rgba(47, 87, 166, 0.88) 100%),
                 url({{$loginBackgroud}});
             background-size: cover;
 

@@ -123,7 +123,7 @@
         </div>
         <footer class="main-footer text-center">
             <strong>{{ $siteName }} &copy;</strong> {{ trans('global.allRightsReserved') }} <a
-                href='https://qrides.com/' target="_blank">QRIDES by BAMIRA TRANSPORTATION PRIVATE LIMITED</a>
+                href='https://qrides.in/' target="_blank">QRIDES by BAMIRA TRANSPORTATION PRIVATE LIMITED</a>
             <span>|</span>
             <a href='https://rareus.in' target="_blank">Designed, developed and maintained by Rareus Private
                 Limited</a>

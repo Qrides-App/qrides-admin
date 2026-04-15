@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => explode(',', env('CORS_ALLOWED_METHODS', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')),
 
-    'allowed_origins' => array_filter(array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', 'https://admin.qrides.app,https://qrides.app')))),
+    'allowed_origins' => array_filter(array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', 'https://admin.qrides.in,https://qrides.in,https://www.qrides.in')))),
 
     'allowed_origins_patterns' => [],
 
