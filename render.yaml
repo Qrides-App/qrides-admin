@@ -53,6 +53,12 @@ services:
         sync: false
       - key: FIREBASE_SERVER_KEY
         sync: false
+      - key: SUPER_ADMIN_NAME
+        value: Super Admin
+      - key: SUPER_ADMIN_EMAIL
+        sync: false
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
 
   - type: pserv
     name: qrides-mysql

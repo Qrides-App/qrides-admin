@@ -47,4 +47,4 @@ RUN sed -i 's/80/8080/g' /etc/apache2/ports.conf /etc/apache2/sites-available/00
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
 
-CMD ["apache2-foreground"]
+CMD ["/bin/sh", "-lc", "php artisan app:ensure-super-admin --no-interaction || true; apache2-foreground"]
