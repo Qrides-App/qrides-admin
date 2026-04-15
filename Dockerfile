@@ -11,9 +11,9 @@ RUN apt-get update \
 # PHP extensions
 RUN docker-php-ext-install pdo pdo_mysql zip gd intl exif
 
-# Required PECL extensions for current composer.lock
-RUN pecl install mongodb grpc \
-    && docker-php-ext-enable mongodb grpc
+# Required PECL extensions
+RUN pecl install mongodb \
+    && docker-php-ext-enable mongodb
 
 # Enable Apache rewrite
 RUN a2enmod rewrite headers
@@ -28,7 +28,8 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY . .
 
 # Composer install (no dev, optimized autoload)
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+# Skip ext-grpc platform check to avoid long grpc source builds on Render.
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-req=ext-grpc
 
 # Laravel permissions
 RUN chown -R www-data:www-data storage bootstrap/cache
