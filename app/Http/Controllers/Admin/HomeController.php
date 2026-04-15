@@ -9,6 +9,7 @@ use App\Models\Modern\Item;
 use App\Models\Module;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 class HomeController
 {
@@ -16,24 +17,35 @@ class HomeController
     {
 
         $module = Cache::remember('default_module', 3600, function () {
-            return Module::where('default_module', '1')->firstOrFail();
+            if (! Schema::hasTable('module')) {
+                return null;
+            }
+
+            return Module::where('default_module', '1')->first() ?? Module::first();
         });
 
-        $moduleId = $module->id;
-        $moduleName = $module->name;
+        $moduleId = $module->id ?? 1;
+        $moduleName = $module->name ?? 'Qrides';
         $currency = Cache::remember('general_default_currency', 3600, function () {
+            if (! Schema::hasTable('general_settings')) {
+                return null;
+            }
+
             return GeneralSetting::where('meta_key', 'general_default_currency')->first();
         });
 
         $installerWarning = installerExists();
         $metrics = $this->fetchDashboardMetrics($moduleId);
-        $latestBookings = Booking::with(['host', 'user', 'item'])
-            ->where('module', $moduleId)
-            ->where('payment_status', 'paid')
-            ->where('created_at', '>=', Carbon::now()->startOfYear())
-            ->latest()
-            ->take(5)
-            ->get();
+        $latestBookings = collect();
+        if (Schema::hasTable('bookings')) {
+            $latestBookings = Booking::with(['host', 'user', 'item'])
+                ->where('module', $moduleId)
+                ->where('payment_status', 'paid')
+                ->where('created_at', '>=', Carbon::now()->startOfYear())
+                ->latest()
+                ->take(5)
+                ->get();
+        }
 
         $latestUsersData = $this->getLatestUsersData();
         $latestBookingsData = $this->getLatestBookingsData($moduleId);
@@ -52,6 +64,9 @@ class HomeController
 
     private function fetchDashboardMetrics($moduleId)
     {
+        if (! Schema::hasTable('app_users') || ! Schema::hasTable('bookings')) {
+            return $this->defaultMetrics();
+        }
 
         $driverMetrics = Cache::remember('driver_metrics', 3600, function () {
             $today = Carbon::today()->toDateString();
@@ -108,6 +123,10 @@ class HomeController
                 ->where('module', $moduleId)
                 ->first();
         });
+
+        if (! $driverMetrics || ! $riderMetrics || ! $bookingMetrics) {
+            return $this->defaultMetrics();
+        }
 
         return [
             'total_drivers' => [
@@ -187,6 +206,10 @@ class HomeController
 
     private function getLatestUsersData()
     {
+        if (! Schema::hasTable('app_users')) {
+            return collect();
+        }
+
         return Cache::remember('latest_users_data', 3600, function () {
             $startDate = Carbon::now()->subWeek()->startOfDay();
             $endDate = Carbon::now()->endOfDay();
@@ -207,6 +230,10 @@ class HomeController
 
     private function getLatestBookingsData($moduleId)
     {
+        if (! Schema::hasTable('bookings')) {
+            return collect();
+        }
+
         return Cache::remember("latest_bookings_data_{$moduleId}", 3600, function () use ($moduleId) {
             $startDate = Carbon::now()->subWeek()->startOfDay();
             $endDate = Carbon::now()->endOfDay();
@@ -224,6 +251,40 @@ class HomeController
                     ];
                 });
         });
+    }
+
+    private function defaultMetrics(): array
+    {
+        $keys = [
+            'total_drivers',
+            'total_active_drivers',
+            'total_inactive_drivers',
+            'total_requested_drivers',
+            'total_riders',
+            'total_active_riders',
+            'today_new_riders',
+            'total_paid_bookings',
+            'running_rides',
+            'completed_rides',
+            'cancelled_rides',
+            'rejected_rides',
+            'today_new_drivers',
+            'today_running_rides',
+            'today_completed_rides',
+            'total_revenue',
+            'today_revenue',
+            'total_income',
+        ];
+
+        $metrics = [];
+        foreach ($keys as $key) {
+            $metrics[$key] = [
+                'chart_title' => str_replace('_', ' ', $key),
+                'total_number' => 0,
+            ];
+        }
+
+        return $metrics;
     }
 
     public function deleteInstaller()

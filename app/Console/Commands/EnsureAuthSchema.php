@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class EnsureAuthSchema extends Command
@@ -21,6 +22,9 @@ class EnsureAuthSchema extends Command
         $this->ensurePermissionRoleTable();
         $this->ensurePasswordResetsTable();
         $this->ensurePersonalAccessTokensTable();
+        $this->ensureModuleTable();
+        $this->ensureGeneralSettingsTable();
+        $this->ensureDefaultModuleRow();
 
         $this->info('Auth schema check completed.');
 
@@ -127,5 +131,63 @@ class EnsureAuthSchema extends Command
             $table->timestamps();
         });
     }
-}
 
+    private function ensureModuleTable(): void
+    {
+        if (Schema::hasTable('module')) {
+            return;
+        }
+
+        Schema::create('module', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->tinyInteger('status')->default(0);
+            $table->tinyInteger('default_module')->default(0);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureGeneralSettingsTable(): void
+    {
+        if (Schema::hasTable('general_settings')) {
+            return;
+        }
+
+        Schema::create('general_settings', function (Blueprint $table) {
+            $table->id();
+            $table->string('meta_key')->unique();
+            $table->text('meta_value');
+            $table->tinyInteger('module')->default(1);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureDefaultModuleRow(): void
+    {
+        if (! Schema::hasTable('module')) {
+            return;
+        }
+
+        $defaultModuleExists = DB::table('module')
+            ->where('default_module', 1)
+            ->exists();
+
+        if ($defaultModuleExists) {
+            return;
+        }
+
+        $now = now();
+
+        DB::table('module')->insert([
+            'name' => 'Ride',
+            'description' => 'Default module',
+            'status' => 1,
+            'default_module' => 1,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+    }
+}
