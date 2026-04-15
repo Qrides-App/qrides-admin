@@ -29,6 +29,8 @@ class EnsureAuthSchema extends Command
         $this->ensureAppUsersPackageColumn();
         $this->ensureAppUserMetaTable();
         $this->normalizeAppUserMetaForeignKeyColumns();
+        $this->ensurePayoutsTable();
+        $this->normalizePayoutForeignKeyColumns();
         $this->ensureEmailTypeTable();
         $this->ensureEmailSmsNotificationTable();
         $this->ensureEmailNotificationMappingsTable();
@@ -433,6 +435,45 @@ class EnsureAuthSchema extends Command
             $table->unsignedInteger('module')->default(1);
             $table->primary(['email_type_id', 'email_sms_notification_id', 'module']);
         });
+    }
+
+    private function ensurePayoutsTable(): void
+    {
+        if (Schema::hasTable('payouts')) {
+            return;
+        }
+
+        Schema::create('payouts', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('vendorid')->nullable()->index('fk_payouts_vendorid');
+            $table->decimal('amount', 15, 2)->default(0);
+            $table->string('currency')->nullable();
+            $table->string('request_by')->nullable()->default('vendor');
+            $table->string('payment_method')->nullable();
+            $table->enum('payout_status', ['Pending', 'Success', 'Rejected'])->nullable();
+            $table->longText('note')->nullable();
+            $table->tinyInteger('module')->default(1);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function normalizePayoutForeignKeyColumns(): void
+    {
+        if (! Schema::hasTable('payouts') || ! Schema::hasTable('app_users')) {
+            return;
+        }
+
+        try {
+            if (Schema::hasColumn('payouts', 'vendorid') && Schema::hasColumn('app_users', 'id')) {
+                $userIdType = $this->getColumnType('app_users', 'id');
+                if ($userIdType) {
+                    DB::statement("ALTER TABLE `payouts` MODIFY `vendorid` {$userIdType} NULL");
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore normalization failures; startup should continue.
+        }
     }
 
     private function normalizeEmailNotificationMappingForeignKeyColumns(): void
