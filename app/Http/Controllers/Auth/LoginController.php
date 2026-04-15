@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 class LoginController extends Controller
 {
@@ -42,8 +43,8 @@ class LoginController extends Controller
 
     protected function validateLogin(Request $request)
     {
-        $general_captcha = GeneralSetting::where('meta_key', 'general_captcha')->value('meta_value');
-        $private_key = GeneralSetting::where('meta_key', 'private_key')->value('meta_value');
+        $general_captcha = $this->safeSetting('general_captcha');
+        $private_key = $this->safeSetting('private_key');
         if ($general_captcha === 'yes') {
             $request->validate([
                 'email' => 'required|email',
@@ -110,16 +111,19 @@ class LoginController extends Controller
 
     public function showLoginForm()
     {
-        $settings = GeneralSetting::whereIn('meta_key', [
-            'general_name',
-            'general_description',
-            'general_logo',
-            'general_favicon',
-            'general_loginBackgroud',
-            'general_captcha',
-            'site_key',
-            'private_key',
-        ])->pluck('meta_value', 'meta_key'); // returns [meta_key => meta_value]
+        $settings = collect();
+        if (Schema::hasTable('general_settings')) {
+            $settings = GeneralSetting::whereIn('meta_key', [
+                'general_name',
+                'general_description',
+                'general_logo',
+                'general_favicon',
+                'general_loginBackgroud',
+                'general_captcha',
+                'site_key',
+                'private_key',
+            ])->pluck('meta_value', 'meta_key');
+        }
 
         return view('auth.login', [
             'logoUrl' => '/storage/'.($settings['general_logo'] ?? 'default_logo.png'),
@@ -131,5 +135,14 @@ class LoginController extends Controller
             'site_key' => $settings['site_key'] ?? '',
             'private_key' => $settings['private_key'] ?? '',
         ]);
+    }
+
+    private function safeSetting(string $key): ?string
+    {
+        if (! Schema::hasTable('general_settings')) {
+            return null;
+        }
+
+        return GeneralSetting::where('meta_key', $key)->value('meta_value');
     }
 }
