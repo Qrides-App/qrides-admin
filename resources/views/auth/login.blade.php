@@ -80,7 +80,7 @@
                             <div id="loader" style="display: none;">
                                 <div class="spinner"></div>
                             </div>
-                            <form method="POST" name="loginform" id="loginform" action="{{ route('login') }}">
+                            <form method="POST" name="loginform" id="loginform" action="/login">
                                 @csrf
                                 <div class="form-group{{ $errors->has('email') ? ' has-error' : '' }} has-feedback">
                                     <input id="email" type="email" name="email" class="email form-control" required

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class LoginController extends Controller
@@ -87,17 +88,28 @@ class LoginController extends Controller
             return $validationResult;
         }
 
-        $credentials = $request->only('email', 'password');
+        try {
+            $credentials = $request->only('email', 'password');
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
+            if (Auth::attempt($credentials, $request->boolean('remember'))) {
+                $request->session()->regenerate();
 
-            return redirect()->intended($this->redirectTo);
+                return redirect()->intended($this->redirectTo);
+            }
+
+            return back()
+                ->withErrors(['email' => trans('auth.failed')])
+                ->onlyInput('email');
+        } catch (\Throwable $e) {
+            Log::error('Login failed with server exception', [
+                'error' => $e->getMessage(),
+                'email' => $request->input('email'),
+            ]);
+
+            return back()
+                ->withErrors(['email' => 'Login is temporarily unavailable. Please try again.'])
+                ->onlyInput('email');
         }
-
-        return back()
-            ->withErrors(['email' => trans('auth.failed')])
-            ->onlyInput('email');
     }
 
     public function logout(Request $request): RedirectResponse
