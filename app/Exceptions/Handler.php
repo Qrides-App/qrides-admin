@@ -4,7 +4,9 @@ namespace App\Exceptions;
 
 use App\Http\Controllers\Traits\ResponseTrait;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -25,6 +27,33 @@ class Handler extends ExceptionHandler
     {
         $this->reportable(function (Throwable $e) {
             //
+        });
+
+        $this->renderable(function (QueryException $e, $request) {
+            $isAdminRoute = $request->is('admin') || $request->is('admin/*');
+
+            if (! $isAdminRoute) {
+                return null;
+            }
+
+            Log::error('Admin DB query exception', [
+                'path' => $request->path(),
+                'error' => $e->getMessage(),
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Some modules are not fully initialized yet. Please try again shortly.',
+                ], 500);
+            }
+
+            if ($request->routeIs('admin.home')) {
+                return null;
+            }
+
+            return redirect()
+                ->route('admin.home')
+                ->with('message', 'Some modules are still initializing. Please try again in a minute.');
         });
     }
 

@@ -42,7 +42,7 @@ class ViewComposerServiceProvider extends ServiceProvider
                 });
 
                 $this->currentModule = cache()->remember('cached_current_module', now()->addHours(24), function () {
-                    return Module::where('default_module', 1)->first();
+                    return Module::where('default_module', 1)->first() ?? Module::query()->first();
                 });
             }
 
