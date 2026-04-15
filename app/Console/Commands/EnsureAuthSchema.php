@@ -24,7 +24,9 @@ class EnsureAuthSchema extends Command
         $this->ensurePersonalAccessTokensTable();
         $this->ensureModuleTable();
         $this->ensureGeneralSettingsTable();
+        $this->ensureLanguagesTable();
         $this->ensureDefaultModuleRow();
+        $this->ensureDefaultLanguageRow();
 
         $this->info('Auth schema check completed.');
 
@@ -188,6 +190,41 @@ class EnsureAuthSchema extends Command
             'default_module' => 1,
             'created_at' => $now,
             'updated_at' => $now,
+        ]);
+    }
+
+    private function ensureLanguagesTable(): void
+    {
+        if (Schema::hasTable('languages')) {
+            return;
+        }
+
+        Schema::create('languages', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('short_name');
+            $table->boolean('language_status')->default(1);
+            $table->timestamps();
+        });
+    }
+
+    private function ensureDefaultLanguageRow(): void
+    {
+        if (! Schema::hasTable('languages')) {
+            return;
+        }
+
+        $defaultLanguageExists = DB::table('languages')->exists();
+        if ($defaultLanguageExists) {
+            return;
+        }
+
+        DB::table('languages')->insert([
+            'name' => 'English',
+            'short_name' => 'en',
+            'language_status' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 }

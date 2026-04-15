@@ -8,6 +8,7 @@ use App\Services\FirestoreService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
@@ -33,6 +34,8 @@ class AppServiceProvider extends ServiceProvider
         if (app()->environment('production')) {
             URL::forceScheme('https');
         }
+
+        $this->ensureStorageFrameworkDirectories();
 
         try {
             DB::connection()->getPdo();
@@ -112,6 +115,30 @@ class AppServiceProvider extends ServiceProvider
             ]);
         } catch (\Throwable $e) {
             Log::warning('ensureDefaultModuleExists failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    private function ensureStorageFrameworkDirectories(): void
+    {
+        try {
+            $paths = [
+                storage_path('framework'),
+                storage_path('framework/cache'),
+                storage_path('framework/cache/data'),
+                storage_path('framework/sessions'),
+                storage_path('framework/views'),
+                storage_path('logs'),
+            ];
+
+            foreach ($paths as $path) {
+                if (! File::isDirectory($path)) {
+                    File::makeDirectory($path, 0775, true, true);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('ensureStorageFrameworkDirectories failed', [
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

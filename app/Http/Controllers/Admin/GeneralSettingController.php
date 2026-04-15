@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -126,7 +127,7 @@ class GeneralSettingController extends Controller
         $hire_custom_min_hours = $settings['hire_custom_min_hours']->meta_value ?? 1;
         $hire_custom_max_hours = $settings['hire_custom_max_hours']->meta_value ?? 720;
         $hire_duration_options_json = $settings['hire_duration_options_json']->meta_value ?? '';
-        $languagedata = Language::all();
+        $languagedata = Schema::hasTable('languages') ? Language::all() : collect();
         $allcurrency = Currency::where('status', 1)->get();
 
         return view('admin.generalSettings.general.basic-configuration-form', compact(
