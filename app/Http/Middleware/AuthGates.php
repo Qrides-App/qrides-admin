@@ -12,6 +12,24 @@ class AuthGates
     public function handle($request, Closure $next)
     {
         try {
+            Gate::before(function ($user, $ability) {
+                // Bootstrap-safe super-admin bypass so full menu/actions stay available
+                // while permission tables are still being seeded.
+                if ((int) ($user->id ?? 0) === 1) {
+                    return true;
+                }
+
+                try {
+                    if (method_exists($user, 'roles') && $user->roles()->where('id', 1)->exists()) {
+                        return true;
+                    }
+                } catch (\Throwable $e) {
+                    // Ignore relation failures here; normal gate checks continue below.
+                }
+
+                return null;
+            });
+
             $user = auth()->user();
 
             if (! $user) {
