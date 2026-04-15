@@ -56,8 +56,8 @@
             <div class="panel-heading" role="tab" id="heading{{ $reply->id }}">
                 <h4 class="panel-title">
                     <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse{{ $reply->id }}" aria-expanded="true" aria-controls="collapse{{ $reply->id }}">
-                        @if($reply->user_id == $adminedata->id)
-                            {{ $adminedata->name }}
+                        @if($reply->user_id == optional($adminedata)->id)
+                            {{ optional($adminedata)->name }}
                         @else
                         {{ optional($reply->appUser)->first_name }} {{ optional($reply->appUser)->last_name }}
                         @endif

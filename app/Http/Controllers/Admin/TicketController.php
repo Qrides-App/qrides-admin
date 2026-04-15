@@ -10,7 +10,12 @@ use App\Models\SupportTicket;
 use App\Models\SupportTicketReply;
 use App\Models\User;
 use Auth;
+use Gate;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Schema;
 
 class TicketController extends Controller
 {
@@ -18,36 +23,60 @@ class TicketController extends Controller
 
     public function index(Request $request)
     {
-        $module = Module::where('default_module', '1')->first();
-        $moduleId = $module->id;
-        $moduleName = $module->name;
-        $status = request()->input('status');
+        if (! Schema::hasTable('support_tickets')) {
+            $moduleName = 'Support';
+            $statusCounts = ['all' => 0, 'open' => 0, 'closed' => 0];
+            $data = new LengthAwarePaginator([], 0, 50, 1, [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]);
 
-        $query = SupportTicket::where('module', $moduleId)
-            ->with(['appUser:id,first_name,last_name'])
-            ->orderBy('id', 'desc');
-
-        $statusCounts = [
-            'all' => SupportTicket::count(),
-            'open' => SupportTicket::where('thread_status', 1)->count(),
-            'closed' => SupportTicket::where('thread_status', 0)->count(),
-        ];
-
-        $isFiltered = ($status);
-
-        if ($status !== null) {
-            $query->where('support_tickets.thread_status', $status);
+            return view('admin.ticket.index', compact('data', 'moduleName', 'statusCounts'));
         }
 
-        $query->orderBy('support_tickets.id', 'desc');
+        $moduleId = null;
+        $moduleName = 'Support';
 
-        $data = $isFiltered ? $query->paginate(50) : $query->paginate(50);
+        if (Schema::hasTable('module')) {
+            $module = Module::where('default_module', '1')->first() ?? Module::query()->first();
+            if ($module) {
+                $moduleId = $module->id;
+                $moduleName = $module->name ?? $moduleName;
+            }
+        }
+
+        $status = $request->input('status');
+        $query = SupportTicket::query()->with(['appUser:id,first_name,last_name'])->orderByDesc('id');
+
+        if ($moduleId !== null && Schema::hasColumn('support_tickets', 'module')) {
+            $query->where('module', $moduleId);
+        }
+
+        if (in_array((string) $status, ['0', '1'], true)) {
+            $query->where('support_tickets.thread_status', (int) $status);
+        }
+
+        $countsQuery = SupportTicket::query();
+        if ($moduleId !== null && Schema::hasColumn('support_tickets', 'module')) {
+            $countsQuery->where('module', $moduleId);
+        }
+
+        $statusCounts = [
+            'all' => (clone $countsQuery)->count(),
+            'open' => (clone $countsQuery)->where('thread_status', 1)->count(),
+            'closed' => (clone $countsQuery)->where('thread_status', 0)->count(),
+        ];
+
+        $data = $query->paginate(50);
 
         return view('admin.ticket.index', compact('data', 'moduleName', 'statusCounts'));
     }
 
     public function reply(Request $request, $id)
     {
+        if (! Schema::hasTable('support_tickets')) {
+            abort(404);
+        }
 
         $data = SupportTicket::with(['replies.AppUser'])
             ->where('id', $id)
@@ -60,12 +89,12 @@ class TicketController extends Controller
 
     public function threads(Request $request, $id)
     {
-
-        if (Auth::check()) {
-
-            $userId = Auth::id();
+        if (! Schema::hasTable('support_tickets')) {
+            abort(404);
         }
-        $adminedata = User::find($userId);
+
+        $userId = Auth::id();
+        $adminedata = $userId ? User::find($userId) : null;
 
         $supportTicketData = SupportTicket::where('id', $id)->first();
 
@@ -78,11 +107,15 @@ class TicketController extends Controller
 
     public function create(Request $request, $id)
     {
+        if (! Schema::hasTable('support_tickets') || ! Schema::hasTable('support_ticket_replies')) {
+            return redirect()->route('admin.ticket.index')->with('error', 'Support ticket tables are not ready.');
+        }
+
         $status = 1;
         $admin = 1;
-        if (Auth::check()) {
-
-            $userId = Auth::id();
+        $userId = Auth::id();
+        if (! $userId) {
+            return redirect()->route('login');
         }
 
         $add = new SupportTicketReply;
@@ -94,9 +127,19 @@ class TicketController extends Controller
         $add->save();
 
         $ticket = SupportTicket::where('id', $id)->first();
+        if (! $ticket) {
+            return redirect()->route('admin.ticket.index');
+        }
 
         $templateId = 42;
-        $this->sendNotificationOnTicketReply($id, $ticket->user_id, $ticket->title, $templateId);
+        try {
+            $this->sendNotificationOnTicketReply($id, $ticket->user_id, $ticket->title, $templateId);
+        } catch (\Throwable $e) {
+            Log::warning('Ticket reply notification failed', [
+                'ticket_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return redirect()->route('admin.ticket.thread', $id);
 
@@ -105,6 +148,9 @@ class TicketController extends Controller
     public function destroy($id)
     {
         try {
+            if (! Schema::hasTable('support_tickets')) {
+                return response()->json(['message' => 'Support ticket table not found.'], 500);
+            }
             $ticket = SupportTicket::findOrFail($id);
             $ticket->delete();
 
