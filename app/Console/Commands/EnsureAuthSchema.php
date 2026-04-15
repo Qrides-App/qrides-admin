@@ -25,6 +25,8 @@ class EnsureAuthSchema extends Command
         $this->ensureModuleTable();
         $this->ensureGeneralSettingsTable();
         $this->ensureAppUsersTable();
+        $this->ensureLegacyItemTypesTable();
+        $this->ensureLegacyItemsTable();
         $this->ensureRentalItemsTable();
         $this->ensureBookingsTable();
         $this->ensureLanguagesTable();
@@ -360,6 +362,43 @@ class EnsureAuthSchema extends Command
             $table->integer('rating')->default(0);
             $table->tinyInteger('module')->default(2);
             $table->string('cancelled_by')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureLegacyItemTypesTable(): void
+    {
+        if (Schema::hasTable('item_types')) {
+            return;
+        }
+
+        Schema::create('item_types', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name')->nullable();
+            $table->string('description')->nullable();
+            $table->string('status')->default('1');
+            $table->integer('module')->nullable()->default(2);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureLegacyItemsTable(): void
+    {
+        if (Schema::hasTable('items')) {
+            return;
+        }
+
+        Schema::create('items', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('token', 191)->nullable()->index('token');
+            $table->string('title')->nullable();
+            $table->unsignedBigInteger('userid_id')->nullable();
+            $table->unsignedBigInteger('item_type_id')->nullable();
+            $table->unsignedBigInteger('place_id')->nullable();
+            $table->integer('module')->nullable()->default(2);
+            $table->boolean('status')->nullable()->default(false);
             $table->timestamps();
             $table->softDeletes();
         });
