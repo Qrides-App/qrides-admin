@@ -121,7 +121,17 @@ return [
     |
     */
 
-    'key' => env('APP_KEY'),
+    'key' => (function () {
+        $key = (string) env('APP_KEY', '');
+
+        if ($key === '' || str_starts_with($key, 'base64:') || strlen($key) === 32) {
+            return $key;
+        }
+
+        // Normalize non-Laravel APP_KEY formats (e.g., platform-generated random strings)
+        // into a deterministic 32-byte key so the app can boot.
+        return 'base64:'.base64_encode(substr(hash('sha256', $key, true), 0, 32));
+    })(),
 
     'cipher' => 'AES-256-CBC',
 
