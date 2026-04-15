@@ -32,6 +32,9 @@ class EnsureAuthSchema extends Command
         $this->ensureRentalItemsTable();
         $this->ensureBookingsTable();
         $this->ensureLanguagesTable();
+        $this->ensureSupportTicketsTable();
+        $this->ensureSupportTicketRepliesTable();
+        $this->normalizeSupportTicketReplyForeignKeyColumns();
         $this->ensureRentalItemTypesTable();
         $this->ensureItemCityFareTable();
         $this->ensureDefaultModuleRow();
@@ -387,6 +390,80 @@ class EnsureAuthSchema extends Command
             $table->index('phone');
             $table->index('otp_code');
         });
+    }
+
+    private function ensureSupportTicketsTable(): void
+    {
+        if (Schema::hasTable('support_tickets')) {
+            return;
+        }
+
+        Schema::create('support_tickets', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('thread_id', 20)->nullable();
+            $table->integer('thread_status')->default(1);
+            $table->string('title')->nullable();
+            $table->text('description')->nullable();
+            $table->tinyInteger('module')->default(2);
+            $table->timestamps();
+        });
+    }
+
+    private function ensureSupportTicketRepliesTable(): void
+    {
+        if (Schema::hasTable('support_ticket_replies')) {
+            return;
+        }
+
+        Schema::create('support_ticket_replies', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('thread_id');
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->boolean('is_admin_reply')->default(false);
+            $table->text('message')->nullable();
+            $table->integer('reply_status')->default(1);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function normalizeSupportTicketReplyForeignKeyColumns(): void
+    {
+        if (! Schema::hasTable('support_tickets') || ! Schema::hasTable('support_ticket_replies')) {
+            return;
+        }
+
+        try {
+            if (Schema::hasColumn('support_ticket_replies', 'thread_id') && Schema::hasColumn('support_tickets', 'id')) {
+                $supportIdColumnType = $this->getColumnType('support_tickets', 'id');
+                if ($supportIdColumnType) {
+                    DB::statement("ALTER TABLE `support_ticket_replies` MODIFY `thread_id` {$supportIdColumnType} NOT NULL");
+                }
+            }
+
+            if (Schema::hasTable('users') && Schema::hasColumn('support_ticket_replies', 'user_id') && Schema::hasColumn('users', 'id')) {
+                $userIdColumnType = $this->getColumnType('users', 'id');
+                if ($userIdColumnType) {
+                    DB::statement("ALTER TABLE `support_ticket_replies` MODIFY `user_id` {$userIdColumnType} NULL");
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore normalization failures; startup should continue.
+        }
+    }
+
+    private function getColumnType(string $table, string $column): ?string
+    {
+        $databaseName = DB::getDatabaseName();
+
+        $columnType = DB::table('information_schema.columns')
+            ->where('table_schema', $databaseName)
+            ->where('table_name', $table)
+            ->where('column_name', $column)
+            ->value('column_type');
+
+        return is_string($columnType) && $columnType !== '' ? $columnType : null;
     }
 
     private function ensureLegacyItemTypesTable(): void
