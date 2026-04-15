@@ -27,6 +27,10 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Copy app files
 COPY . .
 
+# Ensure Laravel writable/cache paths exist before Composer scripts run
+RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views \
+    && chown -R www-data:www-data bootstrap/cache storage
+
 # Composer install (no dev, optimized autoload)
 # Skip ext-grpc platform check to avoid long grpc source builds on Render.
 RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-req=ext-grpc
