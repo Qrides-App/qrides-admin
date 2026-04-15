@@ -54,9 +54,10 @@ Route::get('/home', function () {
     return redirect()->route('admin.home');
 });
 
-if (class_exists(\Laravel\Ui\UiServiceProvider::class)) {
-    Auth::routes(['register' => false]);
-}
+// Keep auth entry routes available in production without laravel/ui scaffolding.
+Route::get('login', 'App\Http\Controllers\Auth\LoginController@showLoginForm')->name('login');
+Route::post('login', 'App\Http\Controllers\Auth\LoginController@login');
+Route::post('logout', 'App\Http\Controllers\Auth\LoginController@logout')->name('logout');
 
 /*********** Front End ****/
 
