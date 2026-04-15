@@ -213,6 +213,12 @@
 
     <script>
         $(document).ready(function () {
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': $('input[name="_token"]').val()
+                }
+            });
+
             $('#loginform').submit(function (event) {
                 event.preventDefault();
 

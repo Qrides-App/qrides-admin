@@ -46,7 +46,11 @@ services:
       - key: CACHE_DRIVER
         value: file
       - key: SESSION_DRIVER
-        value: file
+        value: cookie
+      - key: SESSION_SECURE_COOKIE
+        value: true
+      - key: SESSION_SAME_SITE
+        value: lax
       - key: LOG_CHANNEL
         value: stderr
       - key: GOOGLE_MAP_KEY
