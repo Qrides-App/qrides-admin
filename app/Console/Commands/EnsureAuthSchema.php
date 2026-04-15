@@ -25,6 +25,8 @@ class EnsureAuthSchema extends Command
         $this->ensureModuleTable();
         $this->ensureGeneralSettingsTable();
         $this->ensureLanguagesTable();
+        $this->ensureRentalItemTypesTable();
+        $this->ensureItemCityFareTable();
         $this->ensureDefaultModuleRow();
         $this->ensureDefaultLanguageRow();
 
@@ -226,5 +228,40 @@ class EnsureAuthSchema extends Command
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    private function ensureRentalItemTypesTable(): void
+    {
+        if (Schema::hasTable('rental_item_types')) {
+            return;
+        }
+
+        Schema::create('rental_item_types', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name');
+            $table->string('description')->nullable();
+            $table->string('status')->default('1');
+            $table->boolean('module')->nullable()->default(false);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureItemCityFareTable(): void
+    {
+        if (Schema::hasTable('item_city_fare')) {
+            return;
+        }
+
+        Schema::create('item_city_fare', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('item_type_id')->index('item_type_id');
+            $table->decimal('min_fare', 10)->nullable();
+            $table->decimal('max_fare', 10)->nullable();
+            $table->decimal('recommended_fare', 10)->default(0);
+            $table->decimal('admin_commission', 5)->default(0);
+            $table->timestamp('created_at')->nullable()->useCurrent();
+            $table->timestamp('updated_at')->nullable()->useCurrentOnUpdate();
+        });
     }
 }
