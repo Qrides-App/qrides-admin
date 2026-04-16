@@ -23,6 +23,7 @@ class DemoDataSeeder extends Seeder
 
         $cityIds = $this->seedCities($now);
         $itemTypeIds = $this->seedItemTypes($now);
+        $this->seedItemCityFare($itemTypeIds, $now);
         $makeIds = $this->seedVehicleMakes($now);
 
         $itemIds = $this->seedItems($driverIds, $cityIds, $itemTypeIds, $makeIds, $now);
@@ -50,6 +51,18 @@ class DemoDataSeeder extends Seeder
             ['meta_key' => 'general_default_currency', 'meta_value' => 'INR'],
             ['meta_key' => 'hire_currency', 'meta_value' => 'INR'],
             ['meta_key' => 'hire_rate_per_hour', 'meta_value' => '450'],
+            ['meta_key' => 'fare_base', 'meta_value' => '40'],
+            ['meta_key' => 'fare_included_km', 'meta_value' => '2'],
+            ['meta_key' => 'fare_per_min', 'meta_value' => '1.5'],
+            ['meta_key' => 'fare_min_fare', 'meta_value' => '60'],
+            ['meta_key' => 'fare_booking_fee', 'meta_value' => '10'],
+            ['meta_key' => 'fare_pickup_included_km', 'meta_value' => '1'],
+            ['meta_key' => 'fare_pickup_per_km', 'meta_value' => '8'],
+            ['meta_key' => 'fare_waiting_per_min', 'meta_value' => '1'],
+            ['meta_key' => 'fare_tax_percent', 'meta_value' => '5'],
+            ['meta_key' => 'fare_airport_fee', 'meta_value' => '30'],
+            ['meta_key' => 'fare_surge_floor', 'meta_value' => '1.0'],
+            ['meta_key' => 'fare_surge_cap', 'meta_value' => '2.0'],
             ['meta_key' => 'push_notification_status', 'meta_value' => 'firebase'],
             ['meta_key' => 'firebase_server_key', 'meta_value' => 'demo-firebase-key'],
         ];
@@ -207,6 +220,33 @@ class DemoDataSeeder extends Seeder
         }
 
         return array_values(array_filter($ids));
+    }
+
+    private function seedItemCityFare(array $itemTypeIds, $now): void
+    {
+        if (!Schema::hasTable('item_city_fare') || empty($itemTypeIds)) {
+            return;
+        }
+
+        $fareTemplates = [
+            ['recommended_fare' => 18, 'min_fare' => 60, 'max_fare' => 1200, 'admin_commission' => 12, 'fare_per_minute' => 1.5],
+            ['recommended_fare' => 22, 'min_fare' => 80, 'max_fare' => 1600, 'admin_commission' => 12, 'fare_per_minute' => 1.8],
+            ['recommended_fare' => 14, 'min_fare' => 50, 'max_fare' => 900, 'admin_commission' => 10, 'fare_per_minute' => 1.2],
+        ];
+
+        foreach ($itemTypeIds as $idx => $itemTypeId) {
+            $template = $fareTemplates[$idx % count($fareTemplates)];
+            $row = $this->filterColumns('item_city_fare', array_merge($template, [
+                'item_type_id' => $itemTypeId,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]));
+
+            DB::table('item_city_fare')->updateOrInsert(
+                ['item_type_id' => $itemTypeId],
+                $row
+            );
+        }
     }
 
     private function seedVehicleMakes($now): array
