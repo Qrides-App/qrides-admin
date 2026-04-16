@@ -55,6 +55,12 @@ class BookingApiController extends Controller
             'discount_price' => 'nullable|numeric',
             'amount_to_pay' => 'nullable|numeric',
             'estimated_duration_min' => 'nullable|numeric',
+            'pickup_distance_km' => 'nullable|numeric|min:0',
+            'waiting_minutes' => 'nullable|numeric|min:0',
+            'toll_charge' => 'nullable|numeric|min:0',
+            'parking_charge' => 'nullable|numeric|min:0',
+            'airport_fee' => 'nullable|numeric|min:0',
+            'apply_airport_fee' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -75,7 +81,8 @@ class BookingApiController extends Controller
         $conversionRate = Currency::getValueByCurrencyCode($currencyCode);
         $durationMin = (float) $request->input('duration_minutes', 0);
         $surge = (float) $request->input('surge', 1);
-        $pricingResult = $this->getItemPricesDetails($itemTypeId, $distance, $couponCode, $walletAmount, $currencyCode, $conversionRate, $durationMin, $surge);
+        $fareExtras = $this->extractFareExtras($request);
+        $pricingResult = $this->getItemPricesDetails($itemTypeId, $distance, $couponCode, $walletAmount, $currencyCode, $conversionRate, $durationMin, $surge, $fareExtras);
         $pricing = $pricingResult->getData(true)['data'];
 
         $booking = new Booking;
@@ -516,6 +523,12 @@ class BookingApiController extends Controller
             'wallet_amount' => 'nullable|numeric|min:0',
             'selected_currency_code' => 'nullable|string',
             'token' => 'required|exists:app_users,token',
+            'pickup_distance_km' => 'nullable|numeric|min:0',
+            'waiting_minutes' => 'nullable|numeric|min:0',
+            'toll_charge' => 'nullable|numeric|min:0',
+            'parking_charge' => 'nullable|numeric|min:0',
+            'airport_fee' => 'nullable|numeric|min:0',
+            'apply_airport_fee' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -543,6 +556,7 @@ class BookingApiController extends Controller
         $walletAmount = $request->input('wallet_amount', 0);
         $selectedCurrencyCode = $request->input('selected_currency_code', 'USD');
         $conversionRate = Currency::getValueByCurrencyCode($selectedCurrencyCode);
+        $fareExtras = $this->extractFareExtras($request);
 
         $coupon = null;
 
@@ -580,7 +594,7 @@ class BookingApiController extends Controller
             }
         }
 
-        $pricingResult = $this->getItemPricesDetails($itemTypeId, $distance, $couponCode, $walletAmount, $selectedCurrencyCode, $conversionRate, $durationMin, $surge);
+        $pricingResult = $this->getItemPricesDetails($itemTypeId, $distance, $couponCode, $walletAmount, $selectedCurrencyCode, $conversionRate, $durationMin, $surge, $fareExtras);
         $pricing = $pricingResult->getData(true)['data'];
         $booking->price_per_km = $pricing['price_per_km'];
         $booking->base_price = $pricing['price_before_discount'];
@@ -751,5 +765,17 @@ class BookingApiController extends Controller
             'payment_status' => $booking->payment_status,
             'payment_method' => $booking->payment_method,
         ]);
+    }
+
+    private function extractFareExtras(Request $request): array
+    {
+        return [
+            'pickup_distance_km' => (float) $request->input('pickup_distance_km', 0),
+            'waiting_minutes' => (float) $request->input('waiting_minutes', 0),
+            'toll_charge' => (float) $request->input('toll_charge', 0),
+            'parking_charge' => (float) $request->input('parking_charge', 0),
+            'airport_fee' => (float) $request->input('airport_fee', 0),
+            'apply_airport_fee' => filter_var($request->input('apply_airport_fee', true), FILTER_VALIDATE_BOOLEAN),
+        ];
     }
 }

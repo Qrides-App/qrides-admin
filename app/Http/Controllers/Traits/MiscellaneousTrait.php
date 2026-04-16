@@ -73,7 +73,7 @@ trait MiscellaneousTrait
         return null;
     }
 
-    public function getItemPricesDetails($itemTypeId, $distance, $couponCode = null, $walletAmount = 0, $selectedCurrencyCode = 'USD', $conversionRate = 1, $durationMinutes = 0, $surgeMultiplier = 1.0)
+    public function getItemPricesDetails($itemTypeId, $distance, $couponCode = null, $walletAmount = 0, $selectedCurrencyCode = 'USD', $conversionRate = 1, $durationMinutes = 0, $surgeMultiplier = 1.0, array $fareExtras = [])
     {
         try {
             $itemType = ItemType::with('cityFare')->findOrFail($itemTypeId);
@@ -84,6 +84,12 @@ trait MiscellaneousTrait
             $includedKm = (float) (GeneralSetting::getMetaValue('fare_included_km') ?? 3);
             $perMinRate = (float) (GeneralSetting::getMetaValue('fare_per_min') ?? 0);
             $minFare = (float) (GeneralSetting::getMetaValue('fare_min_fare') ?? $baseFare);
+            $bookingFee = (float) (GeneralSetting::getMetaValue('fare_booking_fee') ?? 0);
+            $pickupIncludedKm = (float) (GeneralSetting::getMetaValue('fare_pickup_included_km') ?? 1);
+            $pickupPerKm = (float) (GeneralSetting::getMetaValue('fare_pickup_per_km') ?? $perKmRate);
+            $waitingPerMin = (float) (GeneralSetting::getMetaValue('fare_waiting_per_min') ?? 0);
+            $taxPercent = (float) (GeneralSetting::getMetaValue('fare_tax_percent') ?? 0);
+            $airportFeeDefault = (float) (GeneralSetting::getMetaValue('fare_airport_fee') ?? 0);
             $surgeCap = (float) (GeneralSetting::getMetaValue('fare_surge_cap') ?? 2.0);
             $surgeFloor = (float) (GeneralSetting::getMetaValue('fare_surge_floor') ?? 1.0);
             $timeSurgeRulesJson = GeneralSetting::getMetaValue('fare_time_surge_rules');
@@ -124,7 +130,25 @@ trait MiscellaneousTrait
 
             $subtotal = $baseFare + $distanceCost + $timeCost;
             $surgedSubtotal = $subtotal * $surgeMultiplier;
-            $priceBeforeDiscount = max($minFare, $surgedSubtotal);
+            $rideFareAfterSurge = max($minFare, $surgedSubtotal);
+
+            $pickupDistanceKm = max(0, (float) ($fareExtras['pickup_distance_km'] ?? 0));
+            $waitingMinutes = max(0, (float) ($fareExtras['waiting_minutes'] ?? 0));
+            $tollCharge = max(0, (float) ($fareExtras['toll_charge'] ?? 0));
+            $parkingCharge = max(0, (float) ($fareExtras['parking_charge'] ?? 0));
+            $airportFee = max(0, (float) ($fareExtras['airport_fee'] ?? $airportFeeDefault));
+            $applyAirportFee = array_key_exists('apply_airport_fee', $fareExtras)
+                ? filter_var($fareExtras['apply_airport_fee'], FILTER_VALIDATE_BOOLEAN)
+                : true;
+            if (! $applyAirportFee) {
+                $airportFee = 0;
+            }
+
+            $pickupBillableKm = max(0, $pickupDistanceKm - $pickupIncludedKm);
+            $pickupCharge = $pickupBillableKm * $pickupPerKm;
+            $waitingCharge = $waitingMinutes * $waitingPerMin;
+
+            $priceBeforeDiscount = $rideFareAfterSurge + $bookingFee + $pickupCharge + $waitingCharge + $tollCharge + $parkingCharge + $airportFee;
 
             $totalPrice = $priceBeforeDiscount;
             $couponDiscount = 0;
@@ -132,7 +156,7 @@ trait MiscellaneousTrait
             if ($couponCode) {
                 $coupon = AddCoupon::where('coupon_code', $couponCode)->first();
                 if ($coupon && $totalPrice >= $coupon->min_order_amount) {
-                    if ($coupon->coupon_type === 'percentage') {
+                    if (in_array($coupon->coupon_type, ['percentage', 'percent'], true)) {
                         $couponDiscount = ($totalPrice * $coupon->coupon_value) / 100;
                     } else {
                         $couponDiscount = $coupon->coupon_value;
@@ -141,6 +165,9 @@ trait MiscellaneousTrait
                 }
             }
 
+            $totalPrice = max(0, $totalPrice);
+            $taxAmount = $totalPrice * ($taxPercent / 100);
+            $totalPrice += $taxAmount;
             $totalPrice = max(0, $totalPrice);
             $walletApplied = min($walletAmount, $totalPrice);
             $remainingWallet = $walletAmount - $walletApplied;
@@ -152,6 +179,15 @@ trait MiscellaneousTrait
                 'price_per_km' => $this->formatPriceWithConversion($perKmRate, $selectedCurrencyCode, $conversionRate),
                 'price_per_min' => $this->formatPriceWithConversion($perMinRate, $selectedCurrencyCode, $conversionRate),
                 'base_fare' => $this->formatPriceWithConversion($baseFare, $selectedCurrencyCode, $conversionRate),
+                'ride_fare_after_surge' => $this->formatPriceWithConversion($rideFareAfterSurge, $selectedCurrencyCode, $conversionRate),
+                'booking_fee' => $this->formatPriceWithConversion($bookingFee, $selectedCurrencyCode, $conversionRate),
+                'pickup_charge' => $this->formatPriceWithConversion($pickupCharge, $selectedCurrencyCode, $conversionRate),
+                'waiting_charge' => $this->formatPriceWithConversion($waitingCharge, $selectedCurrencyCode, $conversionRate),
+                'toll_charge' => $this->formatPriceWithConversion($tollCharge, $selectedCurrencyCode, $conversionRate),
+                'parking_charge' => $this->formatPriceWithConversion($parkingCharge, $selectedCurrencyCode, $conversionRate),
+                'airport_fee' => $this->formatPriceWithConversion($airportFee, $selectedCurrencyCode, $conversionRate),
+                'tax_percent' => $taxPercent,
+                'tax_amount' => $this->formatPriceWithConversion($taxAmount, $selectedCurrencyCode, $conversionRate),
                 'surge_multiplier' => $surgeMultiplier,
                 'price_before_discount' => $this->formatPriceWithConversion($priceBeforeDiscount, $selectedCurrencyCode, $conversionRate),
                 'coupon_discount' => $this->formatPriceWithConversion($couponDiscount, $selectedCurrencyCode, $conversionRate),
@@ -160,7 +196,7 @@ trait MiscellaneousTrait
                 'gross_price' => $this->formatPriceWithConversion($grossPrice, $selectedCurrencyCode, $conversionRate),
                 'total_price' => $this->formatPriceWithConversion($totalPrice, $selectedCurrencyCode, $conversionRate),
                 'coupon_code' => $couponCode,
-                'pricing_type' => 'Distance + Time + Surge',
+                'pricing_type' => 'Distance + Time + Surge + Platform Fees',
             ];
 
             return $this->addSuccessResponse(200, 'Item pricing calculated successfully.', $response);
