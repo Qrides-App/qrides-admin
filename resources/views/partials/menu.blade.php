@@ -117,7 +117,8 @@
 
             @endcan
             @can('front_management_access')
-                <li class="treeview">
+                <li
+                    class="treeview {{ request()->is('admin/drivers') || request()->is('admin/drivers/*') || request()->is('admin/driver/*') ? 'active menu-open' : '' }}">
                     <a href="#">
                         <i class="fa-fw fas fa-users"></i>
                         <span>{{ trans('menu.driverManagement') }}</span>
@@ -170,7 +171,8 @@
             @endcan
 
             @can('front_management_access')
-                <li class="treeview">
+                <li
+                    class="treeview {{ request()->is('admin/app-users') || request()->is('admin/app-users/*') ? 'active menu-open' : '' }}">
                     <a href="#">
                         <i class="fa-fw fas fa-users"></i>
                         <span>{{ trans('menu.riderManagement') }}</span>
