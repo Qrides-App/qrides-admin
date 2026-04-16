@@ -13,7 +13,7 @@
         <div class="col-md-9">
             <div class="box box-info">
                 <div class="box-header with-border">
-                    <h3 class="box-title">Distance + Time + Surge</h3>
+                    <h3 class="box-title">Distance + Time + Surge + Platform Fees</h3>
                 </div>
                 <form method="post" action="{{ route('admin.fareSettingUpdate') }}" class="form-horizontal">
                     {{ csrf_field() }}
@@ -58,6 +58,51 @@
                             <div class="col-sm-6">
                                 <input type="number" step="0.1" min="0.1" name="fare_surge_floor" class="form-control" value="{{ old('fare_surge_floor', $fare_surge_floor) }}" required>
                                 <small class="text-muted">Min multiplier (e.g., 1.0 normal, 0.8 off-peak).</small>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h4 class="col-sm-12">Fees & Taxes</h4>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Booking Fee</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="0.01" min="0" name="fare_booking_fee" class="form-control" value="{{ old('fare_booking_fee', $fare_booking_fee) }}" required>
+                                <small class="text-muted">Flat platform fee per trip.</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Pickup Included KM</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="0.1" min="0" name="fare_pickup_included_km" class="form-control" value="{{ old('fare_pickup_included_km', $fare_pickup_included_km) }}" required>
+                                <small class="text-muted">Free pickup distance before pickup charge starts.</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Pickup Per KM</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="0.01" min="0" name="fare_pickup_per_km" class="form-control" value="{{ old('fare_pickup_per_km', $fare_pickup_per_km) }}" required>
+                                <small class="text-muted">Rate applied to billable pickup kms.</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Waiting Per Min</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="0.01" min="0" name="fare_waiting_per_min" class="form-control" value="{{ old('fare_waiting_per_min', $fare_waiting_per_min) }}" required>
+                                <small class="text-muted">Waiting charge per minute.</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Tax Percent</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="0.01" min="0" max="100" name="fare_tax_percent" class="form-control" value="{{ old('fare_tax_percent', $fare_tax_percent) }}" required>
+                                <small class="text-muted">Applied after coupon on subtotal.</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Airport Fee</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="0.01" min="0" name="fare_airport_fee" class="form-control" value="{{ old('fare_airport_fee', $fare_airport_fee) }}" required>
+                                <small class="text-muted">Default airport surcharge when enabled.</small>
                             </div>
                         </div>
 

@@ -222,14 +222,27 @@ class GeneralSettingController extends Controller
             'fare_included_km',
             'fare_per_min',
             'fare_min_fare',
+            'fare_booking_fee',
+            'fare_pickup_included_km',
+            'fare_pickup_per_km',
+            'fare_waiting_per_min',
+            'fare_tax_percent',
+            'fare_airport_fee',
             'fare_surge_cap',
             'fare_surge_floor',
+            'fare_time_surge_rules',
         ])->pluck('meta_value', 'meta_key');
 
         $fare_base = $meta['fare_base'] ?? 30;
         $fare_included_km = $meta['fare_included_km'] ?? 3;
         $fare_per_min = $meta['fare_per_min'] ?? 0;
         $fare_min_fare = $meta['fare_min_fare'] ?? $fare_base;
+        $fare_booking_fee = $meta['fare_booking_fee'] ?? 0;
+        $fare_pickup_included_km = $meta['fare_pickup_included_km'] ?? 1;
+        $fare_pickup_per_km = $meta['fare_pickup_per_km'] ?? 0;
+        $fare_waiting_per_min = $meta['fare_waiting_per_min'] ?? 0;
+        $fare_tax_percent = $meta['fare_tax_percent'] ?? 0;
+        $fare_airport_fee = $meta['fare_airport_fee'] ?? 0;
         $fare_surge_cap = $meta['fare_surge_cap'] ?? 2.0;
         $fare_surge_floor = $meta['fare_surge_floor'] ?? 1.0;
         $fare_time_surge_rules = $meta['fare_time_surge_rules'] ?? '';
@@ -239,6 +252,12 @@ class GeneralSettingController extends Controller
             'fare_included_km',
             'fare_per_min',
             'fare_min_fare',
+            'fare_booking_fee',
+            'fare_pickup_included_km',
+            'fare_pickup_per_km',
+            'fare_waiting_per_min',
+            'fare_tax_percent',
+            'fare_airport_fee',
             'fare_surge_cap',
             'fare_surge_floor',
             'fare_time_surge_rules'
@@ -254,6 +273,12 @@ class GeneralSettingController extends Controller
             'fare_included_km' => 'required|numeric|min:0',
             'fare_per_min' => 'required|numeric|min:0',
             'fare_min_fare' => 'required|numeric|min:0',
+            'fare_booking_fee' => 'required|numeric|min:0',
+            'fare_pickup_included_km' => 'required|numeric|min:0',
+            'fare_pickup_per_km' => 'required|numeric|min:0',
+            'fare_waiting_per_min' => 'required|numeric|min:0',
+            'fare_tax_percent' => 'required|numeric|min:0|max:100',
+            'fare_airport_fee' => 'required|numeric|min:0',
             'fare_surge_cap' => 'required|numeric|min:0.1',
             'fare_surge_floor' => 'required|numeric|min:0.1',
             'fare_time_surge_rules' => 'nullable|string',
