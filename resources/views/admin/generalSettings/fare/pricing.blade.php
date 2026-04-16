@@ -118,6 +118,58 @@
                                 </small>
                             </div>
                         </div>
+
+                        <hr>
+                        <h4 class="col-sm-12">Auto Dynamic Surge</h4>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Enable Auto Surge</label>
+                            <div class="col-sm-6">
+                                <select name="fare_dynamic_surge_enabled" class="form-control" required>
+                                    <option value="1" {{ old('fare_dynamic_surge_enabled', $fare_dynamic_surge_enabled) == 1 ? 'selected' : '' }}>Enabled</option>
+                                    <option value="0" {{ old('fare_dynamic_surge_enabled', $fare_dynamic_surge_enabled) == 0 ? 'selected' : '' }}>Disabled</option>
+                                </select>
+                                <small class="text-muted">Uses live demand/supply ratio and optional weather/event multipliers.</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Demand Window (min)</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="1" min="1" max="240" name="fare_dynamic_surge_window_min" class="form-control" value="{{ old('fare_dynamic_surge_window_min', $fare_dynamic_surge_window_min) }}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Demand Sensitivity</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="0.01" min="0" max="2" name="fare_dynamic_surge_sensitivity" class="form-control" value="{{ old('fare_dynamic_surge_sensitivity', $fare_dynamic_surge_sensitivity) }}" required>
+                                <small class="text-muted">How strongly demand/supply ratio affects price.</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Dynamic Surge Min</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="0.01" min="0.1" max="5" name="fare_dynamic_surge_min" class="form-control" value="{{ old('fare_dynamic_surge_min', $fare_dynamic_surge_min) }}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Dynamic Surge Max</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="0.01" min="0.1" max="10" name="fare_dynamic_surge_max" class="form-control" value="{{ old('fare_dynamic_surge_max', $fare_dynamic_surge_max) }}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Weather Multipliers JSON</label>
+                            <div class="col-sm-6">
+                                <textarea name="fare_weather_multipliers_json" rows="3" class="form-control" placeholder='{"rain":1.25,"storm":1.5}'>{{ old('fare_weather_multipliers_json', $fare_weather_multipliers_json) }}</textarea>
+                                <small class="text-muted">Map weather condition key to multiplier.</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Event Multipliers JSON</label>
+                            <div class="col-sm-6">
+                                <textarea name="fare_event_multipliers_json" rows="4" class="form-control" placeholder='[{"key":"concert_night","multiplier":1.35},{"name":"City Marathon","start_at":"2026-05-10 05:00:00","end_at":"2026-05-10 14:00:00","multiplier":1.5}]'>{{ old('fare_event_multipliers_json', $fare_event_multipliers_json) }}</textarea>
+                                <small class="text-muted">Optional list of event-based surge rules by key and/or time window.</small>
+                            </div>
+                        </div>
                     </div>
                     <div class="box-footer">
                         <button type="submit" class="btn btn-info btn-space">Save</button>

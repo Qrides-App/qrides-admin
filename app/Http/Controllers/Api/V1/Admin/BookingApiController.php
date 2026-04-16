@@ -61,6 +61,9 @@ class BookingApiController extends Controller
             'parking_charge' => 'nullable|numeric|min:0',
             'airport_fee' => 'nullable|numeric|min:0',
             'apply_airport_fee' => 'nullable|boolean',
+            'weather_condition' => 'nullable|string|max:50',
+            'event_key' => 'nullable|string|max:120',
+            'pickup_city_id' => 'nullable|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -529,6 +532,9 @@ class BookingApiController extends Controller
             'parking_charge' => 'nullable|numeric|min:0',
             'airport_fee' => 'nullable|numeric|min:0',
             'apply_airport_fee' => 'nullable|boolean',
+            'weather_condition' => 'nullable|string|max:50',
+            'event_key' => 'nullable|string|max:120',
+            'pickup_city_id' => 'nullable|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -776,6 +782,9 @@ class BookingApiController extends Controller
             'parking_charge' => (float) $request->input('parking_charge', 0),
             'airport_fee' => (float) $request->input('airport_fee', 0),
             'apply_airport_fee' => filter_var($request->input('apply_airport_fee', true), FILTER_VALIDATE_BOOLEAN),
+            'weather_condition' => $request->input('weather_condition'),
+            'event_key' => $request->input('event_key'),
+            'pickup_city_id' => $request->input('pickup_city_id'),
         ];
     }
 }

@@ -231,6 +231,13 @@ class GeneralSettingController extends Controller
             'fare_surge_cap',
             'fare_surge_floor',
             'fare_time_surge_rules',
+            'fare_dynamic_surge_enabled',
+            'fare_dynamic_surge_window_min',
+            'fare_dynamic_surge_sensitivity',
+            'fare_dynamic_surge_min',
+            'fare_dynamic_surge_max',
+            'fare_weather_multipliers_json',
+            'fare_event_multipliers_json',
         ])->pluck('meta_value', 'meta_key');
 
         $fare_base = $meta['fare_base'] ?? 30;
@@ -246,6 +253,13 @@ class GeneralSettingController extends Controller
         $fare_surge_cap = $meta['fare_surge_cap'] ?? 2.0;
         $fare_surge_floor = $meta['fare_surge_floor'] ?? 1.0;
         $fare_time_surge_rules = $meta['fare_time_surge_rules'] ?? '';
+        $fare_dynamic_surge_enabled = (int) ($meta['fare_dynamic_surge_enabled'] ?? 1);
+        $fare_dynamic_surge_window_min = $meta['fare_dynamic_surge_window_min'] ?? 15;
+        $fare_dynamic_surge_sensitivity = $meta['fare_dynamic_surge_sensitivity'] ?? 0.35;
+        $fare_dynamic_surge_min = $meta['fare_dynamic_surge_min'] ?? 1.0;
+        $fare_dynamic_surge_max = $meta['fare_dynamic_surge_max'] ?? 1.8;
+        $fare_weather_multipliers_json = $meta['fare_weather_multipliers_json'] ?? '{"rain":1.25,"storm":1.5}';
+        $fare_event_multipliers_json = $meta['fare_event_multipliers_json'] ?? '';
 
         return view('admin.generalSettings.fare.pricing', compact(
             'fare_base',
@@ -260,7 +274,14 @@ class GeneralSettingController extends Controller
             'fare_airport_fee',
             'fare_surge_cap',
             'fare_surge_floor',
-            'fare_time_surge_rules'
+            'fare_time_surge_rules',
+            'fare_dynamic_surge_enabled',
+            'fare_dynamic_surge_window_min',
+            'fare_dynamic_surge_sensitivity',
+            'fare_dynamic_surge_min',
+            'fare_dynamic_surge_max',
+            'fare_weather_multipliers_json',
+            'fare_event_multipliers_json'
         ));
     }
 
@@ -282,10 +303,18 @@ class GeneralSettingController extends Controller
             'fare_surge_cap' => 'required|numeric|min:0.1',
             'fare_surge_floor' => 'required|numeric|min:0.1',
             'fare_time_surge_rules' => 'nullable|string',
+            'fare_dynamic_surge_enabled' => 'required|in:0,1',
+            'fare_dynamic_surge_window_min' => 'required|integer|min:1|max:240',
+            'fare_dynamic_surge_sensitivity' => 'required|numeric|min:0|max:2',
+            'fare_dynamic_surge_min' => 'required|numeric|min:0.1|max:5',
+            'fare_dynamic_surge_max' => 'required|numeric|min:0.1|max:10',
+            'fare_weather_multipliers_json' => 'nullable|string',
+            'fare_event_multipliers_json' => 'nullable|string',
         ]);
 
         // clamp cap >= floor
         $data['fare_surge_cap'] = max((float) $data['fare_surge_cap'], (float) $data['fare_surge_floor']);
+        $data['fare_dynamic_surge_max'] = max((float) $data['fare_dynamic_surge_max'], (float) $data['fare_dynamic_surge_min']);
 
         // validate optional time surge JSON
         if (! empty($data['fare_time_surge_rules'])) {
@@ -315,6 +344,22 @@ class GeneralSettingController extends Controller
                 ];
             }
             $data['fare_time_surge_rules'] = json_encode($cleaned, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
+        if (! empty($data['fare_weather_multipliers_json'])) {
+            $decodedWeather = json_decode($data['fare_weather_multipliers_json'], true);
+            if (! is_array($decodedWeather)) {
+                return back()->withErrors(['fare_weather_multipliers_json' => 'Invalid JSON.'])->withInput();
+            }
+            $data['fare_weather_multipliers_json'] = json_encode($decodedWeather, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
+        if (! empty($data['fare_event_multipliers_json'])) {
+            $decodedEvents = json_decode($data['fare_event_multipliers_json'], true);
+            if (! is_array($decodedEvents)) {
+                return back()->withErrors(['fare_event_multipliers_json' => 'Invalid JSON.'])->withInput();
+            }
+            $data['fare_event_multipliers_json'] = json_encode($decodedEvents, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         }
 
         foreach ($data as $k => $v) {

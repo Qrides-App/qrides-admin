@@ -92,8 +92,15 @@ trait MiscellaneousTrait
             $airportFeeDefault = (float) (GeneralSetting::getMetaValue('fare_airport_fee') ?? 0);
             $surgeCap = (float) (GeneralSetting::getMetaValue('fare_surge_cap') ?? 2.0);
             $surgeFloor = (float) (GeneralSetting::getMetaValue('fare_surge_floor') ?? 1.0);
+            $dynamicEnabled = filter_var((GeneralSetting::getMetaValue('fare_dynamic_surge_enabled') ?? '1'), FILTER_VALIDATE_BOOLEAN);
+            $dynamicWindowMin = max(1, (int) (GeneralSetting::getMetaValue('fare_dynamic_surge_window_min') ?? 15));
+            $dynamicSensitivity = (float) (GeneralSetting::getMetaValue('fare_dynamic_surge_sensitivity') ?? 0.35);
+            $dynamicMin = max(0.1, (float) (GeneralSetting::getMetaValue('fare_dynamic_surge_min') ?? 1.0));
+            $dynamicMax = max($dynamicMin, (float) (GeneralSetting::getMetaValue('fare_dynamic_surge_max') ?? 1.8));
             $timeSurgeRulesJson = GeneralSetting::getMetaValue('fare_time_surge_rules');
             $timeSurgeRules = $timeSurgeRulesJson ? json_decode($timeSurgeRulesJson, true) : [];
+            $weatherRules = $this->parseJsonSettingAsArray('fare_weather_multipliers_json');
+            $eventRules = $this->parseJsonSettingAsArray('fare_event_multipliers_json');
 
             // time-based surge (server-side)
             $now = Carbon::now();
@@ -118,8 +125,21 @@ trait MiscellaneousTrait
                 }
             }
 
-            // combine client surge (traffic/supply) with time-based
-            $surgeMultiplier = (float) $surgeMultiplier * (float) $timeSurge;
+            $manualSurge = max(0.1, (float) $surgeMultiplier);
+            $cityId = isset($fareExtras['pickup_city_id']) ? (int) $fareExtras['pickup_city_id'] : null;
+            $weatherCondition = isset($fareExtras['weather_condition']) ? strtolower(trim((string) $fareExtras['weather_condition'])) : null;
+            $eventKey = isset($fareExtras['event_key']) ? trim((string) $fareExtras['event_key']) : null;
+
+            $demandSupplyContext = $dynamicEnabled
+                ? $this->calculateDemandSupplySurgeContext($dynamicWindowMin, $dynamicSensitivity, $dynamicMin, $dynamicMax, $cityId)
+                : ['multiplier' => 1.0, 'demand_count' => 0, 'available_drivers' => 0, 'busy_drivers' => 0, 'supply_count' => 0, 'ratio' => 0];
+
+            $demandSupplySurge = (float) ($demandSupplyContext['multiplier'] ?? 1.0);
+            $weatherSurge = $dynamicEnabled ? $this->resolveWeatherSurge($weatherRules, $weatherCondition) : 1.0;
+            $eventSurge = $dynamicEnabled ? $this->resolveEventSurge($eventRules, $eventKey, $now) : 1.0;
+
+            // combine client surge (traffic/supply), time-based and server dynamic multipliers
+            $surgeMultiplier = $manualSurge * (float) $timeSurge * $demandSupplySurge * $weatherSurge * $eventSurge;
 
             // clamp surge
             $surgeMultiplier = max($surgeFloor, min($surgeCap, (float) $surgeMultiplier));
@@ -188,7 +208,23 @@ trait MiscellaneousTrait
                 'airport_fee' => $this->formatPriceWithConversion($airportFee, $selectedCurrencyCode, $conversionRate),
                 'tax_percent' => $taxPercent,
                 'tax_amount' => $this->formatPriceWithConversion($taxAmount, $selectedCurrencyCode, $conversionRate),
+                'manual_surge_multiplier' => $manualSurge,
+                'time_surge_multiplier' => $timeSurge,
+                'demand_supply_surge_multiplier' => $demandSupplySurge,
+                'weather_surge_multiplier' => $weatherSurge,
+                'event_surge_multiplier' => $eventSurge,
+                'dynamic_surge_enabled' => $dynamicEnabled,
                 'surge_multiplier' => $surgeMultiplier,
+                'surge_context' => [
+                    'window_minutes' => $dynamicWindowMin,
+                    'demand_count' => (int) ($demandSupplyContext['demand_count'] ?? 0),
+                    'supply_count' => (int) ($demandSupplyContext['supply_count'] ?? 0),
+                    'busy_drivers' => (int) ($demandSupplyContext['busy_drivers'] ?? 0),
+                    'available_drivers' => (int) ($demandSupplyContext['available_drivers'] ?? 0),
+                    'demand_supply_ratio' => round((float) ($demandSupplyContext['ratio'] ?? 0), 3),
+                    'weather_condition' => $weatherCondition,
+                    'event_key' => $eventKey,
+                ],
                 'price_before_discount' => $this->formatPriceWithConversion($priceBeforeDiscount, $selectedCurrencyCode, $conversionRate),
                 'coupon_discount' => $this->formatPriceWithConversion($couponDiscount, $selectedCurrencyCode, $conversionRate),
                 'wallet_amount' => $this->formatPriceWithConversion($walletApplied, $selectedCurrencyCode, $conversionRate),
@@ -196,13 +232,145 @@ trait MiscellaneousTrait
                 'gross_price' => $this->formatPriceWithConversion($grossPrice, $selectedCurrencyCode, $conversionRate),
                 'total_price' => $this->formatPriceWithConversion($totalPrice, $selectedCurrencyCode, $conversionRate),
                 'coupon_code' => $couponCode,
-                'pricing_type' => 'Distance + Time + Surge + Platform Fees',
+                'pricing_type' => 'Distance + Time + Auto Dynamic Surge + Platform Fees',
             ];
 
             return $this->addSuccessResponse(200, 'Item pricing calculated successfully.', $response);
         } catch (\Exception $e) {
             return $this->addErrorResponse(500, 'Internal server error.', $e->getMessage());
         }
+    }
+
+    private function parseJsonSettingAsArray(string $metaKey): array
+    {
+        $raw = GeneralSetting::getMetaValue($metaKey);
+        if (! is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function calculateDemandSupplySurgeContext(int $windowMinutes, float $sensitivity, float $minMultiplier, float $maxMultiplier, ?int $cityId = null): array
+    {
+        if (! DB::getSchemaBuilder()->hasTable('bookings') || ! DB::getSchemaBuilder()->hasTable('app_users')) {
+            return ['multiplier' => 1.0, 'demand_count' => 0, 'supply_count' => 0, 'busy_drivers' => 0, 'available_drivers' => 0, 'ratio' => 0];
+        }
+
+        $windowStart = Carbon::now()->subMinutes($windowMinutes);
+
+        $activeBookingStatuses = ['Pending', 'Accepted', 'Ongoing', 'Arrived'];
+        $demandQuery = DB::table('bookings')->whereIn('status', $activeBookingStatuses);
+        if (DB::getSchemaBuilder()->hasColumn('bookings', 'module')) {
+            $demandQuery->where('module', 2);
+        }
+        if (DB::getSchemaBuilder()->hasColumn('bookings', 'created_at')) {
+            $demandQuery->where('created_at', '>=', $windowStart);
+        }
+        if (DB::getSchemaBuilder()->hasColumn('bookings', 'deleted_at')) {
+            $demandQuery->whereNull('deleted_at');
+        }
+
+        $demandCount = (int) $demandQuery->count();
+
+        $supplyQuery = DB::table('app_users')->where('user_type', 'driver');
+        if (DB::getSchemaBuilder()->hasColumn('app_users', 'status')) {
+            $supplyQuery->where('status', 1);
+        }
+        if (DB::getSchemaBuilder()->hasColumn('app_users', 'host_status')) {
+            $supplyQuery->where('host_status', 1);
+        }
+        if (DB::getSchemaBuilder()->hasColumn('app_users', 'document_verify')) {
+            $supplyQuery->where('document_verify', 1);
+        }
+        if (DB::getSchemaBuilder()->hasColumn('app_users', 'deleted_at')) {
+            $supplyQuery->whereNull('deleted_at');
+        }
+
+        $supplyCount = (int) $supplyQuery->count();
+
+        $busyDriversQuery = DB::table('bookings')
+            ->whereIn('status', ['Accepted', 'Ongoing', 'Arrived'])
+            ->whereNotNull('host_id');
+        if (DB::getSchemaBuilder()->hasColumn('bookings', 'module')) {
+            $busyDriversQuery->where('module', 2);
+        }
+        if (DB::getSchemaBuilder()->hasColumn('bookings', 'deleted_at')) {
+            $busyDriversQuery->whereNull('deleted_at');
+        }
+
+        $busyDrivers = (int) $busyDriversQuery->distinct('host_id')->count('host_id');
+        $availableDrivers = max(1, $supplyCount - $busyDrivers);
+        $ratio = $demandCount / $availableDrivers;
+
+        $rawMultiplier = 1 + (($ratio - 1) * max(0, $sensitivity));
+        $multiplier = max($minMultiplier, min($maxMultiplier, $rawMultiplier));
+
+        return [
+            'multiplier' => $multiplier,
+            'demand_count' => $demandCount,
+            'supply_count' => $supplyCount,
+            'busy_drivers' => $busyDrivers,
+            'available_drivers' => $availableDrivers,
+            'ratio' => $ratio,
+        ];
+    }
+
+    private function resolveWeatherSurge(array $rules, ?string $weatherCondition): float
+    {
+        if (! $weatherCondition || empty($rules)) {
+            return 1.0;
+        }
+
+        $normalized = strtolower($weatherCondition);
+        if (array_key_exists($normalized, $rules) && is_numeric($rules[$normalized])) {
+            return max(0.1, (float) $rules[$normalized]);
+        }
+
+        foreach ($rules as $rule) {
+            if (! is_array($rule)) {
+                continue;
+            }
+            $key = strtolower((string) ($rule['condition'] ?? $rule['key'] ?? ''));
+            if ($key !== '' && $key === $normalized) {
+                $multiplier = (float) ($rule['multiplier'] ?? 1);
+
+                return max(0.1, $multiplier);
+            }
+        }
+
+        return 1.0;
+    }
+
+    private function resolveEventSurge(array $rules, ?string $eventKey, Carbon $now): float
+    {
+        if (empty($rules)) {
+            return 1.0;
+        }
+
+        $activeMultiplier = 1.0;
+        foreach ($rules as $rule) {
+            if (! is_array($rule)) {
+                continue;
+            }
+            $multiplier = max(0.1, (float) ($rule['multiplier'] ?? 1));
+            $ruleKey = trim((string) ($rule['key'] ?? $rule['name'] ?? ''));
+
+            if ($eventKey && $ruleKey !== '' && strcasecmp($ruleKey, $eventKey) === 0) {
+                $activeMultiplier = max($activeMultiplier, $multiplier);
+                continue;
+            }
+
+            $startAt = isset($rule['start_at']) ? Carbon::parse($rule['start_at']) : null;
+            $endAt = isset($rule['end_at']) ? Carbon::parse($rule['end_at']) : null;
+            if ($startAt && $endAt && $now->between($startAt, $endAt)) {
+                $activeMultiplier = max($activeMultiplier, $multiplier);
+            }
+        }
+
+        return $activeMultiplier;
     }
 
     public function parseDataFromResponse($responseString)

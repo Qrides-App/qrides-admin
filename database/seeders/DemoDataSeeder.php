@@ -63,6 +63,13 @@ class DemoDataSeeder extends Seeder
             ['meta_key' => 'fare_airport_fee', 'meta_value' => '30'],
             ['meta_key' => 'fare_surge_floor', 'meta_value' => '1.0'],
             ['meta_key' => 'fare_surge_cap', 'meta_value' => '2.0'],
+            ['meta_key' => 'fare_dynamic_surge_enabled', 'meta_value' => '1'],
+            ['meta_key' => 'fare_dynamic_surge_window_min', 'meta_value' => '15'],
+            ['meta_key' => 'fare_dynamic_surge_sensitivity', 'meta_value' => '0.35'],
+            ['meta_key' => 'fare_dynamic_surge_min', 'meta_value' => '1.0'],
+            ['meta_key' => 'fare_dynamic_surge_max', 'meta_value' => '1.8'],
+            ['meta_key' => 'fare_weather_multipliers_json', 'meta_value' => '{"rain":1.25,"storm":1.5}'],
+            ['meta_key' => 'fare_event_multipliers_json', 'meta_value' => '[]'],
             ['meta_key' => 'push_notification_status', 'meta_value' => 'firebase'],
             ['meta_key' => 'firebase_server_key', 'meta_value' => 'demo-firebase-key'],
         ];
