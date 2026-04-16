@@ -425,7 +425,12 @@ class DemoDataSeeder extends Seeder
         }
 
         $payoutColumns = Schema::getColumnListing('payouts');
-        $statuses = ['Pending', 'Success', 'Rejected'];
+        $allowedStatuses = $this->getEnumAllowedValues('payouts', 'payout_status');
+        $statuses = [
+            $this->normalizePayoutStatus('Pending', $allowedStatuses),
+            $this->normalizePayoutStatus('Success', $allowedStatuses),
+            $this->normalizePayoutStatus('Rejected', $allowedStatuses),
+        ];
         foreach ($statuses as $idx => $status) {
             $vendorId = $driverIds[$idx % count($driverIds)];
             $row = $this->filterColumns('payouts', [
@@ -589,6 +594,37 @@ class DemoDataSeeder extends Seeder
         $newId = $newQuery->orderByDesc('id')->value('id');
 
         return is_null($newId) ? null : (int) $newId;
+    }
+
+    private function normalizePayoutStatus(string $status, array $allowedStatuses): string
+    {
+        if (empty($allowedStatuses)) {
+            return $status;
+        }
+
+        if (in_array($status, $allowedStatuses, true)) {
+            return $status;
+        }
+
+        if ($status === 'Rejected' && in_array('Pending', $allowedStatuses, true)) {
+            return 'Pending';
+        }
+
+        return $allowedStatuses[0];
+    }
+
+    private function getEnumAllowedValues(string $table, string $column): array
+    {
+        $columnInfo = DB::selectOne("SHOW COLUMNS FROM `{$table}` LIKE ?", [$column]);
+        if (!$columnInfo || empty($columnInfo->Type)) {
+            return [];
+        }
+
+        if (!preg_match('/^enum\((.*)\)$/i', $columnInfo->Type, $matches)) {
+            return [];
+        }
+
+        return str_getcsv($matches[1], ',', "'", "\\");
     }
 
     private function filterColumns(string $table, array $data): array
