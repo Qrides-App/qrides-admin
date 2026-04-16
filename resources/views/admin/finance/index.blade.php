@@ -25,10 +25,16 @@
 @endsection
 @section('content')
     <div class="content">
+        <div class="admin-page-header">
+            <div>
+                <h3 class="admin-page-title">{{ trans('global.finance') }}</h3>
+                <p class="admin-page-subtitle">Review revenue, commission splits and payment health.</p>
+            </div>
+        </div>
 
         <div class="row">
             <div class="col-lg-12">
-                <div class="box">
+                <div class="box booking-filter-card">
                     <div class="box-body">
                         <form class="form-horizontal" enctype="multipart/form-data" action="" method="GET"
                             accept-charset="UTF-8" id="bookingFilterForm">
@@ -85,16 +91,12 @@
                                     </div>
 
 
-                                    <div class="col-md-2 d-flex gap-2 mt-4 col-sm-2 col-xs-4 mt-5">
+                                    <div class="col-md-2 col-sm-12 col-xs-12 booking-filter-actions">
 
                                         <button type="submit" name="btn"
                                             class="btn btn-primary btn-flat">{{ trans('global.filter') }}</button>
                                         <button type="button" name="reset_btn" id="resetBtn"
-                                            class="btn btn-primary btn-flat">{{ trans('global.reset') }}</button>
-                                    </div>
-                                    <div class="col-md-1 col-sm-2 col-xs-4 mt-5">
-                                        <br>
-
+                                            class="btn btn-default btn-flat">{{ trans('global.reset') }}</button>
                                     </div>
                                 </div>
                             </div>
@@ -193,7 +195,7 @@
 
 
             <div class="col-lg-12">
-                <div class="panel  panel-default">
+                <div class="panel panel-default booking-table-panel">
                     <div class="panel-heading">
                         {{ trans('global.finance') }}
                     </div>
@@ -342,6 +344,16 @@
 
                                         </tr>
                                     @endforeach
+                                    @if($bookings->isEmpty())
+                                        <tr>
+                                            <td colspan="12">
+                                                <div class="table-empty-state">
+                                                    <h4>No finance rows found</h4>
+                                                    <p>Try broadening your filters or date range.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endif
                                 </tbody>
                             </table>
                             <nav aria-label="...">

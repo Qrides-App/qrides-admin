@@ -1,14 +1,17 @@
 @extends('layouts.admin')
 
 @section('content')
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h3 class="box-title">QR Hire Bookings</h3>
-            <small class="text-muted">Rides created when riders scan a driver's QR</small>
+<div class="content">
+    <div class="admin-page-header">
+        <div>
+            <h3 class="admin-page-title">QR Hire Bookings</h3>
+            <p class="admin-page-subtitle">Rides created when riders scan a driver's QR code.</p>
         </div>
+    </div>
 
-        <div class="card-body">
-            <form method="get" class="form-inline" style="gap: 8px; flex-wrap: wrap;">
+    <div class="box booking-filter-card">
+        <div class="box-body">
+            <form method="get" class="form-inline booking-inline-form" style="gap: 8px; flex-wrap: wrap;">
                 <input type="text" name="driver_id" class="form-control" style="min-width: 140px;" placeholder="Driver ID"
                     value="{{ $filters['driver_id'] ?? '' }}">
                 <input type="text" name="rider_id" class="form-control" style="min-width: 140px;" placeholder="Rider ID"
@@ -32,20 +35,23 @@
                 <button type="submit" class="btn btn-primary">Filter</button>
                 <a href="{{ route('admin.hire-bookings.index') }}" class="btn btn-default">Reset</a>
             </form>
+        </div>
+    </div>
 
-            <div class="row" style="margin-top: 15px;">
-                @foreach (['total' => 'Total', 'booked' => 'Booked', 'ongoing' => 'Ongoing', 'completed' => 'Completed', 'cancelled' => 'Cancelled'] as $key => $label)
-                    <div class="col-md-2 col-sm-4 col-xs-6" style="margin-bottom:10px;">
-                        <div class="small-box bg-gray">
-                            <div class="inner">
-                                <h3>{{ $summary[$key] ?? 0 }}</h3>
-                                <p>{{ $label }}</p>
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
+    <div class="row booking-summary-grid" style="margin-top: 10px;">
+        @foreach (['total' => 'Total', 'booked' => 'Booked', 'ongoing' => 'Ongoing', 'completed' => 'Completed', 'cancelled' => 'Cancelled'] as $key => $label)
+            <div class="col-md-3 col-sm-6">
+                <div class="booking-summary-card">
+                    <div class="booking-summary-label">{{ $label }}</div>
+                    <div class="booking-summary-value">{{ $summary[$key] ?? 0 }}</div>
+                </div>
             </div>
+        @endforeach
+    </div>
 
+    <div class="panel panel-default booking-table-panel">
+        <div class="panel-heading">Hire Booking List</div>
+        <div class="panel-body">
             <div class="table-responsive">
                 <table class="table table-bordered table-striped">
                     <thead>
@@ -103,7 +109,12 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center">No hire bookings found.</td>
+                                <td colspan="9">
+                                    <div class="table-empty-state">
+                                        <h4>No hire bookings found</h4>
+                                        <p>Adjust filters or create a new hire booking flow to populate this list.</p>
+                                    </div>
+                                </td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -113,4 +124,5 @@
             {{ $bookings->links() }}
         </div>
     </div>
+</div>
 @endsection

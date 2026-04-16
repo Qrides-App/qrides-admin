@@ -1656,3 +1656,287 @@ iframe {
 .skin-purple .sidebar-menu>li>.treeview-menu {
   background: #000 !important;
 }
+
+/* Admin UX polish */
+.admin-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 15px 14px;
+}
+
+.admin-page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.admin-page-subtitle {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.booking-summary-grid {
+  margin: 0 0 8px;
+}
+
+.booking-summary-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  min-height: 84px;
+}
+
+.booking-summary-label {
+  color: #6b7280;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  margin-bottom: 6px;
+}
+
+.booking-summary-value {
+  color: #111827;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.booking-filter-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(17, 24, 39, 0.04);
+}
+
+.booking-filter-actions {
+  margin-top: 25px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.booking-status-tabs {
+  margin: 6px 0 10px;
+}
+
+.booking-status-chip {
+  border-radius: 20px !important;
+  margin: 0 6px 8px 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  border: 1px solid #d1d5db;
+}
+
+.booking-status-chip.is-active {
+  box-shadow: 0 3px 10px rgba(62, 107, 203, 0.2);
+}
+
+.booking-count-badge {
+  background: rgba(255, 255, 255, 0.25);
+  margin-left: 6px;
+}
+
+.booking-table-panel {
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.booking-table-panel .panel-heading {
+  padding: 14px 18px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.booking-table-panel .table > tbody > tr:hover {
+  background-color: #f8fbff;
+}
+
+.table-empty-state {
+  text-align: center;
+  padding: 30px 10px;
+}
+
+.table-empty-state h4 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.table-empty-state p {
+  margin: 0;
+  color: #6b7280;
+}
+
+@media (max-width: 767px) {
+  .admin-page-header {
+    margin: 0 10px 10px;
+  }
+
+  .admin-page-title {
+    font-size: 18px;
+  }
+
+  .admin-page-subtitle {
+    font-size: 12px;
+  }
+
+  .booking-filter-card .box-body {
+    padding: 12px 10px;
+  }
+
+  .booking-filter-card .row > [class*='col-'] {
+    margin-bottom: 10px;
+  }
+
+  .booking-filter-card label {
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  .booking-filter-card .input-group {
+    width: 100%;
+  }
+
+  .booking-filter-card .select2-container {
+    width: 100% !important;
+  }
+
+  .booking-filter-actions {
+    margin-top: 14px;
+    width: 100%;
+  }
+
+  .booking-filter-actions .btn {
+    width: 100%;
+    margin: 0 0 8px 0 !important;
+  }
+
+  .booking-summary-grid .col-sm-6 {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .booking-summary-card {
+    min-height: 74px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+
+  .booking-summary-label {
+    font-size: 11px;
+  }
+
+  .booking-summary-value {
+    font-size: 20px;
+  }
+
+  .booking-status-chip {
+    width: 100%;
+    text-align: left;
+    margin-right: 0;
+  }
+
+  .booking-table-panel .panel-heading {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .booking-table-panel .panel-body {
+    padding: 10px;
+  }
+
+  .booking-table-panel .table {
+    font-size: 12px;
+  }
+
+  .table-empty-state {
+    padding: 20px 8px;
+  }
+
+  .table-empty-state h4 {
+    font-size: 14px;
+  }
+
+  .booking-inline-form .form-control,
+  .booking-inline-form .btn {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .admin-page-header {
+    margin: 0 12px 12px;
+  }
+
+  .admin-page-title {
+    font-size: 20px;
+  }
+
+  .booking-filter-card .box-body {
+    padding: 14px 12px;
+  }
+
+  .booking-filter-card label {
+    font-size: 12px;
+  }
+
+  .booking-filter-card .form-control {
+    font-size: 13px;
+  }
+
+  .booking-filter-actions {
+    margin-top: 20px;
+    gap: 6px;
+  }
+
+  .booking-filter-actions .btn {
+    min-width: 96px;
+  }
+
+  .booking-summary-grid {
+    margin-bottom: 6px;
+  }
+
+  .booking-summary-card {
+    min-height: 80px;
+    padding: 10px 12px;
+  }
+
+  .booking-summary-label {
+    font-size: 11px;
+  }
+
+  .booking-summary-value {
+    font-size: 21px;
+  }
+
+  .booking-status-chip {
+    margin-bottom: 6px;
+    font-size: 11px;
+    padding: 7px 10px;
+  }
+
+  .booking-table-panel .panel-heading {
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+
+  .booking-table-panel .panel-body {
+    padding: 12px;
+  }
+
+  .booking-table-panel .table {
+    font-size: 12px;
+  }
+
+  .booking-table-panel .table > thead > tr > th,
+  .booking-table-panel .table > tbody > tr > td {
+    white-space: nowrap;
+  }
+}

@@ -5,9 +5,43 @@ $i = 0;
 $j = 0;
 @endphp
 <div class="content">
+    <div class="admin-page-header">
+        <div>
+            <h3 class="admin-page-title">{{ trans('booking.all_bookings') }}</h3>
+            <p class="admin-page-subtitle">Filter, review and manage rides quickly from one place.</p>
+        </div>
+    </div>
+
+    <div class="row booking-summary-grid">
+        <div class="col-md-3 col-sm-6">
+            <div class="booking-summary-card">
+                <div class="booking-summary-label">{{ trans('booking.booking_all') }}</div>
+                <div class="booking-summary-value">{{ $statusCounts['all'] ?? 0 }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="booking-summary-card">
+                <div class="booking-summary-label">{{ trans('booking.booking_running') }}</div>
+                <div class="booking-summary-value">{{ $statusCounts['ongoing'] ?? 0 }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="booking-summary-card">
+                <div class="booking-summary-label">{{ trans('booking.booking_completed') }}</div>
+                <div class="booking-summary-value">{{ $statusCounts['completed'] ?? 0 }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="booking-summary-card">
+                <div class="booking-summary-label">{{ trans('booking.booking_cancelled') }}</div>
+                <div class="booking-summary-value">{{ $statusCounts['cancelled'] ?? 0 }}</div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-lg-12">
-            <div class="box">
+            <div class="box booking-filter-card">
                 <div class="box-body">
                     <form class="form-horizontal" enctype="multipart/form-data" action="" method="GET"
                         accept-charset="UTF-8" id="bookingFilterForm">
@@ -62,12 +96,12 @@ $j = 0;
                             </div>
 
 
-                            <div class="col-md-2 d-flex gap-2 mt-4 col-sm-2 col-xs-4 mt-5">
-
+                            <div class="col-md-2 col-sm-12 col-xs-12 booking-filter-actions">
                                 <button type="submit" name="btn" class="btn btn-primary btn-flat">
                                     {{ trans('booking.filter') }}
                                 </button>
-                                <button type="button" name="reset_btn" id="resetBtn" class="btn btn-primary btn-flat">
+                                <button type="button" name="reset_btn" id="resetBtn"
+                                    class="btn btn-default btn-flat">
                                     {{ trans('booking.reset') }}
                                 </button>
 
@@ -125,7 +159,7 @@ $j = 0;
         $currentQuery = request()->query();
         @endphp
 
-        <div class="row" style="margin-left: 5px; margin-bottom: 6px;">
+        <div class="row booking-status-tabs">
             <div class="col-lg-12">
                 @foreach ($statuses as $status)
                 @php
@@ -139,7 +173,7 @@ $j = 0;
                 $isActive = request()->query('status') === $status['key'];
                 }
                 }
-                $class = $isActive ? 'btn btn-primary' : 'btn btn-inactive';
+                $class = $isActive ? 'btn btn-primary booking-status-chip is-active' : 'btn btn-default booking-status-chip';
                 $routeParams = $currentQuery;
                 if ($status['isTrash']) {
                 $url = route($status['route']);
@@ -158,14 +192,14 @@ $j = 0;
 
                 <a class="{{ $class }}" href="{{ $url }}">
                     {{ $status['label'] }}
-                    <span class="badge badge-pill badge-primary">{{ $count > 0 ? $count : 0 }}</span>
+                    <span class="badge badge-pill booking-count-badge">{{ $count > 0 ? $count : 0 }}</span>
                 </a>
                 @endforeach
             </div>
         </div>
 
         <div class="col-lg-12">
-            <div class="panel panel-default">
+            <div class="panel panel-default booking-table-panel">
                 <div class="panel-heading">
                     {{ trans('booking.all_bookings') }}
                 </div>
@@ -222,7 +256,7 @@ $j = 0;
                                         </a>
                                         <span class="badge badge-pill badge-success live-badge">
                                             <i class="fas fa-fire table-icon"></i>
-                                            {{ $booking->extension->ride_id }}
+                                            {{ optional($booking->extension)->ride_id ?? 'RIDE-NA' }}
                                         </span>
                                     </td>
                                     <td>
@@ -355,7 +389,7 @@ $j = 0;
                                             style="display: inline-block;">
                                             @csrf
                                             <button type="button" class="btn btn-xs btn-success restore-btn"
-                                                data-id="{{ $booking->id }}">
+                                                data-id="{{ $booking->id }}" title="Restore booking">
                                                 <i class="fa fa-undo" aria-hidden="true"></i>
                                             </button>
                                         </form>
@@ -366,21 +400,21 @@ $j = 0;
                                             method="POST" style="display: inline-block;">
                                             @csrf
                                             <button type="button" class="btn btn-xs btn-danger permanent-delete"
-                                                data-id="{{ $booking->id }}">
+                                                data-id="{{ $booking->id }}" title="Delete permanently">
                                                 <i class="fa fa-trash" aria-hidden="true"></i>
                                             </button>
                                         </form>
                                         @else
                                         @can('booking_delete')
                                         <button type="button" class="btn btn-xs btn-danger delete-booking-button"
-                                            data-id="{{ $booking->id }}">
+                                            data-id="{{ $booking->id }}" title="Move to trash">
                                             <i class="fa fa-trash" aria-hidden="true"></i>
                                         </button>
                                         @endcan
 
                                         <!-- View Button (always shown) -->
                                         <a target="_blank" class="badge badge-pill badge-primary live-badge"
-                                            href="{{ route('admin.bookings.show', $booking->id) }}">
+                                            href="{{ route('admin.bookings.show', $booking->id) }}" title="View booking">
                                             <i class="fa fa-eye" aria-hidden="true"></i>
                                         </a>
                                         @endif
@@ -388,6 +422,16 @@ $j = 0;
 
                                 </tr>
                                 @endforeach
+                                @if($bookings->isEmpty())
+                                <tr>
+                                    <td colspan="12">
+                                        <div class="table-empty-state">
+                                            <h4>No bookings match your current filters</h4>
+                                            <p>Try resetting filters or adjust the date/status selection.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endif
                             </tbody>
                         </table>
                         <nav aria-label="...">

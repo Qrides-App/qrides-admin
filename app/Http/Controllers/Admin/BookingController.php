@@ -149,7 +149,11 @@ class BookingController extends Controller
         $searchfieldItem = $itemData ? $itemData->title : 'All';
         $searchfieldItemId = $itemData ? $itemData->id : '';
 
-        $general_default_currency = cache()->remember('general_default_currency', now()->addHours(24), fn () => View::shared('general_default_currency'));
+        $general_default_currency = cache()->remember(
+            'general_default_currency',
+            now()->addHours(24),
+            fn () => GeneralSetting::where('meta_key', 'general_default_currency')->first()
+        );
 
         return view('admin.bookings.index', compact(
             'bookings',

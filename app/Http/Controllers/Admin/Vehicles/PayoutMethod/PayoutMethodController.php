@@ -7,6 +7,7 @@ use App\Models\PayoutMethod;
 use Gate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -20,6 +21,15 @@ class PayoutMethodController extends Controller
         abort_if(! $this->hasPermission($permissionrealRoute.'_access', 'payout_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
         if ($request->ajax()) {
+            if (! Schema::hasTable((new PayoutMethod)->getTable())) {
+                return response()->json([
+                    'draw' => (int) $request->input('draw', 1),
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => [],
+                ]);
+            }
+
             $query = PayoutMethod::orderBy('id', 'desc');
             $table = DataTables::of($query)
                 ->addColumn('placeholder', '&nbsp;')
