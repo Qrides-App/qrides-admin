@@ -615,7 +615,11 @@ class DemoDataSeeder extends Seeder
 
     private function getEnumAllowedValues(string $table, string $column): array
     {
-        $columnInfo = DB::selectOne("SHOW COLUMNS FROM `{$table}` LIKE ?", [$column]);
+        $columnsInfo = DB::select("SHOW COLUMNS FROM `{$table}`");
+        $columnInfo = collect($columnsInfo)->first(function ($item) use ($column) {
+            return isset($item->Field) && $item->Field === $column;
+        });
+
         if (!$columnInfo || empty($columnInfo->Type)) {
             return [];
         }
