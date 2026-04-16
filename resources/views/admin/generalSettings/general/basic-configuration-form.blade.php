@@ -158,7 +158,7 @@
                                         name="general_default_language">
                                         @foreach ($languagedata as $language)
                                             <option value="{{ $language->short_name }}"
-                                                @if ($language->short_name == $general_default_language->meta_value) selected @endif>{{ $language->name }}
+                                                @if ($language->short_name == ($general_default_language->meta_value ?? null)) selected @endif>{{ $language->name }}
                                             </option>
                                         @endforeach
                                     </select>

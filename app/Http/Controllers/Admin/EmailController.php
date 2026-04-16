@@ -14,30 +14,28 @@ class EmailController extends Controller
     public function template(Request $request, $id)
     {
         abort_if(Gate::denies('email_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-        $module = Module::where('default_module', '1')->first();
-        $moduleId = $module->id;
-        $moduleName = $module->name;
-        $emailTemplates = [
-            'User Registration',
-            'Signup OTP',
-            'Forgot Password OTP',
-            'Booking Cancellation by Guest',
-            'Booking Cancellation/Confirmed by Vendor',
-            'Payout Request',
-            'Payment Sent',
-            'Wallet Transaction',
-        ];
+        $module = Module::where('default_module', '1')->first() ?? Module::query()->first();
+        $moduleId = $module?->id;
 
         $AllEmailRecord = EmailSmsNotification::with([
             'notificationMapping' => function ($query) use ($moduleId) {
-                $query->where('module', $moduleId)->with('emailType');
+                if ($moduleId) {
+                    $query->where('module', $moduleId);
+                }
+                $query->with('emailType');
             },
-        ])->where('status', 1)->get();
+        ])
+            ->where('status', 1)
+            ->orderBy('id')
+            ->get();
 
-        $emaildata = EmailSmsNotification::where('id', $id)->first();
+        $emaildata = $AllEmailRecord->firstWhere('id', (int) $id);
+        if (! $emaildata) {
+            $emaildata = $AllEmailRecord->first();
+        }
 
         if (is_null($emaildata)) {
-            abort(404, 'Email template not found.');
+            abort(404, 'No active email templates found.');
         }
 
         return view('admin.email.index', compact('emaildata', 'AllEmailRecord'));

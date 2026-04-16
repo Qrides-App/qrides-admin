@@ -88,21 +88,18 @@ input:checked + .slider:before {
         </div>
         <div class="ms-auto sms-provider-name">
         @php
-            $url = '';
-            if ($sms_provider_name->meta_value == 'nonage') {
-                $url = route('admin.smssetting');
-            } elseif ($sms_provider_name->meta_value == 'twillio') {
+            $providerName = $sms_provider_name->meta_value ?? '';
+            $url = route('admin.smssetting');
+            if ($providerName === 'twillio') {
                 $url = route('admin.twilliosetting');
-            }
-            elseif ($sms_provider_name->meta_value == 'sinch') {
+            } elseif ($providerName === 'sinch') {
                 $url = route('admin.sinchSetting');
-            }
-            elseif ($sms_provider_name->meta_value == 'msg91') {
+            } elseif ($providerName === 'msg91') {
                 $url = route('admin.msg91');
             }
         @endphp
         Active :: <a href="{{ $url }}" class="sms-provider-link">
-            {{ $sms_provider_name->meta_value }}
+            {{ $providerName !== '' ? $providerName : 'nonage' }}
         </a>
         </div>
         
@@ -136,4 +133,3 @@ input:checked + .slider:before {
 </div>
 
 <div class="box box-muted">
-
