@@ -424,6 +424,7 @@ class DemoDataSeeder extends Seeder
             return;
         }
 
+        $payoutColumns = Schema::getColumnListing('payouts');
         $statuses = ['Pending', 'Success', 'Rejected'];
         foreach ($statuses as $idx => $status) {
             $vendorId = $driverIds[$idx % count($driverIds)];
@@ -441,14 +442,23 @@ class DemoDataSeeder extends Seeder
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
-            DB::table('payouts')->updateOrInsert(
-                [
-                    'vendorid' => $vendorId,
-                    'payout_status' => $status,
-                    'request_by' => 'vendor',
-                ],
-                $row
-            );
+
+            $lookup = Arr::only([
+                'vendorid' => $vendorId,
+                'payout_status' => $status,
+                'request_by' => 'vendor',
+            ], $payoutColumns);
+
+            if (empty($lookup)) {
+                $lookup = Arr::only(['vendorid' => $vendorId], $payoutColumns);
+            }
+
+            if (empty($lookup)) {
+                DB::table('payouts')->insert($row);
+                continue;
+            }
+
+            DB::table('payouts')->updateOrInsert($lookup, $row);
         }
     }
 
