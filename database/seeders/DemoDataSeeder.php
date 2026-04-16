@@ -74,6 +74,7 @@ class DemoDataSeeder extends Seeder
         if (!Schema::hasTable('app_users')) {
             return $result;
         }
+        $packageId = $this->resolvePackageId($now);
 
         $demoUsers = [
             ['first_name' => 'Ravi', 'last_name' => 'Driver', 'email' => 'driver1@demo.local', 'phone' => '9000000001', 'user_type' => 'driver'],
@@ -118,7 +119,6 @@ class DemoDataSeeder extends Seeder
                 'ave_host_rate' => 4.6,
                 'avr_guest_rate' => 4.4,
                 'status' => 1,
-                'package_id' => 1,
                 'fcm' => null,
                 'sms_notification' => 1,
                 'email_notification' => 1,
@@ -130,6 +130,9 @@ class DemoDataSeeder extends Seeder
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
+            if (!is_null($packageId)) {
+                $raw['package_id'] = $packageId;
+            }
 
             $row = $this->filterColumns('app_users', $raw);
             DB::table('app_users')->updateOrInsert(['email' => $user['email']], $row);
@@ -536,6 +539,46 @@ class DemoDataSeeder extends Seeder
                 $row
             );
         }
+    }
+
+    private function resolvePackageId($now): ?int
+    {
+        if (!Schema::hasTable('all_packages')) {
+            return null;
+        }
+
+        $query = DB::table('all_packages');
+        if (Schema::hasColumn('all_packages', 'deleted_at')) {
+            $query->whereNull('deleted_at');
+        }
+
+        $existingId = $query->orderBy('id')->value('id');
+        if (!is_null($existingId)) {
+            return (int) $existingId;
+        }
+
+        $packageRow = $this->filterColumns('all_packages', [
+            'package_name' => 'Demo Starter Plan',
+            'package_total_day' => 30,
+            'package_price' => 999,
+            'package_description' => 'Auto-created demo package for seeded users',
+            'max_item' => 10,
+            'status' => '1',
+            'module' => 2,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        DB::table('all_packages')->insert($packageRow);
+
+        $newQuery = DB::table('all_packages');
+        if (Schema::hasColumn('all_packages', 'deleted_at')) {
+            $newQuery->whereNull('deleted_at');
+        }
+
+        $newId = $newQuery->orderByDesc('id')->value('id');
+
+        return is_null($newId) ? null : (int) $newId;
     }
 
     private function filterColumns(string $table, array $data): array
