@@ -30,6 +30,7 @@ class EnsureAuthSchema extends Command
         $this->ensureAppUserMetaTable();
         $this->normalizeAppUserMetaForeignKeyColumns();
         $this->ensurePayoutsTable();
+        $this->ensureDriverRechargePlansTable();
         $this->normalizePayoutForeignKeyColumns();
         $this->ensureEmailTypeTable();
         $this->ensureEmailSmsNotificationTable();
@@ -453,6 +454,25 @@ class EnsureAuthSchema extends Command
             $table->enum('payout_status', ['Pending', 'Success', 'Rejected'])->nullable();
             $table->longText('note')->nullable();
             $table->tinyInteger('module')->default(1);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureDriverRechargePlansTable(): void
+    {
+        if (Schema::hasTable('driver_recharge_plans')) {
+            return;
+        }
+
+        Schema::create('driver_recharge_plans', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->unsignedInteger('duration_days');
+            $table->decimal('amount', 15, 2);
+            $table->string('currency_code', 10)->default('INR');
+            $table->boolean('is_active')->default(true);
+            $table->unsignedInteger('sort_order')->default(0);
             $table->timestamps();
             $table->softDeletes();
         });

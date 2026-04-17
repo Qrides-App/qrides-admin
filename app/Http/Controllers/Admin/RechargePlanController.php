@@ -6,14 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\DriverRechargePlan;
 use App\Models\GeneralSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class RechargePlanController extends Controller
 {
     public function index()
     {
-        $plans = DriverRechargePlan::orderBy('sort_order')
-            ->orderBy('duration_days')
-            ->get();
+        $plans = collect();
+        if (Schema::hasTable('driver_recharge_plans')) {
+            $plans = DriverRechargePlan::orderBy('sort_order')
+                ->orderBy('duration_days')
+                ->get();
+        } else {
+            session()->flash('warning', 'Recharge plans table is missing. Run migrations or schema ensure command.');
+        }
 
         return view('admin.rechargePlans.index', [
             'plans' => $plans,
@@ -37,12 +43,16 @@ class RechargePlanController extends Controller
         $data['is_active'] = (int) ($request->boolean('is_active'));
         $data['sort_order'] = $data['sort_order'] ?? 0;
 
+        if (! Schema::hasTable('driver_recharge_plans')) {
+            return redirect()->route('admin.recharge-plans.index')->with('error', 'Recharge plans table is missing. Please run migrations.');
+        }
+
         DriverRechargePlan::create($data);
 
         return redirect()->route('admin.recharge-plans.index')->with('success', 'Recharge plan added successfully.');
     }
 
-    public function update(Request $request, DriverRechargePlan $plan)
+    public function update(Request $request, $plan)
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
@@ -57,13 +67,23 @@ class RechargePlanController extends Controller
         $data['is_active'] = (int) ($request->boolean('is_active'));
         $data['sort_order'] = $data['sort_order'] ?? 0;
 
+        if (! Schema::hasTable('driver_recharge_plans')) {
+            return redirect()->route('admin.recharge-plans.index')->with('error', 'Recharge plans table is missing. Please run migrations.');
+        }
+
+        $plan = DriverRechargePlan::findOrFail($plan);
         $plan->update($data);
 
         return redirect()->route('admin.recharge-plans.index')->with('success', 'Recharge plan updated successfully.');
     }
 
-    public function destroy(DriverRechargePlan $plan)
+    public function destroy($plan)
     {
+        if (! Schema::hasTable('driver_recharge_plans')) {
+            return redirect()->route('admin.recharge-plans.index')->with('error', 'Recharge plans table is missing. Please run migrations.');
+        }
+
+        $plan = DriverRechargePlan::findOrFail($plan);
         $plan->delete();
 
         return redirect()->route('admin.recharge-plans.index')->with('success', 'Recharge plan deleted successfully.');
@@ -88,4 +108,3 @@ class RechargePlanController extends Controller
         return redirect()->route('admin.recharge-plans.index')->with('success', 'Recharge settings updated successfully.');
     }
 }
-
