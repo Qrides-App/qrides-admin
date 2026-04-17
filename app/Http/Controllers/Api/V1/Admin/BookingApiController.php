@@ -158,9 +158,12 @@ class BookingApiController extends Controller
             $booking->payment_status = 'paid';
             $booking->payment_method = 'wallet';
             $booking->save();
+            $offerBoostConfig = $this->getOfferBoostConfigPayload();
             $responseData = [
                 'booking_id' => $booking->id,
                 'status' => $booking->status,
+                'offer_boost_amount' => (float) ($bookingExtension->offer_boost_amount ?? 0),
+                'offer_boost' => $offerBoostConfig,
                 'payment_url' => route('payment_success', ['booking' => $booking->id]),
             ];
 
@@ -179,6 +182,7 @@ class BookingApiController extends Controller
             // $template_id = 10;
             $booking->save();
             $firstBookingCoupon = GeneralSetting::where('meta_key', 'first_booking_coupon')->value('meta_value');
+            $offerBoostConfig = $this->getOfferBoostConfigPayload();
 
             $responseData = [
                 'booking_id' => $booking->id,
@@ -186,6 +190,8 @@ class BookingApiController extends Controller
                 'booking_token' => $booking->token ?? 0,
                 'pickup_otp' => $booking->extension->pick_otp ?? 0,
                 'status' => $booking->status,
+                'offer_boost_amount' => (float) ($bookingExtension->offer_boost_amount ?? 0),
+                'offer_boost' => $offerBoostConfig,
                 'bookingCount' => $bookingCount ?? 0,
                 'coupon' => $firstBookingCoupon ?: null,
                 'payment_url' => route('payment_methods', ['booking' => $booking->id]),
@@ -269,6 +275,7 @@ class BookingApiController extends Controller
 
         return $this->addSuccessResponse(200, trans('global.booking_list'), [
             'Bookings' => $bookings,
+            'offer_boost' => $this->getOfferBoostConfigPayload(),
             'offset' => $nextOffset,
             'limit' => $limit,
         ]);
@@ -353,6 +360,7 @@ class BookingApiController extends Controller
 
         return $this->addSuccessResponse(200, trans("global.vendor_{$type}_bookings_is"), [
             'Bookings' => $bookings,
+            'offer_boost' => $this->getOfferBoostConfigPayload(),
             'offset' => $nextOffset,
             'limit' => $limit,
         ]);
@@ -872,11 +880,77 @@ class BookingApiController extends Controller
             'booking_id' => $booking->id,
             'applied_boost' => $boostAmount,
             'total_offer_boost' => $newBoost,
-            'allowed_options' => $allowedOptions,
-            'max_boost_total' => $maxBoostTotal,
+            'offer_boost' => $this->getOfferBoostConfigPayload(),
             'amount_to_pay' => $booking->amount_to_pay,
             'status' => $booking->status,
         ]);
+    }
+
+    public function getOfferBoostConfig(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'booking_id' => 'nullable|exists:bookings,id',
+            'token' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorComputing($validator);
+        }
+
+        $config = $this->getOfferBoostConfigPayload();
+        $bookingInfo = null;
+
+        if ($request->filled('booking_id')) {
+            $booking = Booking::with('extension')->find($request->input('booking_id'));
+            if ($booking) {
+                $bookingInfo = [
+                    'booking_id' => $booking->id,
+                    'status' => $booking->status,
+                    'amount_to_pay' => $booking->amount_to_pay,
+                    'offer_boost_amount' => (float) optional($booking->extension)->offer_boost_amount,
+                ];
+            }
+        }
+
+        return $this->addSuccessResponse(200, 'Offer boost config fetched successfully.', [
+            'offer_boost' => $config,
+            'booking' => $bookingInfo,
+        ]);
+    }
+
+    private function getOfferBoostConfigPayload(): array
+    {
+        $enabled = filter_var((string) (GeneralSetting::getMetaValue('fare_offer_boost_enabled') ?? '1'), FILTER_VALIDATE_BOOLEAN);
+        $rawOptions = (string) (GeneralSetting::getMetaValue('fare_offer_boost_options') ?? '10,20');
+        $allowedOptions = collect(explode(',', $rawOptions))
+            ->map(fn ($v) => trim($v))
+            ->filter(fn ($v) => $v !== '' && is_numeric($v) && (float) $v > 0)
+            ->map(fn ($v) => round((float) $v, 2))
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+        if (empty($allowedOptions)) {
+            $allowedOptions = [10.0, 20.0];
+        }
+
+        $maxBoostTotal = max((float) (GeneralSetting::getMetaValue('fare_offer_boost_max_total') ?? 100), max($allowedOptions));
+        $currencyCode = strtoupper((string) (GeneralSetting::getMetaValue('driver_recharge_currency') ?: GeneralSetting::getMetaValue('general_default_currency') ?: 'INR'));
+
+        $quickActions = collect($allowedOptions)->map(function ($amount) use ($currencyCode) {
+            return [
+                'amount' => $amount,
+                'label' => '+' . rtrim(rtrim(number_format((float) $amount, 2, '.', ''), '0'), '.') . ' ' . $currencyCode,
+            ];
+        })->values()->all();
+
+        return [
+            'enabled' => $enabled,
+            'allowed_options' => $allowedOptions,
+            'max_boost_total' => $maxBoostTotal,
+            'currency_code' => $currencyCode,
+            'quick_actions' => $quickActions,
+        ];
     }
 
     private function extractFareExtras(Request $request): array
