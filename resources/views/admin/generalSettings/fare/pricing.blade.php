@@ -109,13 +109,17 @@
                         <hr>
                         <h4 class="col-sm-12">Time-Based Surge Rules</h4>
                         <div class="form-group">
-                            <label class="col-sm-3 control-label">Rules JSON</label>
+                            <label class="col-sm-3 control-label">Weekday Morning Surge</label>
                             <div class="col-sm-6">
-                                <textarea name="fare_time_surge_rules" rows="6" class="form-control" placeholder='[{"name":"Weekday Morning","days":[1,2,3,4,5],"start":"08:00","end":"11:00","multiplier":1.4},{"name":"Weekend Night","days":[6,0],"start":"18:00","end":"23:30","multiplier":1.6}]'>{{ old('fare_time_surge_rules', $fare_time_surge_rules) }}</textarea>
-                                <small class="text-muted">
-                                    Optional. JSON array of rules. Fields: name, days (0=Sun), start/end (HH:MM, 24h), multiplier (>0).
-                                    Applied with traffic surge and clamped between floor/cap.
-                                </small>
+                                <input type="number" step="0.01" min="0.1" max="10" name="fare_weekday_morning_multiplier" class="form-control" value="{{ old('fare_weekday_morning_multiplier', $fare_weekday_morning_multiplier) }}">
+                                <small class="text-muted">Auto-applies on Mon-Fri, 08:00 to 11:00.</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Weekend Night Surge</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="0.01" min="0.1" max="10" name="fare_weekend_night_multiplier" class="form-control" value="{{ old('fare_weekend_night_multiplier', $fare_weekend_night_multiplier) }}">
+                                <small class="text-muted">Auto-applies on Sat-Sun, 18:00 to 23:30.</small>
                             </div>
                         </div>
 
@@ -157,17 +161,31 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-sm-3 control-label">Weather Multipliers JSON</label>
+                            <label class="col-sm-3 control-label">Rain Multiplier</label>
                             <div class="col-sm-6">
-                                <textarea name="fare_weather_multipliers_json" rows="3" class="form-control" placeholder='{"rain":1.25,"storm":1.5}'>{{ old('fare_weather_multipliers_json', $fare_weather_multipliers_json) }}</textarea>
-                                <small class="text-muted">Map weather condition key to multiplier.</small>
+                                <input type="number" step="0.01" min="0.1" max="10" name="fare_weather_rain_multiplier" class="form-control" value="{{ old('fare_weather_rain_multiplier', $fare_weather_rain_multiplier) }}">
+                                <small class="text-muted">Applied when weather condition is rain.</small>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-sm-3 control-label">Event Multipliers JSON</label>
+                            <label class="col-sm-3 control-label">Storm Multiplier</label>
                             <div class="col-sm-6">
-                                <textarea name="fare_event_multipliers_json" rows="4" class="form-control" placeholder='[{"key":"concert_night","multiplier":1.35},{"name":"City Marathon","start_at":"2026-05-10 05:00:00","end_at":"2026-05-10 14:00:00","multiplier":1.5}]'>{{ old('fare_event_multipliers_json', $fare_event_multipliers_json) }}</textarea>
-                                <small class="text-muted">Optional list of event-based surge rules by key and/or time window.</small>
+                                <input type="number" step="0.01" min="0.1" max="10" name="fare_weather_storm_multiplier" class="form-control" value="{{ old('fare_weather_storm_multiplier', $fare_weather_storm_multiplier) }}">
+                                <small class="text-muted">Applied when weather condition is storm.</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Event Key</label>
+                            <div class="col-sm-6">
+                                <input type="text" maxlength="120" name="fare_event_key" class="form-control" value="{{ old('fare_event_key', $fare_event_key) }}" placeholder="concert_night">
+                                <small class="text-muted">Optional event identifier for surge override.</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Event Multiplier</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="0.01" min="0.1" max="10" name="fare_event_multiplier" class="form-control" value="{{ old('fare_event_multiplier', $fare_event_multiplier) }}">
+                                <small class="text-muted">Multiplier to apply for the event key above.</small>
                             </div>
                         </div>
 

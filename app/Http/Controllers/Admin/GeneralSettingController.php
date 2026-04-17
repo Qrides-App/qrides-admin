@@ -264,6 +264,34 @@ class GeneralSettingController extends Controller
         $fare_dynamic_surge_max = $meta['fare_dynamic_surge_max'] ?? 1.8;
         $fare_weather_multipliers_json = $meta['fare_weather_multipliers_json'] ?? '{"rain":1.25,"storm":1.5}';
         $fare_event_multipliers_json = $meta['fare_event_multipliers_json'] ?? '';
+        $decodedTimeRules = is_string($fare_time_surge_rules) ? json_decode($fare_time_surge_rules, true) : [];
+        $weekdayMorningRule = collect(is_array($decodedTimeRules) ? $decodedTimeRules : [])->first(function ($rule) {
+            if (! is_array($rule)) {
+                return false;
+            }
+            $days = $rule['days'] ?? [];
+
+            return is_array($days) && count(array_intersect([1, 2, 3, 4, 5], $days)) > 0;
+        });
+        $weekendNightRule = collect(is_array($decodedTimeRules) ? $decodedTimeRules : [])->first(function ($rule) {
+            if (! is_array($rule)) {
+                return false;
+            }
+            $days = $rule['days'] ?? [];
+
+            return is_array($days) && count(array_intersect([0, 6], $days)) > 0;
+        });
+        $fare_weekday_morning_multiplier = $weekdayMorningRule['multiplier'] ?? 1.4;
+        $fare_weekend_night_multiplier = $weekendNightRule['multiplier'] ?? 1.6;
+
+        $decodedWeatherRules = is_string($fare_weather_multipliers_json) ? json_decode($fare_weather_multipliers_json, true) : [];
+        $fare_weather_rain_multiplier = is_array($decodedWeatherRules) ? ($decodedWeatherRules['rain'] ?? 1.25) : 1.25;
+        $fare_weather_storm_multiplier = is_array($decodedWeatherRules) ? ($decodedWeatherRules['storm'] ?? 1.5) : 1.5;
+
+        $decodedEventRules = is_string($fare_event_multipliers_json) ? json_decode($fare_event_multipliers_json, true) : [];
+        $firstEventRule = (is_array($decodedEventRules) && ! empty($decodedEventRules) && is_array($decodedEventRules[0])) ? $decodedEventRules[0] : [];
+        $fare_event_key = $firstEventRule['key'] ?? ($firstEventRule['name'] ?? '');
+        $fare_event_multiplier = $firstEventRule['multiplier'] ?? null;
         $fare_offer_boost_enabled = (int) ($meta['fare_offer_boost_enabled'] ?? 1);
         $fare_offer_boost_options = $meta['fare_offer_boost_options'] ?? '10,20';
         $fare_offer_boost_max_total = $meta['fare_offer_boost_max_total'] ?? 100;
@@ -289,6 +317,12 @@ class GeneralSettingController extends Controller
             'fare_dynamic_surge_max',
             'fare_weather_multipliers_json',
             'fare_event_multipliers_json',
+            'fare_weekday_morning_multiplier',
+            'fare_weekend_night_multiplier',
+            'fare_weather_rain_multiplier',
+            'fare_weather_storm_multiplier',
+            'fare_event_key',
+            'fare_event_multiplier',
             'fare_offer_boost_enabled',
             'fare_offer_boost_options',
             'fare_offer_boost_max_total'
@@ -312,14 +346,17 @@ class GeneralSettingController extends Controller
             'fare_airport_fee' => 'required|numeric|min:0',
             'fare_surge_cap' => 'required|numeric|min:0.1',
             'fare_surge_floor' => 'required|numeric|min:0.1',
-            'fare_time_surge_rules' => 'nullable|string',
             'fare_dynamic_surge_enabled' => 'required|in:0,1',
             'fare_dynamic_surge_window_min' => 'required|integer|min:1|max:240',
             'fare_dynamic_surge_sensitivity' => 'required|numeric|min:0|max:2',
             'fare_dynamic_surge_min' => 'required|numeric|min:0.1|max:5',
             'fare_dynamic_surge_max' => 'required|numeric|min:0.1|max:10',
-            'fare_weather_multipliers_json' => 'nullable|string',
-            'fare_event_multipliers_json' => 'nullable|string',
+            'fare_weekday_morning_multiplier' => 'nullable|numeric|min:0.1|max:10',
+            'fare_weekend_night_multiplier' => 'nullable|numeric|min:0.1|max:10',
+            'fare_weather_rain_multiplier' => 'nullable|numeric|min:0.1|max:10',
+            'fare_weather_storm_multiplier' => 'nullable|numeric|min:0.1|max:10',
+            'fare_event_key' => 'nullable|string|max:120',
+            'fare_event_multiplier' => 'nullable|numeric|min:0.1|max:10',
             'fare_offer_boost_enabled' => 'required|in:0,1',
             'fare_offer_boost_options' => 'required|string',
             'fare_offer_boost_max_total' => 'required|numeric|min:0',
@@ -329,51 +366,53 @@ class GeneralSettingController extends Controller
         $data['fare_surge_cap'] = max((float) $data['fare_surge_cap'], (float) $data['fare_surge_floor']);
         $data['fare_dynamic_surge_max'] = max((float) $data['fare_dynamic_surge_max'], (float) $data['fare_dynamic_surge_min']);
 
-        // validate optional time surge JSON
-        if (! empty($data['fare_time_surge_rules'])) {
-            $decoded = json_decode($data['fare_time_surge_rules'], true);
-            if (! is_array($decoded)) {
-                return back()->withErrors(['fare_time_surge_rules' => 'Invalid JSON.'])->withInput();
-            }
-            $cleaned = [];
-            foreach ($decoded as $rule) {
-                if (! isset($rule['days'], $rule['start'], $rule['end'], $rule['multiplier'])) {
-                    return back()->withErrors(['fare_time_surge_rules' => 'Each rule needs days,start,end,multiplier'])->withInput();
-                }
-                $days = array_values(array_filter($rule['days'], fn ($d) => is_numeric($d) && $d >= 0 && $d <= 6));
-                if (empty($days)) {
-                    return back()->withErrors(['fare_time_surge_rules' => 'Days must include 0-6'])->withInput();
-                }
-                $mult = (float) $rule['multiplier'];
-                if ($mult <= 0) {
-                    return back()->withErrors(['fare_time_surge_rules' => 'Multiplier must be > 0'])->withInput();
-                }
-                $cleaned[] = [
-                    'name' => $rule['name'] ?? 'Surge',
-                    'days' => $days,
-                    'start' => $rule['start'],
-                    'end' => $rule['end'],
-                    'multiplier' => $mult,
-                ];
-            }
-            $data['fare_time_surge_rules'] = json_encode($cleaned, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $timeRules = [];
+        if (! empty($data['fare_weekday_morning_multiplier'])) {
+            $timeRules[] = [
+                'name' => 'Weekday Morning',
+                'days' => [1, 2, 3, 4, 5],
+                'start' => '08:00',
+                'end' => '11:00',
+                'multiplier' => (float) $data['fare_weekday_morning_multiplier'],
+            ];
         }
+        if (! empty($data['fare_weekend_night_multiplier'])) {
+            $timeRules[] = [
+                'name' => 'Weekend Night',
+                'days' => [6, 0],
+                'start' => '18:00',
+                'end' => '23:30',
+                'multiplier' => (float) $data['fare_weekend_night_multiplier'],
+            ];
+        }
+        $data['fare_time_surge_rules'] = json_encode($timeRules, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-        if (! empty($data['fare_weather_multipliers_json'])) {
-            $decodedWeather = json_decode($data['fare_weather_multipliers_json'], true);
-            if (! is_array($decodedWeather)) {
-                return back()->withErrors(['fare_weather_multipliers_json' => 'Invalid JSON.'])->withInput();
-            }
-            $data['fare_weather_multipliers_json'] = json_encode($decodedWeather, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $weatherRules = [];
+        if (! empty($data['fare_weather_rain_multiplier'])) {
+            $weatherRules['rain'] = (float) $data['fare_weather_rain_multiplier'];
         }
+        if (! empty($data['fare_weather_storm_multiplier'])) {
+            $weatherRules['storm'] = (float) $data['fare_weather_storm_multiplier'];
+        }
+        $data['fare_weather_multipliers_json'] = json_encode($weatherRules, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-        if (! empty($data['fare_event_multipliers_json'])) {
-            $decodedEvents = json_decode($data['fare_event_multipliers_json'], true);
-            if (! is_array($decodedEvents)) {
-                return back()->withErrors(['fare_event_multipliers_json' => 'Invalid JSON.'])->withInput();
-            }
-            $data['fare_event_multipliers_json'] = json_encode($decodedEvents, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $eventRules = [];
+        if (! empty($data['fare_event_key']) && ! empty($data['fare_event_multiplier'])) {
+            $eventRules[] = [
+                'key' => trim((string) $data['fare_event_key']),
+                'multiplier' => (float) $data['fare_event_multiplier'],
+            ];
         }
+        $data['fare_event_multipliers_json'] = json_encode($eventRules, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        unset(
+            $data['fare_weekday_morning_multiplier'],
+            $data['fare_weekend_night_multiplier'],
+            $data['fare_weather_rain_multiplier'],
+            $data['fare_weather_storm_multiplier'],
+            $data['fare_event_key'],
+            $data['fare_event_multiplier']
+        );
 
         $boostOptions = collect(explode(',', (string) $data['fare_offer_boost_options']))
             ->map(fn ($value) => trim($value))
