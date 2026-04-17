@@ -31,28 +31,29 @@ Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', '
     Route::post('/sliders', [SliderApiController::class, 'sliders']);
 
     // App Users
-    Route::post('/userRegister', 'AppUsersApiController@userRegister')->name('userRegister');
-    Route::post('/otpVerification', 'AppUsersApiController@otpVerification');
-    Route::post('/userLogin', 'AppUsersApiController@userLogin');
+    Route::middleware('throttle:user-auth')->group(function () {
+        Route::post('/userRegister', 'AppUsersApiController@userRegister')->name('userRegister');
+        Route::post('/otpVerification', 'AppUsersApiController@otpVerification');
+        Route::post('/userLogin', 'AppUsersApiController@userLogin');
+        Route::post('/socialLogin', 'AppUsersApiController@socialLogin');
+        Route::post('/userEmailLogin', 'AppUsersApiController@userEmailLogin')->name('userEmailLogin');
+        Route::post('/forgotPassword', 'AppUsersApiController@forgotPassword');
+        Route::post('/verifyResetToken', 'AppUsersApiController@verifyResetToken');
+        Route::post('/ResendTokenEmailChange', 'AppUsersApiController@ResendTokenEmailChange');
+        Route::post('/sendMobileLoginOtp', 'AppUsersApiController@sendMobileLoginOtp');
+        Route::post('/userMobileLogin', 'AppUsersApiController@userMobileLogin');
+        Route::post('/sendOnlyEmailLoginOtp', 'AppUsersApiController@sendOnlyEmailLoginOtp');
+        Route::post('/userOnlyEmailLogin', 'AppUsersApiController@userOnlyEmailLogin');
+        Route::post('/resetPassword', 'AppUsersApiController@resetPassword');
+        Route::post('/emailcheck', 'AppUsersApiController@emailcheck');
+        Route::post('/mobilecheck', 'AppUsersApiController@mobilecheck');
+        Route::post('/ResendOtp', 'AppUsersApiController@ResendOtp');
+        Route::post('/ResendToken', 'AppUsersApiController@ResendToken');
+    });
+
     Route::post('/userLogout', 'AppUsersApiController@userLogout');
     Route::post('/puthostRequest', 'AppUsersApiController@puthostRequest');
     Route::post('/gethostStatus', 'AppUsersApiController@gethostStatus');
-    Route::post('/socialLogin', 'AppUsersApiController@socialLogin');
-    Route::post('/userEmailLogin', 'AppUsersApiController@userEmailLogin')->name('userEmailLogin');
-    Route::post('/forgotPassword', 'AppUsersApiController@forgotPassword');
-    Route::post('/verifyResetToken', 'AppUsersApiController@verifyResetToken');
-    Route::post('/ResendTokenEmailChange', 'AppUsersApiController@ResendTokenEmailChange');
-    Route::post('/sendMobileLoginOtp', 'AppUsersApiController@sendMobileLoginOtp');
-    Route::post('/userMobileLogin', 'AppUsersApiController@userMobileLogin');
-
-    Route::post('/sendOnlyEmailLoginOtp', 'AppUsersApiController@sendOnlyEmailLoginOtp');
-    Route::post('/userOnlyEmailLogin', 'AppUsersApiController@userOnlyEmailLogin');
-
-    Route::post('/resetPassword', 'AppUsersApiController@resetPassword');
-    Route::post('/emailcheck', 'AppUsersApiController@emailcheck');
-    Route::post('/mobilecheck', 'AppUsersApiController@mobilecheck');
-    Route::post('/ResendOtp', 'AppUsersApiController@ResendOtp');
-    Route::post('/ResendToken', 'AppUsersApiController@ResendToken');
     Route::post('/updatePassword', 'AppUsersApiController@updatePassword');
     Route::post('/getUserWallet', 'AppUsersApiController@getUserWallet');
     Route::post('/getUserWalletTransactions', 'AppUsersApiController@getUserWalletTransactions');
