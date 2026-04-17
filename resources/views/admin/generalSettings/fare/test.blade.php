@@ -105,11 +105,17 @@
                     <h3 class="box-title">Comparison Across Vehicle Types</h3>
                 </div>
                 <div class="box-body table-responsive">
+                    @if(empty($results))
+                        <div class="alert alert-warning">
+                            No vehicle types available for comparison. Add vehicle types from <strong>Platform Setup → Vehicle Type</strong>.
+                        </div>
+                    @endif
                     <table class="table table-bordered table-striped">
                         <thead>
                             <tr>
                                 <th>ID</th>
                                 <th>Vehicle Type</th>
+                                <th>Status</th>
                                 <th>Per KM</th>
                                 <th>Base</th>
                                 <th>Per Min</th>
@@ -120,6 +126,7 @@
                                 <th>Waiting</th>
                                 <th>Tax</th>
                                 <th>Total</th>
+                                <th>Engine</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -127,6 +134,7 @@
                                 <tr>
                                     <td>{{ $row['item_type_id'] }}</td>
                                     <td>{{ $row['item_type_name'] }}</td>
+                                    <td>{{ $row['item_type_status'] }}</td>
                                     <td>{{ $row['per_km'] }}</td>
                                     <td>{{ $row['base_fare'] }}</td>
                                     <td>{{ $row['time_component'] }}</td>
@@ -137,10 +145,17 @@
                                     <td>{{ $row['waiting_charge'] }}</td>
                                     <td>{{ $row['tax_amount'] }}</td>
                                     <td><strong>{{ $row['total_price'] }}</strong></td>
+                                    <td>
+                                        @if(!empty($row['error']))
+                                            <span class="text-danger">{{ $row['error'] }}</span>
+                                        @else
+                                            <span class="text-success">OK</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="12" class="text-center">No vehicle types found.</td>
+                                    <td colspan="14" class="text-center">No vehicle types found.</td>
                                 </tr>
                             @endforelse
                         </tbody>

@@ -406,31 +406,34 @@ class GeneralSettingController extends Controller
             'event_key' => $input['event_key'] ?? null,
         ];
 
-        $itemTypes = ItemType::with('cityFare')->where('status', '1')->get();
-        if ($itemTypes->isEmpty() && Schema::hasTable('item_types')) {
-            $itemTypes = ItemType::with('cityFare')->get();
-        }
+        $itemTypes = ItemType::with('cityFare')->orderBy('id')->get();
 
         $results = [];
         foreach ($itemTypes as $itemType) {
-            $pricingResponse = $this->getItemPricesDetails(
-                $itemType->id,
-                $distance,
-                null,
-                $walletAmount,
-                $currencyCode,
-                1,
-                $durationMinutes,
-                $surge,
-                $fareExtras
-            );
-
-            $payload = $pricingResponse->getData(true);
-            $data = $payload['data'] ?? [];
+            try {
+                $pricingResponse = $this->getItemPricesDetails(
+                    $itemType->id,
+                    $distance,
+                    null,
+                    $walletAmount,
+                    $currencyCode,
+                    1,
+                    $durationMinutes,
+                    $surge,
+                    $fareExtras
+                );
+                $payload = $pricingResponse->getData(true);
+                $data = $payload['data'] ?? [];
+                $errorMessage = null;
+            } catch (\Throwable $e) {
+                $data = [];
+                $errorMessage = $e->getMessage();
+            }
 
             $results[] = [
                 'item_type_id' => $itemType->id,
                 'item_type_name' => $itemType->name,
+                'item_type_status' => (string) ($itemType->status ?? ''),
                 'per_km' => $data['price_per_km'] ?? '0',
                 'base_fare' => $data['base_fare'] ?? '0',
                 'time_component' => $data['price_per_min'] ?? '0',
@@ -442,6 +445,7 @@ class GeneralSettingController extends Controller
                 'tax_amount' => $data['tax_amount'] ?? '0',
                 'total_price' => $data['total_price'] ?? '0',
                 'pricing_type' => $data['pricing_type'] ?? '',
+                'error' => $errorMessage,
             ];
         }
 
