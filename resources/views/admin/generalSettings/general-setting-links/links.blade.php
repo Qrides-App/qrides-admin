@@ -24,6 +24,9 @@
     <li class="{{ request()->routeIs('admin.fareSetting') ? 'active' : '' }}">
         <a href="{{ route('admin.fareSetting') }}" data-group="sms">Fare Settings</a>
     </li>
+    <li class="{{ request()->routeIs('admin.fareTest') ? 'active' : '' }}">
+        <a href="{{ route('admin.fareTest') }}" data-group="sms">Fare Test</a>
+    </li>
     <li class="{{ request()->routeIs('admin.pushnotification') ? 'active' : '' }}">
         <a href="{{ route('admin.pushnotification') }}"
             data-group="sms">{{ trans('global.push_notification_setting') }}</a>

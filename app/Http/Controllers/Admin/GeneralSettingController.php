@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\MediaUploadingTrait;
+use App\Http\Controllers\Traits\MiscellaneousTrait;
 use App\Http\Controllers\Traits\NotificationTrait;
 use App\Http\Controllers\Traits\PushNotificationTrait;
 use App\Http\Controllers\Traits\ResponseTrait;
@@ -36,7 +37,7 @@ use Yajra\DataTables\Facades\DataTables;
 
 class GeneralSettingController extends Controller
 {
-    use MediaUploadingTrait, NotificationTrait, PushNotificationTrait, ResponseTrait;
+    use MediaUploadingTrait, NotificationTrait, PushNotificationTrait, ResponseTrait, MiscellaneousTrait;
 
     public function index(Request $request)
     {
@@ -367,6 +368,101 @@ class GeneralSettingController extends Controller
         }
 
         return redirect()->route('admin.fareSetting')->with('success', 'Fare settings updated.');
+    }
+
+    public function fareTest(Request $request)
+    {
+        abort_if(Gate::denies('general_setting_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+        $input = $request->validate([
+            'distance' => 'nullable|numeric|min:0',
+            'duration_minutes' => 'nullable|numeric|min:0',
+            'surge' => 'nullable|numeric|min:0.1',
+            'wallet_amount' => 'nullable|numeric|min:0',
+            'pickup_distance_km' => 'nullable|numeric|min:0',
+            'waiting_minutes' => 'nullable|numeric|min:0',
+            'toll_charge' => 'nullable|numeric|min:0',
+            'parking_charge' => 'nullable|numeric|min:0',
+            'airport_fee' => 'nullable|numeric|min:0',
+            'apply_airport_fee' => 'nullable|in:0,1',
+            'weather_condition' => 'nullable|string|max:50',
+            'event_key' => 'nullable|string|max:100',
+            'currency_code' => 'nullable|string|max:10',
+        ]);
+
+        $distance = (float) ($input['distance'] ?? 12.5);
+        $durationMinutes = (float) ($input['duration_minutes'] ?? 28);
+        $surge = (float) ($input['surge'] ?? 1.2);
+        $walletAmount = (float) ($input['wallet_amount'] ?? 0);
+        $currencyCode = strtoupper((string) ($input['currency_code'] ?? 'INR'));
+        $fareExtras = [
+            'pickup_distance_km' => (float) ($input['pickup_distance_km'] ?? 2),
+            'waiting_minutes' => (float) ($input['waiting_minutes'] ?? 5),
+            'toll_charge' => (float) ($input['toll_charge'] ?? 0),
+            'parking_charge' => (float) ($input['parking_charge'] ?? 0),
+            'airport_fee' => (float) ($input['airport_fee'] ?? 0),
+            'apply_airport_fee' => (bool) ($input['apply_airport_fee'] ?? 0),
+            'weather_condition' => $input['weather_condition'] ?? null,
+            'event_key' => $input['event_key'] ?? null,
+        ];
+
+        $itemTypes = ItemType::with('cityFare')->where('status', '1')->get();
+        if ($itemTypes->isEmpty() && Schema::hasTable('item_types')) {
+            $itemTypes = ItemType::with('cityFare')->get();
+        }
+
+        $results = [];
+        foreach ($itemTypes as $itemType) {
+            $pricingResponse = $this->getItemPricesDetails(
+                $itemType->id,
+                $distance,
+                null,
+                $walletAmount,
+                $currencyCode,
+                1,
+                $durationMinutes,
+                $surge,
+                $fareExtras
+            );
+
+            $payload = $pricingResponse->getData(true);
+            $data = $payload['data'] ?? [];
+
+            $results[] = [
+                'item_type_id' => $itemType->id,
+                'item_type_name' => $itemType->name,
+                'per_km' => $data['price_per_km'] ?? '0',
+                'base_fare' => $data['base_fare'] ?? '0',
+                'time_component' => $data['price_per_min'] ?? '0',
+                'surge' => $data['surge_multiplier'] ?? 1,
+                'ride_fare_after_surge' => $data['ride_fare_after_surge'] ?? '0',
+                'booking_fee' => $data['booking_fee'] ?? '0',
+                'pickup_charge' => $data['pickup_charge'] ?? '0',
+                'waiting_charge' => $data['waiting_charge'] ?? '0',
+                'tax_amount' => $data['tax_amount'] ?? '0',
+                'total_price' => $data['total_price'] ?? '0',
+                'pricing_type' => $data['pricing_type'] ?? '',
+            ];
+        }
+
+        return view('admin.generalSettings.fare.test', [
+            'results' => $results,
+            'inputs' => [
+                'distance' => $distance,
+                'duration_minutes' => $durationMinutes,
+                'surge' => $surge,
+                'wallet_amount' => $walletAmount,
+                'pickup_distance_km' => $fareExtras['pickup_distance_km'],
+                'waiting_minutes' => $fareExtras['waiting_minutes'],
+                'toll_charge' => $fareExtras['toll_charge'],
+                'parking_charge' => $fareExtras['parking_charge'],
+                'airport_fee' => $fareExtras['airport_fee'],
+                'apply_airport_fee' => $fareExtras['apply_airport_fee'] ? 1 : 0,
+                'weather_condition' => $fareExtras['weather_condition'],
+                'event_key' => $fareExtras['event_key'],
+                'currency_code' => $currencyCode,
+            ],
+        ]);
     }
 
     public function addConfigurationWizard(Request $request)

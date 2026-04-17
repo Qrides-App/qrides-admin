@@ -370,6 +370,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
         // Fare settings (surge/time/distance config)
         Route::get('settings/fare', 'fareSetting')->name('fareSetting');
         Route::post('settings/fare', 'fareSettingUpdate')->name('fareSettingUpdate');
+        Route::get('settings/fare-test', 'fareTest')->name('fareTest');
     });
 
     // SMS settings
