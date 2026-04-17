@@ -25,17 +25,16 @@ class EmailController extends Controller
                 $query->with('emailType');
             },
         ])
-            ->where('status', 1)
             ->orderBy('id')
             ->get();
+
+        if ($AllEmailRecord->isEmpty()) {
+            return redirect()->route('admin.email')->with('error', 'No email templates found. Please add templates first.');
+        }
 
         $emaildata = $AllEmailRecord->firstWhere('id', (int) $id);
         if (! $emaildata) {
             $emaildata = $AllEmailRecord->first();
-        }
-
-        if (is_null($emaildata)) {
-            abort(404, 'No active email templates found.');
         }
 
         return view('admin.email.index', compact('emaildata', 'AllEmailRecord'));

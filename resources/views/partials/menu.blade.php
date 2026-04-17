@@ -469,9 +469,9 @@
 
                     @can('email_access')
                         <li
-                            class="{{ request()->is('user/email-templates') || request()->is('user/email-templates/*') ? 'active' : '' }}">
+                            class="{{ request()->is('admin/email-templates') || request()->is('admin/email-templates/*') || request()->is('user/email-templates') || request()->is('user/email-templates/*') || request()->is('vendor/email-templates') || request()->is('vendor/email-templates/*') ? 'active' : '' }}">
 
-                            <a href="{{ route('user.email-templates', ['id' => 1]) }}">
+                            <a href="{{ route('admin.email-templates', ['id' => 1]) }}">
                                 <i class="fas fa-dot-circle"></i>
                                 <span>{{ trans('menu.emailTemplate_title') }}</span>
                             </a>
