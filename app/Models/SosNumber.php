@@ -6,5 +6,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class SosNumber extends Model
 {
-    protected $fillable = ['name', 'sos_number', 'status'];
+    protected $fillable = ['name', 'sos_number', 'description', 'status', 'module'];
 }

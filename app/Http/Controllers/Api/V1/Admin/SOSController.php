@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\ResponseTrait;
 use App\Models\SosNumber;
+use Illuminate\Support\Facades\Schema;
 
 class SOSController extends Controller
 {
@@ -13,6 +14,14 @@ class SOSController extends Controller
     public function index()
     {
         try {
+            if (! Schema::hasTable('sos_numbers')) {
+                return $this->addSuccessResponse(
+                    200,
+                    trans('global.SOS_numbers_fetched_successfully'),
+                    ['sos' => []]
+                );
+            }
+
             $activeSosNumbers = SosNumber::where('status', '1')
                 ->latest()
                 ->get();

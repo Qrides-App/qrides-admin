@@ -31,6 +31,7 @@ class EnsureAuthSchema extends Command
         $this->normalizeAppUserMetaForeignKeyColumns();
         $this->ensurePayoutsTable();
         $this->ensureDriverRechargePlansTable();
+        $this->ensureSosNumbersTable();
         $this->normalizePayoutForeignKeyColumns();
         $this->ensureEmailTypeTable();
         $this->ensureEmailSmsNotificationTable();
@@ -473,6 +474,24 @@ class EnsureAuthSchema extends Command
             $table->string('currency_code', 10)->default('INR');
             $table->boolean('is_active')->default(true);
             $table->unsignedInteger('sort_order')->default(0);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureSosNumbersTable(): void
+    {
+        if (Schema::hasTable('sos_numbers')) {
+            return;
+        }
+
+        Schema::create('sos_numbers', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->string('name');
+            $table->string('sos_number');
+            $table->text('description')->nullable();
+            $table->boolean('status')->default(true);
+            $table->tinyInteger('module')->default(2);
             $table->timestamps();
             $table->softDeletes();
         });

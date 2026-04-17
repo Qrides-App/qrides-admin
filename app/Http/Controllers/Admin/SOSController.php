@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\SosNumber;
 use Gate;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
 class SOSController extends Controller
@@ -13,6 +15,14 @@ class SOSController extends Controller
     public function index(Request $request)
     {
         abort_if(Gate::denies('sos_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+        if (! Schema::hasTable('sos_numbers')) {
+            session()->flash('warning', 'SOS table is missing. Run migrations or schema ensure command.');
+
+            $sosNumbers = new LengthAwarePaginator([], 0, 10);
+
+            return view('admin.sos.index', compact('sosNumbers'));
+        }
 
         $sosNumbers = SosNumber::orderBy('id', 'desc')->paginate(10);
 
@@ -30,6 +40,10 @@ class SOSController extends Controller
     {
         abort_if(Gate::denies('sos_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
+        if (! Schema::hasTable('sos_numbers')) {
+            return redirect()->route('admin.sos.index')->with('error', 'SOS table is missing. Please run migrations.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'sos_number' => 'required|string|max:255',
@@ -46,6 +60,10 @@ class SOSController extends Controller
     {
         abort_if(Gate::denies('sos_update'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
+        if (! Schema::hasTable('sos_numbers')) {
+            return redirect()->route('admin.sos.index')->with('error', 'SOS table is missing. Please run migrations.');
+        }
+
         $sos = SosNumber::findOrFail($id);
 
         return view('admin.sos.edit', compact('sos'));
@@ -54,6 +72,10 @@ class SOSController extends Controller
     public function update(Request $request, $id)
     {
         abort_if(Gate::denies('sos_update'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+        if (! Schema::hasTable('sos_numbers')) {
+            return redirect()->route('admin.sos.index')->with('error', 'SOS table is missing. Please run migrations.');
+        }
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -72,6 +94,10 @@ class SOSController extends Controller
     {
         abort_if(Gate::denies('sos_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
+        if (! Schema::hasTable('sos_numbers')) {
+            return redirect()->route('admin.sos.index')->with('error', 'SOS table is missing. Please run migrations.');
+        }
+
         $sos = SosNumber::findOrFail($id);
 
         return view('admin.sos.show', compact('sos'));
@@ -80,6 +106,13 @@ class SOSController extends Controller
     public function updateStatus(Request $request)
     {
         abort_if(Gate::denies('sos_update'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+        if (! Schema::hasTable('sos_numbers')) {
+            return response()->json([
+                'status' => 500,
+                'message' => 'SOS table is missing. Please run migrations.',
+            ]);
+        }
 
         $updated = SosNumber::where('id', $request->id)
             ->update(['status' => $request->status]);
@@ -101,6 +134,10 @@ class SOSController extends Controller
     {
         abort_if(Gate::denies('sos_delete'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
+        if (! Schema::hasTable('sos_numbers')) {
+            return redirect()->route('admin.sos.index')->with('error', 'SOS table is missing. Please run migrations.');
+        }
+
         $sos = SosNumber::find($id);
 
         if (! $sos) {
@@ -116,6 +153,10 @@ class SOSController extends Controller
     public function deleteAll(Request $request)
     {
         abort_if(Gate::denies('sos_delete'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+        if (! Schema::hasTable('sos_numbers')) {
+            return response()->json(['message' => 'SOS table is missing. Please run migrations.'], 500);
+        }
 
         $ids = $request->input('ids');
         if (! empty($ids)) {
