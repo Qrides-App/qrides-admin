@@ -239,6 +239,9 @@ class GeneralSettingController extends Controller
             'fare_dynamic_surge_max',
             'fare_weather_multipliers_json',
             'fare_event_multipliers_json',
+            'fare_offer_boost_enabled',
+            'fare_offer_boost_options',
+            'fare_offer_boost_max_total',
         ])->pluck('meta_value', 'meta_key');
 
         $fare_base = $meta['fare_base'] ?? 30;
@@ -261,6 +264,9 @@ class GeneralSettingController extends Controller
         $fare_dynamic_surge_max = $meta['fare_dynamic_surge_max'] ?? 1.8;
         $fare_weather_multipliers_json = $meta['fare_weather_multipliers_json'] ?? '{"rain":1.25,"storm":1.5}';
         $fare_event_multipliers_json = $meta['fare_event_multipliers_json'] ?? '';
+        $fare_offer_boost_enabled = (int) ($meta['fare_offer_boost_enabled'] ?? 1);
+        $fare_offer_boost_options = $meta['fare_offer_boost_options'] ?? '10,20';
+        $fare_offer_boost_max_total = $meta['fare_offer_boost_max_total'] ?? 100;
 
         return view('admin.generalSettings.fare.pricing', compact(
             'fare_base',
@@ -282,7 +288,10 @@ class GeneralSettingController extends Controller
             'fare_dynamic_surge_min',
             'fare_dynamic_surge_max',
             'fare_weather_multipliers_json',
-            'fare_event_multipliers_json'
+            'fare_event_multipliers_json',
+            'fare_offer_boost_enabled',
+            'fare_offer_boost_options',
+            'fare_offer_boost_max_total'
         ));
     }
 
@@ -311,6 +320,9 @@ class GeneralSettingController extends Controller
             'fare_dynamic_surge_max' => 'required|numeric|min:0.1|max:10',
             'fare_weather_multipliers_json' => 'nullable|string',
             'fare_event_multipliers_json' => 'nullable|string',
+            'fare_offer_boost_enabled' => 'required|in:0,1',
+            'fare_offer_boost_options' => 'required|string',
+            'fare_offer_boost_max_total' => 'required|numeric|min:0',
         ]);
 
         // clamp cap >= floor
@@ -362,6 +374,21 @@ class GeneralSettingController extends Controller
             }
             $data['fare_event_multipliers_json'] = json_encode($decodedEvents, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         }
+
+        $boostOptions = collect(explode(',', (string) $data['fare_offer_boost_options']))
+            ->map(fn ($value) => trim($value))
+            ->filter(fn ($value) => $value !== '' && is_numeric($value) && (float) $value > 0)
+            ->map(fn ($value) => (int) round((float) $value))
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        if (empty($boostOptions)) {
+            return back()->withErrors(['fare_offer_boost_options' => 'Provide at least one valid amount, e.g. 10,20'])->withInput();
+        }
+        $data['fare_offer_boost_options'] = implode(',', $boostOptions);
+        $data['fare_offer_boost_max_total'] = max((float) $data['fare_offer_boost_max_total'], (float) max($boostOptions));
 
         foreach ($data as $k => $v) {
             GeneralSetting::updateOrCreate(['meta_key' => $k], ['meta_value' => $v]);

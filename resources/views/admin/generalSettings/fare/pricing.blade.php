@@ -170,6 +170,32 @@
                                 <small class="text-muted">Optional list of event-based surge rules by key and/or time window.</small>
                             </div>
                         </div>
+
+                        <hr>
+                        <h4 class="col-sm-12">Rapido-Style Offer Boost (if driver not accepting)</h4>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Enable Offer Boost</label>
+                            <div class="col-sm-6">
+                                <select name="fare_offer_boost_enabled" class="form-control" required>
+                                    <option value="1" {{ old('fare_offer_boost_enabled', $fare_offer_boost_enabled) == 1 ? 'selected' : '' }}>Enabled</option>
+                                    <option value="0" {{ old('fare_offer_boost_enabled', $fare_offer_boost_enabled) == 0 ? 'selected' : '' }}>Disabled</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Allowed Add Amounts</label>
+                            <div class="col-sm-6">
+                                <input type="text" class="form-control" name="fare_offer_boost_options" value="{{ old('fare_offer_boost_options', $fare_offer_boost_options) }}" placeholder="10,20,30">
+                                <small class="text-muted">Comma-separated amounts user can add when waiting for acceptance.</small>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Max Total Addable</label>
+                            <div class="col-sm-6">
+                                <input type="number" step="1" min="0" class="form-control" name="fare_offer_boost_max_total" value="{{ old('fare_offer_boost_max_total', $fare_offer_boost_max_total) }}">
+                                <small class="text-muted">Total boost cap per booking (e.g. 100).</small>
+                            </div>
+                        </div>
                     </div>
                     <div class="box-footer">
                         <button type="submit" class="btn btn-info btn-space">Save</button>

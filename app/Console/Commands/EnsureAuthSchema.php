@@ -45,6 +45,7 @@ class EnsureAuthSchema extends Command
         $this->ensureRentalItemsTable();
         $this->ensureBookingsTable();
         $this->ensureBookingMetaTable();
+        $this->ensureBookingExtensionsOfferBoostColumn();
         $this->ensureLanguagesTable();
         $this->ensureSupportTicketsTable();
         $this->ensureSupportTicketRepliesTable();
@@ -788,6 +789,21 @@ class EnsureAuthSchema extends Command
             $table->longText('meta_value')->nullable();
             $table->timestamp('created_at')->nullable()->useCurrent();
             $table->timestamp('updated_at')->nullable()->useCurrentOnUpdate();
+        });
+    }
+
+    private function ensureBookingExtensionsOfferBoostColumn(): void
+    {
+        if (! Schema::hasTable('booking_extensions')) {
+            return;
+        }
+
+        if (Schema::hasColumn('booking_extensions', 'offer_boost_amount')) {
+            return;
+        }
+
+        Schema::table('booking_extensions', function (Blueprint $table) {
+            $table->decimal('offer_boost_amount', 10, 2)->default(0)->after('ride_id');
         });
     }
 }

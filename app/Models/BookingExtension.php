@@ -21,11 +21,13 @@ class BookingExtension extends Model
         'estimated_duration_min',
         'pick_otp',
         'ride_id',
+        'offer_boost_amount',
     ];
 
     protected $casts = [
         'pickup_location' => 'array',
         'dropoff_location' => 'array',
+        'offer_boost_amount' => 'float',
     ];
 
     // Relationship to the Booking model
