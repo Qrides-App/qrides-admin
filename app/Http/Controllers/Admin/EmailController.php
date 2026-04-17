@@ -14,6 +14,7 @@ class EmailController extends Controller
     public function template(Request $request, $id)
     {
         abort_if(Gate::denies('email_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $scope = in_array($request->query('scope'), ['user', 'vendor', 'admin'], true) ? $request->query('scope') : 'user';
         $module = Module::where('default_module', '1')->first() ?? Module::query()->first();
         $moduleId = $module?->id;
 
@@ -37,7 +38,7 @@ class EmailController extends Controller
             $emaildata = $AllEmailRecord->first();
         }
 
-        return view('admin.email.index', compact('emaildata', 'AllEmailRecord'));
+        return view('admin.email.index', compact('emaildata', 'AllEmailRecord', 'scope'));
     }
 
     public function templatecreate(Request $request, $id)
@@ -68,9 +69,7 @@ class EmailController extends Controller
 
             $emaildata->save();
 
-            return redirect()->route('vendor.email-templates', $id)->with('success', 'Updated successfully!');
-
-            // return redirect()->route('vendor.email-templates', $id);
+            return redirect()->route('admin.email-templates', ['id' => $id, 'scope' => 'vendor'])->with('success', 'Updated successfully!');
         }
         if ($request->type == 'admin') {
 
@@ -89,7 +88,7 @@ class EmailController extends Controller
 
             $emaildata->save();
 
-            return redirect()->route('admin.email-templates', $id)->with('success', 'Updated successfully!');
+            return redirect()->route('admin.email-templates', ['id' => $id, 'scope' => 'admin'])->with('success', 'Updated successfully!');
         }
         $emaildata = EmailSmsNotification::where('id', $id)->firstOrNew();
 
@@ -118,6 +117,6 @@ class EmailController extends Controller
         ]);
         $emaildata->save();
 
-        return redirect()->route('user.email-templates', $id)->with('success', 'Updated successfully!');
+        return redirect()->route('admin.email-templates', ['id' => $id, 'scope' => 'user'])->with('success', 'Updated successfully!');
     }
 }

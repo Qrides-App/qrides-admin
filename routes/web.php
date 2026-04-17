@@ -56,7 +56,7 @@ Route::get('/home', function () {
 
 // Keep auth entry routes available in production without laravel/ui scaffolding.
 Route::get('login', 'App\Http\Controllers\Auth\LoginController@showLoginForm')->name('login');
-Route::post('login', 'App\Http\Controllers\Auth\LoginController@login');
+Route::post('login', 'App\Http\Controllers\Auth\LoginController@login')->middleware('throttle:login');
 Route::post('logout', 'App\Http\Controllers\Auth\LoginController@logout')->name('logout');
 
 /*********** Front End ****/

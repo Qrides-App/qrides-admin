@@ -9,25 +9,21 @@
                     <ul class="nav nav-pills nav-stacked d-flex flex-column">
 
                         @php
-                        $currentRoute = request()->path();
+                        $activeScope = in_array($scope ?? 'user', ['user', 'vendor', 'admin'], true) ? $scope : 'user';
                         @endphp
 
 
 
                         @foreach($AllEmailRecord as $data)
                         @php
-
-                        $userRoute = 'user/email-templates/'.$data->id;
-                        $vendorRoute = 'vendor/email-templates/'.$data->id;
-                        $adminRoute = 'admin/email-templates/'.$data->id;
-                        $cls = ($currentRoute === $userRoute || $currentRoute === $vendorRoute || $currentRoute ===
-                        $adminRoute ) ? 'active' : '';
+                        $currentTemplateId = (int) request()->route('id');
+                        $cls = ($currentTemplateId === (int) $data->id) ? 'active' : '';
                         @endphp
 
 
 
                         <li class=" {{ $cls }} ">
-                            <a href="{{ route('user.email-templates', ['id' => $data->id]) }}">{{ trans('global.' . strtolower(str_replace(' ', '_', $data->temp_name ?? 'default_value'))) }}
+                            <a href="{{ route('admin.email-templates', ['id' => $data->id, 'scope' => $activeScope]) }}">{{ trans('global.' . strtolower(str_replace(' ', '_', $data->temp_name ?? 'default_value'))) }}
                             </a>
                         </li>
                         @endforeach
@@ -48,13 +44,13 @@
             @foreach($userRoles as $index => $userRole)
             @if(isset($roles[$index]))
             @if($userRole == 'user')
-            <a href="{{ route('user.email-templates', ['id' => $emaildata->id]) }}" class="btn btn-primary formtag"
+            <a href="{{ route('admin.email-templates', ['id' => $emaildata->id, 'scope' => 'user']) }}" class="btn btn-primary formtag"
                 id="2"> {{ trans('global.user') }}</a>
             @elseif($userRole == 'vendor')
-            <a href="{{ route('vendor.email-templates', ['id' => $emaildata->id]) }}" class="btn btn-primary formtag"
+            <a href="{{ route('admin.email-templates', ['id' => $emaildata->id, 'scope' => 'vendor']) }}" class="btn btn-primary formtag"
                 id="3"> {{ trans('global.vendor') }}</a>
             @elseif($userRole == 'admin')
-            <a href="{{ route('admin.email-templates', ['id' => $emaildata->id]) }}" class="btn btn-primary formtag"
+            <a href="{{ route('admin.email-templates', ['id' => $emaildata->id, 'scope' => 'admin']) }}" class="btn btn-primary formtag"
                 id="1" active> {{ trans('global.admin') }}</a>
             @endif
             @endif
@@ -189,14 +185,15 @@
             </div>
 
 
-            @if(request()->is("user/email-templates/*"))
+            @if($activeScope === 'user')
 
-            <form action="{{ route('user.email-template.create',['id' => $emaildata->id]) }}" method="POST"
+            <form action="{{ route('admin.email-template.create',['id' => $emaildata->id, 'scope' => 'user']) }}" method="POST"
                 class="myform" data-id="2" id="user-form">
                 @csrf
                 <div class="box-body">
                     <div class="form-group">
                         <label class="fw-bold mb-2" for="exampleInputEmail1">{{ trans('global.subject') }}</label>
+                        <input type="hidden" name="type" value="user">
                         <input class="form-control f-14" name="subject" type="text"
                             value="{{ $emaildata->subject ?? '' }}">
                     </div>
@@ -239,9 +236,9 @@
 
                 </div>
             </form>
-            @elseif(request()->is("vendor/email-templates/*"))
+            @elseif($activeScope === 'vendor')
 
-            <form action="{{ route('vendor.email-template.create',['id' => $emaildata->id]) }}" method="POST"
+            <form action="{{ route('admin.email-template.create',['id' => $emaildata->id, 'scope' => 'vendor']) }}" method="POST"
                 class="myform" data-id="3" id="vendor-form">
                 @csrf
                 <div class="box-body">
@@ -295,7 +292,7 @@
                 </div>
             </form>
             @else
-            <form action="{{ route('admin.email-template.create',['id' => $emaildata->id]) }}" method="POST"
+            <form action="{{ route('admin.email-template.create',['id' => $emaildata->id, 'scope' => 'admin']) }}" method="POST"
                 class="myform" data-id="1" id="admin-form">
                 @csrf
                 <div class="box-body">
