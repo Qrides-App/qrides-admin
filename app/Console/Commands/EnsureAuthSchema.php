@@ -26,6 +26,7 @@ class EnsureAuthSchema extends Command
         $this->ensureGeneralSettingsTable();
         $this->ensureAllPackagesTable();
         $this->ensureAppUsersTable();
+        $this->ensureAppUsersAuthColumns();
         $this->ensureAppUsersPackageColumn();
         $this->ensureAppUserMetaTable();
         $this->normalizeAppUserMetaForeignKeyColumns();
@@ -336,6 +337,25 @@ class EnsureAuthSchema extends Command
             $table->timestamps();
             $table->softDeletes();
         });
+    }
+
+    private function ensureAppUsersAuthColumns(): void
+    {
+        if (! Schema::hasTable('app_users')) {
+            return;
+        }
+
+        if (! Schema::hasColumn('app_users', 'token')) {
+            Schema::table('app_users', function (Blueprint $table) {
+                $table->text('token')->nullable()->after('password');
+            });
+        }
+
+        if (! Schema::hasColumn('app_users', 'reset_token')) {
+            Schema::table('app_users', function (Blueprint $table) {
+                $table->integer('reset_token')->nullable()->default(0)->after('token');
+            });
+        }
     }
 
     private function ensureAppUsersPackageColumn(): void
