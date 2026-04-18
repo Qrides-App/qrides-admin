@@ -178,7 +178,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::post('bookings/permanent-delete/{id}', 'BookingController@permanentDelete')->name('bookings.permanentDelete');
     Route::post('bookings/permanent-delete-all', 'BookingController@deleteAllPermanent')->name('bookings.permanentDeleteAll');
     Route::resource('bookings', 'BookingController');
-    Route::redirect('hire-bookings', '/admin/bookings');
+    Route::get('hire-bookings', '\App\Http\Controllers\Admin\HireBookingController@index')->name('hire-bookings.index');
     Route::get('customerItem', 'BookingController@customerItem')->name('customerItem');
     Route::get('overview/{booking}', 'Driver\AppDriverController@driverProfileView')->name('overview');
     Route::get('item/{booking}', 'BookingController@items')->name('item');
