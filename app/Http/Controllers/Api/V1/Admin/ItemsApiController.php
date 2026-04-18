@@ -55,9 +55,8 @@ class ItemsApiController extends Controller
             'place_id' => $request->place_id,
             'latitude' => $request->platitude,
             'longitude' => $request->plongitude,
-            'make' => $request->make,
-            'model' => $request->model,
-            'registration_number' => $request->registration_number,
+            'category_id' => $request->make ?: $item->category_id,
+            'subcategory_id' => $request->model ?: $item->subcategory_id,
 
         ]);
         ItemVehicle::updateOrCreate(
@@ -65,6 +64,7 @@ class ItemsApiController extends Controller
             [
                 'year' => $request->year,
                 'color' => $request->color,
+                'vehicle_registration_number' => $request->registration_number,
             ]
         );
         $userData = AppUser::find($user_id);

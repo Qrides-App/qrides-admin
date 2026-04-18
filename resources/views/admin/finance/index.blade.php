@@ -25,16 +25,10 @@
 @endsection
 @section('content')
     <div class="content">
-        <div class="admin-page-header">
-            <div>
-                <h3 class="admin-page-title">{{ trans('global.finance') }}</h3>
-                <p class="admin-page-subtitle">Review revenue, commission splits and payment health.</p>
-            </div>
-        </div>
 
         <div class="row">
             <div class="col-lg-12">
-                <div class="box booking-filter-card">
+                <div class="box">
                     <div class="box-body">
                         <form class="form-horizontal" enctype="multipart/form-data" action="" method="GET"
                             accept-charset="UTF-8" id="bookingFilterForm">
@@ -91,12 +85,16 @@
                                     </div>
 
 
-                                    <div class="col-md-2 col-sm-12 col-xs-12 booking-filter-actions">
+                                    <div class="col-md-2 d-flex gap-2 mt-4 col-sm-2 col-xs-4 mt-5">
 
                                         <button type="submit" name="btn"
                                             class="btn btn-primary btn-flat">{{ trans('global.filter') }}</button>
                                         <button type="button" name="reset_btn" id="resetBtn"
-                                            class="btn btn-default btn-flat">{{ trans('global.reset') }}</button>
+                                            class="btn btn-primary btn-flat">{{ trans('global.reset') }}</button>
+                                    </div>
+                                    <div class="col-md-1 col-sm-2 col-xs-4 mt-5">
+                                        <br>
+
                                     </div>
                                 </div>
                             </div>
@@ -195,7 +193,7 @@
 
 
             <div class="col-lg-12">
-                <div class="panel panel-default booking-table-panel">
+                <div class="panel  panel-default">
                     <div class="panel-heading">
                         {{ trans('global.finance') }}
                     </div>
@@ -303,20 +301,21 @@
                                             </td>
 
 
+                                            @php $normalizedStatus = strtolower($booking->status ?? ''); @endphp
                                             <td>
-                                                @if ($booking->status === 'Pending')
+                                                @if ($normalizedStatus === 'pending')
                                                     <span class="badge badge-pill label-secondary">Pending</span>
-                                                @elseif ($booking->status === 'Cancelled')
+                                                @elseif ($normalizedStatus === 'cancelled')
                                                     <span class="badge badge-pill label-danger">Cancelled</span>
-                                                @elseif ($booking->status === 'Approved')
+                                                @elseif ($normalizedStatus === 'approved')
                                                     <span class="badge badge-pill label-success">Approved</span>
-                                                @elseif ($booking->status === 'Declined')
+                                                @elseif ($normalizedStatus === 'declined' || $normalizedStatus === 'rejected')
                                                     <span class="badge badge-pill label-warning">Declined</span>
-                                                @elseif ($booking->status === 'Completed')
+                                                @elseif ($normalizedStatus === 'completed')
                                                     <span class="badge badge-pill label-info">Completed</span>
-                                                @elseif ($booking->status === 'Refunded')
+                                                @elseif ($normalizedStatus === 'refunded')
                                                     <span class="badge badge-pill label-primary">Refunded</span>
-                                                @elseif ($booking->status === 'Confirmed')
+                                                @elseif ($normalizedStatus === 'confirmed')
                                                     <span class="badge badge-pill label-success">Confirmed</span>
                                                 @else
                                                     {{ $booking->status }}
@@ -344,16 +343,6 @@
 
                                         </tr>
                                     @endforeach
-                                    @if($bookings->isEmpty())
-                                        <tr>
-                                            <td colspan="12">
-                                                <div class="table-empty-state">
-                                                    <h4>No finance rows found</h4>
-                                                    <p>Try broadening your filters or date range.</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endif
                                 </tbody>
                             </table>
                             <nav aria-label="...">

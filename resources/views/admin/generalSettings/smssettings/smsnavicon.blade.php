@@ -1,135 +1,58 @@
-@section('styles')
-<style>
-    .d-flex {
-        display: flex;
-    }
-    .justify-content-between {
-        justify-content: space-between;
-    }
-    .sms-provider-name {
-        /* Ensure this has enough space to be aligned right */
-        margin-left: auto; /* This will push the element to the right */
-        font-weight: bold;
-        color: #333;
-    }
-.autoFillOtp-toggle {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
-}
+@php
+    $providers = [
+        ['key' => 'nonage', 'label' => trans('global.smssettings_title_singular'), 'route' => 'admin.smssetting', 'icon' => 'fa-commenting'],
+        ['key' => 'msg91', 'label' => trans('global.msg91'), 'route' => 'admin.msg91', 'icon' => 'fa-bolt'],
+        ['key' => 'twillio', 'label' => trans('global.twillio'), 'route' => 'admin.twilliosetting', 'icon' => 'fa-phone'],
+        ['key' => 'sinch', 'label' => 'Sinch', 'route' => 'admin.sinchSetting', 'icon' => 'fa-rss'],
+        ['key' => 'twofactor', 'label' => trans('global.2_factor'), 'route' => 'admin.twofactor', 'icon' => 'fa-shield'],
+        ['key' => 'nexmo', 'label' => trans('global.nexmo'), 'route' => 'admin.nexmosetting', 'icon' => 'fa-paper-plane'],
+    ];
+    $activeProviderKey = $sms_provider_name->meta_value ?? null;
+    $activeProvider = collect($providers)->firstWhere('key', $activeProviderKey);
+@endphp
 
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 60px;
-    height: 22px;
-    margin-right: 10px;
-}
-
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 34px;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 15px;
-    width: 15px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-}
-
-input:checked + .slider {
-    background-color: #2196F3;
-}
-
-input:focus + .slider {
-    box-shadow: 0 0 1px #2196F3;
-}
-
-input:checked + .slider:before {
-    transform: translateX(26px);
-}
-
-.toggle-label {
-    font-size: 14px;
-}
-</style>
-@endsection
-   <div class="col-md-9">
-   <div class="d-flex justify-content-between align-items-center mb-3">
-   <span class="toggle-label">Auto Fill OTP</span>
-   <div class="autoFillOtp">
-   
-    <label class="switch">
-            <input type="checkbox" id="autofillotp" data-offstyle="danger"
-            data-toggle="toggle" data-on="Active" data-off="InActive"
-            {{ $auto_fill_otp && $auto_fill_otp->meta_value == 1 ? 'checked' : '' }}> 
-                <span class="slider round"></span>
-            </label>
-           
-        </div>
-        <div class="ms-auto sms-provider-name">
-        @php
-            $providerName = $sms_provider_name->meta_value ?? '';
-            $url = route('admin.smssetting');
-            if ($providerName === 'twillio') {
-                $url = route('admin.twilliosetting');
-            } elseif ($providerName === 'sinch') {
-                $url = route('admin.sinchSetting');
-            } elseif ($providerName === 'msg91') {
-                $url = route('admin.msg91');
-            }
-        @endphp
-        Active :: <a href="{{ $url }}" class="sms-provider-link">
-            {{ $providerName !== '' ? $providerName : 'nonage' }}
-        </a>
-        </div>
-        
+<div class="settings-page-header">
+    <div>
+        <span class="settings-page-header__eyebrow">{{ $pageEyebrow ?? 'Messaging stack' }}</span>
+        <h1 class="settings-page-header__title">{{ $pageTitle ?? 'SMS Settings' }}</h1>
+        <p class="settings-page-header__subtitle">
+            {{ $pageSubtitle ?? 'Configure gateway credentials, choose the active SMS delivery provider, and control OTP auto-fill behavior for mobile login flows.' }}
+        </p>
     </div>
-          <div class="nav-tabs-custom">
-          <ul class="nav nav-tabs" style="display: inline-block;">             
-    <li class="{{ Request::route()->getName() === 'admin.smssetting' ? 'active' : '' }}">
-        <a href="{{ route('admin.smssetting') }}" id="smssetting">{{ trans('global.smssettings_title_singular') }}</a>
-    </li>
-
-    <li class="{{ Request::route()->getName() === 'admin.twilliosetting' ? 'active' : '' }}">
-        <a href="{{ route('admin.twilliosetting') }}" id="twilliosetting">{{ trans('global.twillio') }}</a>
-    </li>
-
-    <li class="{{ Request::route()->getName() === 'admin.sinchSetting' ? 'active' : '' }}">
-        <a href="{{ route('admin.sinchSetting') }}" id="sinchSetting" >Sinch</a>
-    </li>
-     <li class="{{ Request::route()->getName() === 'admin.msg91' ? 'active' : '' }}">
-        <a href="{{ route('admin.msg91') }}" >{{ trans('global.msg91') }}</a>
-    </li>
-   <!-- <li class="{{ Request::route()->getName() === 'admin.twilliosetting' ? 'active' : '' }}">
-        <a href="{{ route('admin.twilliosetting') }}" >{{ trans('global.twillio') }}</a>
-    </li>
-    <li class="{{ Request::route()->getName() === 'admin.nexmosetting' ? 'active' : '' }}">
-        <a href="{{ route('admin.nexmosetting') }}" >{{ trans('global.nexmo') }}</a>
-    </li>
-    <li class="{{ Request::route()->getName() === 'admin.twofactor' ? 'active' : '' }}">
-        <a href="{{ route('admin.twofactor') }}" >{{ trans('global.2_factor') }}</a>
-    </li> -->
-</ul>
+    <div class="settings-page-header__actions">
+        <span class="settings-status-pill {{ $activeProvider ? 'is-live' : 'is-muted' }}">
+            {{ $activeProvider ? 'Active: ' . $activeProvider['label'] : 'No active provider' }}
+        </span>
+    </div>
 </div>
 
-<div class="box box-muted">
+<div class="settings-card settings-card--hero">
+    <div class="settings-card__header">
+        <div>
+            <h3>Delivery routing</h3>
+            <p>Each provider keeps its own credentials. Switching the active provider does not erase saved keys.</p>
+        </div>
+        <div class="settings-toggle-wrap">
+            <span class="settings-toggle-wrap__label">Auto Fill OTP</span>
+            <label class="settings-switch">
+                <input type="checkbox" id="autofillotp" {{ ($auto_fill_otp->meta_value ?? 0) == 1 ? 'checked' : '' }}>
+                <span class="settings-switch__slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <div class="settings-callout settings-callout--soft">
+        <i class="fa fa-info-circle"></i>
+        <span>Keep only one provider active at a time. OTP auto-fill controls whether supported mobile clients may auto-read the verification code.</span>
+    </div>
+
+    <div class="sms-provider-tabs">
+        @foreach ($providers as $provider)
+            <a href="{{ route($provider['route']) }}"
+                class="settings-pill-tabs__item {{ request()->routeIs($provider['route']) ? 'is-active' : '' }}">
+                <i class="fa {{ $provider['icon'] }}"></i>
+                <span>{{ $provider['label'] }}</span>
+            </a>
+        @endforeach
+    </div>
+</div>

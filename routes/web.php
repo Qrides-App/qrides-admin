@@ -25,12 +25,16 @@ Route::get('/payment_success', 'App\Http\Controllers\Front\PaymentFrontControlle
 Route::get('/payment_payduniya', 'App\Http\Controllers\Front\PaymentFrontController@payment_payduniya')->name('payment_payduniya');
 Route::get('/payment_fail', 'App\Http\Controllers\Front\PaymentFrontController@paymentfail')->name('payment_fail');
 Route::get('/testing', 'App\Http\Controllers\Front\PaymentFrontController@testing')->name('testing');
+Route::get('/ride-tracking/{token}', [App\Http\Controllers\Front\RideTrackingController::class, 'show'])->name('ride-tracking.show');
+Route::get('/ride-tracking/{token}/snapshot', [App\Http\Controllers\Front\RideTrackingController::class, 'snapshot'])->name('ride-tracking.snapshot');
 
 // email route
-Route::get('user/email-templates/{id}', 'App\Http\Controllers\Admin\EmailController@template')->name('user.email-templates');
-Route::get('vendor/email-templates/{id}', 'App\Http\Controllers\Admin\EmailController@template')->name('vendor.email-templates');
-Route::post('vendor/email-templates/create/{id}', 'App\Http\Controllers\Admin\EmailController@templatecreate')->name('vendor.email-template.create');
-Route::post('user/email-template/create/{id}', 'App\Http\Controllers\Admin\EmailController@templatecreate')->name('user.email-template.create');
+Route::middleware('auth')->group(function () {
+    Route::get('user/email-templates/{id}', 'App\Http\Controllers\Admin\EmailController@template')->name('user.email-templates');
+    Route::get('vendor/email-templates/{id}', 'App\Http\Controllers\Admin\EmailController@template')->name('vendor.email-templates');
+    Route::post('vendor/email-templates/create/{id}', 'App\Http\Controllers\Admin\EmailController@templatecreate')->name('vendor.email-template.create');
+    Route::post('user/email-template/create/{id}', 'App\Http\Controllers\Admin\EmailController@templatecreate')->name('user.email-template.create');
+});
 // end
 
 // Forgot Password Routes
@@ -40,12 +44,6 @@ Route::get('password/reset/{token}', 'App\Http\Controllers\Auth\ResetPasswordCon
 Route::post('password/reset', 'App\Http\Controllers\Auth\ResetPasswordController@reset')->name('password.update');
 
 Route::redirect('/', '/login');
-Route::get('/healthz', function () {
-    return response()->json([
-        'status' => 'ok',
-        'service' => 'qrides-admin',
-    ], 200);
-});
 Route::get('/home', function () {
     if (session('status')) {
         return redirect()->route('admin.home')->with('status', session('status'));
@@ -54,10 +52,7 @@ Route::get('/home', function () {
     return redirect()->route('admin.home');
 });
 
-// Keep auth entry routes available in production without laravel/ui scaffolding.
-Route::get('login', 'App\Http\Controllers\Auth\LoginController@showLoginForm')->name('login');
-Route::post('login', 'App\Http\Controllers\Auth\LoginController@login');
-Route::post('logout', 'App\Http\Controllers\Auth\LoginController@logout')->name('logout');
+Auth::routes(['register' => false]);
 
 /*********** Front End ****/
 
@@ -163,11 +158,11 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::delete('bookings/delete-all', 'BookingController@bookingDeleteAll')->name('bookings.deleteAll');
     Route::delete('bookings/deleteTrash-all', 'BookingController@bookngTrashAll')->name('bookings.deleteTrashAll');
     Route::get('bookings/trash', 'BookingController@index')->name('bookings.trash');
-    Route::post('admin/bookings/restore/{id}', 'BookingController@restoreTrash')->name('bookings.restore');
-    Route::post('admin/bookings/permanent-delete/{id}', 'BookingController@permanentDelete')->name('bookings.permanentDelete');
+    Route::post('bookings/restore/{id}', 'BookingController@restoreTrash')->name('bookings.restore');
+    Route::post('bookings/permanent-delete/{id}', 'BookingController@permanentDelete')->name('bookings.permanentDelete');
     Route::post('bookings/permanent-delete-all', 'BookingController@deleteAllPermanent')->name('bookings.permanentDeleteAll');
     Route::resource('bookings', 'BookingController');
-    Route::get('hire-bookings', '\App\Http\Controllers\Admin\HireBookingController@index')->name('hire-bookings.index');
+    Route::redirect('hire-bookings', '/admin/bookings');
     Route::get('customerItem', 'BookingController@customerItem')->name('customerItem');
     Route::get('overview/{booking}', 'Driver\AppDriverController@driverProfileView')->name('overview');
     Route::get('item/{booking}', 'BookingController@items')->name('item');
@@ -248,7 +243,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
         ->name('rider.account.update');
 
     /*** Driver Profile */
-    Route::resource('drivers', 'Driver\AppDriverController');
+    Route::resource('drivers', 'Driver\AppDriverController')->only(['index']);
     Route::get('driver/profile/{driver_id}', 'Driver\AppDriverController@driverProfileView')
         ->name('driver.profile');
     Route::get('driver/financial/{driver_id}', 'Driver\AppDriverController@driverFinanceView')
@@ -259,8 +254,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
         ->name('driver.vehicle');
     Route::get('driver/document/{driver_id}', 'Driver\AppDriverController@driverDocumentView')
         ->name('driver.document');
-    Route::get('driver/hire/{driver_id}', 'Driver\AppDriverController@driverHireView')
-        ->name('driver.hire');
     Route::get('driver/payouts/{driver_id}', 'Driver\AppDriverController@driverPayoutsView')
         ->name('driver.payouts');
 
@@ -282,13 +275,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::get('driver.searchDrivers', 'Driver\AppDriverController@searchDrivers')->name('driver.search');
     Route::get('driver/vendor-wallet/{id}', 'PayoutController@getWalletBalance')->name('driver.getWalletBalance');
 
-    // Driver recharge plans/settings (admin UI)
-    Route::get('recharge-plans', 'RechargePlanController@index')->name('recharge-plans.index');
-    Route::post('recharge-plans', 'RechargePlanController@store')->name('recharge-plans.store');
-    Route::put('recharge-plans/{plan}', 'RechargePlanController@update')->name('recharge-plans.update');
-    Route::delete('recharge-plans/{plan}', 'RechargePlanController@destroy')->name('recharge-plans.destroy');
-    Route::post('recharge-plans/settings', 'RechargePlanController@updateSettings')->name('recharge-plans.settings');
-
     // Availability
     Route::resource('availabilities', 'AvailabilityController', ['except' => ['destroy']]);
 
@@ -305,6 +291,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     // Route::resource('emails', 'EmailController', ['except' => ['destroy']]);
     Route::get('email-templates/{id}', 'EmailController@template')->name('email-templates');
     Route::post('email-template/create/{id}', 'EmailController@templatecreate')->name('email-template.create');
+    Route::post('email-template/test/{id}', 'EmailController@sendTestMail')->name('email-template.test');
 
     // Review
     Route::resource('reviews', 'ReviewController', ['except' => ['destroy']]);
@@ -346,6 +333,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
 
         // Email settings
         Route::get('settings/email', 'emailSetting')->name('email');
+        Route::post('settings/email/update', 'emailSettingUpdate')->name('email.update');
+        Route::post('settings/email/test', 'sendTestMail')->name('email.test');
 
         // Fees
         Route::get('settings/fees', 'fees')->name('fees');
@@ -362,15 +351,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
         // API informations
         Route::get('settings/api-informations', 'apiInformations')->name('api-informations');
         Route::post('apiauthenticationadd', 'apiAuthenticationAdd')->name('apiauthenticationadd');
-
-        // QR Hire settings
-        Route::get('settings/hire', 'hireSetting')->name('hireSetting');
-        Route::post('settings/hire', 'hireSettingUpdate')->name('hireSettingUpdate');
-
-        // Fare settings (surge/time/distance config)
-        Route::get('settings/fare', 'fareSetting')->name('fareSetting');
-        Route::post('settings/fare', 'fareSettingUpdate')->name('fareSettingUpdate');
-        Route::get('settings/fare-test', 'fareTest')->name('fareTest');
     });
 
     // SMS settings

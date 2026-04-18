@@ -39,7 +39,7 @@ class DriverFinanceApiController extends Controller
         if (! $user) {
             return $this->addErrorResponse(500, trans('global.token_not_match'), '');
         }
-        $hostBookingsQuery = $user->hostBookings()->where('status', 'completed');
+        $hostBookingsQuery = $user->hostBookings()->whereRaw("LOWER(status) = 'completed'");
 
         if ($startDate) {
             $hostBookingsQuery->whereDate('ride_date', '>=', $startDate);

@@ -51,7 +51,7 @@ class VehicleBaseController extends Controller
         $request->validate([
             'car_type' => 'required|numeric',
             'make' => 'required|numeric',
-            'model' => 'required',
+            'model' => 'nullable',
             'year' => 'required|numeric',
             'registration_number' => 'required',
         ]);
@@ -61,13 +61,13 @@ class VehicleBaseController extends Controller
         $itemData = Item::findOrFail($id);
         $itemData->update([
             'item_type_id' => $car_type,
-            'make' => $request->input('make'),
-            'model' => $request->input('model'),
-            'registration_number' => $request->input('registration_number'),
+            'category_id' => $request->input('make'),
+            'subcategory_id' => is_numeric($request->input('model')) ? $request->input('model') : $itemData->subcategory_id,
         ]);
 
         $data = [
             'year' => $request->input('year'),
+            'vehicle_registration_number' => $request->input('registration_number'),
         ];
 
         $identifier = [
@@ -113,6 +113,10 @@ class VehicleBaseController extends Controller
             $itemData->vehicle_insurance_doc->delete();
 
         }
+
+        return response()->json([
+            'message' => 'Vehicle updated successfully.',
+        ]);
     }
 
     public function getVehicleType(Request $request)

@@ -4,208 +4,165 @@
 $i = 0;
 $j = 0;
 @endphp
-<div class="content">
-    <div class="admin-page-header">
+<div class="content admin-screen">
+    @php
+        $statuses = [
+            'accepted' => trans('booking.booking_accepted'),
+            'ongoing' => trans('booking.booking_running'),
+            'cancelled' => trans('booking.booking_cancelled'),
+            'rejected' => trans('booking.booking_rejected'),
+            'completed' => trans('booking.booking_completed'),
+        ];
+        $selectedStatus = request()->input('status');
+        $statusTabs = [
+            ['key' => null, 'label' => trans('booking.booking_all'), 'route' => 'admin.bookings.index', 'isTrash' => false],
+            ['key' => 'accepted', 'label' => trans('booking.booking_accepted'), 'route' => 'admin.bookings.index', 'isTrash' => false],
+            ['key' => 'ongoing', 'label' => trans('booking.booking_running'), 'route' => 'admin.bookings.index', 'isTrash' => false],
+            ['key' => 'completed', 'label' => trans('booking.booking_completed'), 'route' => 'admin.bookings.index', 'isTrash' => false],
+            ['key' => 'cancelled', 'label' => trans('booking.booking_cancelled'), 'route' => 'admin.bookings.index', 'isTrash' => false],
+            ['key' => 'rejected', 'label' => trans('booking.booking_rejected'), 'route' => 'admin.bookings.index', 'isTrash' => false],
+            ['key' => null, 'label' => trans('booking.booking_trash'), 'route' => 'admin.bookings.trash', 'isTrash' => true],
+        ];
+        $currentQuery = request()->query();
+    @endphp
+
+    <div class="admin-screen-header">
         <div>
-            <h3 class="admin-page-title">{{ trans('booking.all_bookings') }}</h3>
-            <p class="admin-page-subtitle">Filter, review and manage rides quickly from one place.</p>
+            <span class="admin-screen-header__eyebrow">Ride operations</span>
+            <h1 class="admin-screen-header__title">Booking command center</h1>
+            <p class="admin-screen-header__subtitle">Follow reservation flow, rider-driver assignment, route details, and payment state from one operational table.</p>
+        </div>
+        <div class="admin-screen-header__actions">
+            <div class="admin-screen-header__meta">
+                <span>Total bookings</span>
+                <strong>{{ $bookings->total() }}</strong>
+            </div>
         </div>
     </div>
 
-    <div class="row booking-summary-grid">
-        <div class="col-md-3 col-sm-6">
-            <div class="booking-summary-card">
-                <div class="booking-summary-label">{{ trans('booking.booking_all') }}</div>
-                <div class="booking-summary-value">{{ $statusCounts['all'] ?? 0 }}</div>
+    <div class="admin-surface admin-filter-shell">
+        <div class="admin-filter-shell__header">
+            <div>
+                <h3>Filter booking activity</h3>
+                <p>Search by date window, rider, driver, and ride status to surface operational issues quickly.</p>
+            </div>
+            <div class="admin-inline-stat">
+                <span>Current page</span>
+                <strong>{{ $bookings->currentPage() }}</strong>
             </div>
         </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="booking-summary-card">
-                <div class="booking-summary-label">{{ trans('booking.booking_running') }}</div>
-                <div class="booking-summary-value">{{ $statusCounts['ongoing'] ?? 0 }}</div>
+        <form class="form-horizontal admin-filter-grid" enctype="multipart/form-data" action="" method="GET"
+            accept-charset="UTF-8" id="bookingFilterForm">
+            <div class="col-md-12 d-none">
+                <input class="form-control" type="hidden" id="startDate" name="from" value="">
+                <input class="form-control" type="hidden" id="endDate" name="to" value="">
             </div>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="booking-summary-card">
-                <div class="booking-summary-label">{{ trans('booking.booking_completed') }}</div>
-                <div class="booking-summary-value">{{ $statusCounts['completed'] ?? 0 }}</div>
+            <div class="row">
+                <div class="col-md-3 col-sm-12 col-xs-12">
+                    <label>{{ trans('booking.date_range') }}</label>
+                    <div class="input-group col-xs-12">
+                        <input type="text" class="form-control" autocomplete="off" id="daterange-btn">
+                        <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-12 col-xs-12">
+                    <label>{{ trans('booking.rider') }}</label>
+                    <select class="form-control select2" name="customer" id="rider">
+                        <option value="">{{ $searchCustomer }}</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 col-sm-12 col-xs-12">
+                    <label>{{ trans('booking.host') }}</label>
+                    <select class="form-control select2" name="host" id="host">
+                        <option value="">{{ $searchfield }}</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 col-sm-12 col-xs-12">
+                    <label>{{ trans('booking.booking_status') }}</label>
+                    <select class="form-control" name="status" id="status">
+                        <option value="">{{ trans('booking.select_status') }}</option>
+                        @foreach($statuses as $value => $label)
+                            <option value="{{ $value }}" {{ $selectedStatus === $value ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-12 col-sm-12 col-xs-12">
+                    <div class="admin-filter-actions">
+                        <button type="submit" name="btn" class="btn btn-primary btn-flat">
+                            {{ trans('booking.filter') }}
+                        </button>
+                        <button type="button" name="reset_btn" id="resetBtn" class="btn btn-default btn-flat">
+                            {{ trans('booking.reset') }}
+                        </button>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="booking-summary-card">
-                <div class="booking-summary-label">{{ trans('booking.booking_cancelled') }}</div>
-                <div class="booking-summary-value">{{ $statusCounts['cancelled'] ?? 0 }}</div>
-            </div>
-        </div>
+        </form>
     </div>
 
     <div class="row">
         <div class="col-lg-12">
-            <div class="box booking-filter-card">
-                <div class="box-body">
-                    <form class="form-horizontal" enctype="multipart/form-data" action="" method="GET"
-                        accept-charset="UTF-8" id="bookingFilterForm">
-                        <div class="col-md-12 d-none">
-                            <input class="form-control" type="hidden" id="startDate" name="from" value="">
-                            <input class="form-control" type="hidden" id="endDate" name="to" value="">
-                        </div>
-                        <div class="row">
-                            <div class="col-md-2 col-sm-12 col-xs-12">
-                                <label>{{ trans('booking.date_range') }}</label>
-                                <div class="input-group col-xs-12">
-                                    <input type="text" class="form-control" autocomplete="off" id="daterange-btn">
-                                    <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
-                                </div>
-                            </div>
+            <div class="admin-chip-row">
+                @foreach ($statusTabs as $status)
+                    @php
+                        $isActive = false;
+                        if ($status['isTrash']) {
+                            $isActive = request()->routeIs($status['route']);
+                        } else {
+                            if (is_null($status['key'])) {
+                                $isActive = request()->routeIs($status['route']) && !request()->query('status');
+                            } else {
+                                $isActive = request()->query('status') === $status['key'];
+                            }
+                        }
+                        $class = $isActive ? 'btn btn-primary' : 'btn btn-inactive';
+                        $routeParams = $currentQuery;
+                        if ($status['isTrash']) {
+                            $url = route($status['route']);
+                        } else {
+                            if (is_null($status['key'])) {
+                                unset($routeParams['status']);
+                            } else {
+                                $routeParams['status'] = $status['key'];
+                            }
+                            $url = route($status['route'], $routeParams);
+                        }
 
-                            <div class="col-md-2 col-sm-12 col-xs-12">
-                                <label>{{ trans('booking.rider') }}</label>
-                                <select class="form-control select2" name="customer" id="rider">
-                                    <option value="">{{ $searchCustomer }}</option>
-                                </select>
-                            </div>
+                        $countKey = $status['key'] ?? ($status['isTrash'] ? 'trash' : 'all');
+                        $count = $statusCounts[$countKey] ?? 0;
+                    @endphp
 
-                            <div class="col-md-2 col-sm-12 col-xs-12">
-                                <label>{{ trans('booking.host') }}</label>
-                                <select class="form-control select2" name="host" id="host">
-                                    <option value="">{{ $searchfield }}</option>
-                                </select>
-                            </div>
-
-                            @php
-                            $statuses = [
-                            'accepted' => trans('booking.booking_accepted'),
-                            'ongoing' => trans('booking.booking_running'),
-                            'cancelled' => trans('booking.booking_cancelled'),
-                            'rejected' => trans('booking.booking_rejected'),
-                            'completed' => trans('booking.booking_completed'),
-                            ];
-                            $selectedStatus = request()->input('status');
-                            @endphp
-
-                            <div class="col-md-2 col-sm-12 col-xs-12">
-                                <label>{{ trans('booking.booking_status') }}</label>
-                                <select class="form-control" name="status" id="status">
-                                    <option value="">{{ trans('booking.select_status') }}</option>
-                                    @foreach($statuses as $value => $label)
-                                    <option value="{{ $value }}" {{ $selectedStatus===$value ? 'selected' : '' }}>
-                                        {{ $label }}
-                                    </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-
-                            <div class="col-md-2 col-sm-12 col-xs-12 booking-filter-actions">
-                                <button type="submit" name="btn" class="btn btn-primary btn-flat">
-                                    {{ trans('booking.filter') }}
-                                </button>
-                                <button type="button" name="reset_btn" id="resetBtn"
-                                    class="btn btn-default btn-flat">
-                                    {{ trans('booking.reset') }}
-                                </button>
-
-                            </div>
-
-                        </div>
-                </div>
-            </div>
-            </form>
-        </div>
-        @php
-        $statuses = [
-        ['key' => null, 'label' => trans('booking.booking_all'), 'route' => 'admin.bookings.index', 'isTrash' => false],
-        [
-        'key' => 'accepted',
-        'label' => trans('booking.booking_accepted'),
-        'route' => 'admin.bookings.index',
-        'isTrash'
-        => false
-        ],
-        [
-        'key' => 'ongoing',
-        'label' => trans('booking.booking_running'),
-        'route' => 'admin.bookings.index',
-        'isTrash'
-        => false
-        ],
-        [
-        'key' => 'completed',
-        'label' => trans('booking.booking_completed'),
-        'route' => 'admin.bookings.index',
-        'isTrash' => false
-        ],
-        [
-        'key' => 'cancelled',
-        'label' => trans('booking.booking_cancelled'),
-        'route' => 'admin.bookings.index',
-        'isTrash' => false
-        ],
-        [
-        'key' => 'rejected',
-        'label' => trans('booking.booking_rejected'),
-        'route' => 'admin.bookings.index',
-        'isTrash'
-        => false
-        ],
-        [
-        'key' => null,
-        'label' => trans('booking.booking_trash'),
-        'route' => 'admin.bookings.trash',
-        'isTrash' =>
-        true
-        ],
-        ];
-        $currentQuery = request()->query();
-        @endphp
-
-        <div class="row booking-status-tabs">
-            <div class="col-lg-12">
-                @foreach ($statuses as $status)
-                @php
-                $isActive = false;
-                if ($status['isTrash']) {
-                $isActive = request()->routeIs($status['route']);
-                } else {
-                if (is_null($status['key'])) {
-                $isActive = request()->routeIs($status['route']) && !request()->query('status');
-                } else {
-                $isActive = request()->query('status') === $status['key'];
-                }
-                }
-                $class = $isActive ? 'btn btn-primary booking-status-chip is-active' : 'btn btn-default booking-status-chip';
-                $routeParams = $currentQuery;
-                if ($status['isTrash']) {
-                $url = route($status['route']);
-                } else {
-                if (is_null($status['key'])) {
-                unset($routeParams['status']);
-                } else {
-                $routeParams['status'] = $status['key'];
-                }
-                $url = route($status['route'], $routeParams);
-                }
-
-                $countKey = $status['key'] ?? ($status['isTrash'] ? 'trash' : 'all');
-                $count = $statusCounts[$countKey] ?? 0;
-                @endphp
-
-                <a class="{{ $class }}" href="{{ $url }}">
-                    {{ $status['label'] }}
-                    <span class="badge badge-pill booking-count-badge">{{ $count > 0 ? $count : 0 }}</span>
-                </a>
+                    <a class="{{ $class }}" href="{{ $url }}">
+                        {{ $status['label'] }}
+                        <span class="badge badge-pill badge-primary">{{ $count > 0 ? $count : 0 }}</span>
+                    </a>
                 @endforeach
             </div>
         </div>
+    </div>
 
-        <div class="col-lg-12">
-            <div class="panel panel-default booking-table-panel">
-                <div class="panel-heading">
-                    {{ trans('booking.all_bookings') }}
+    <div class="panel panel-default admin-data-card">
+        <div class="panel-heading">
+            <div class="admin-panel-header">
+                <div>
+                    <h3>{{ trans('booking.all_bookings') }}</h3>
+                    <p>Inspect booking lifecycle, route details, and payment coverage from the same operational grid.</p>
                 </div>
-                <div class="panel-body">
-                    <div class="table-responsive">
-                        <table class=" table table-bordered table-striped table-hover datatable datatable-Booking">
+                <div class="admin-inline-stat">
+                    <span>Visible rows</span>
+                    <strong>{{ $bookings->count() }}</strong>
+                </div>
+            </div>
+        </div>
+        <div class="panel-body">
+            <div class="table-responsive">
+                <table class=" table table-bordered table-striped table-hover datatable datatable-Booking">
                             <thead>
                                 <tr>
                                     <th width="10"></th>
@@ -256,98 +213,118 @@ $j = 0;
                                         </a>
                                         <span class="badge badge-pill badge-success live-badge">
                                             <i class="fas fa-fire table-icon"></i>
-                                            {{ optional($booking->extension)->ride_id ?? 'RIDE-NA' }}
+                                            {{ $booking->extension->ride_id }}
                                         </span>
                                     </td>
                                     <td>
                                         @if ($booking->host)
-                                        <a target="_blank"
-                                            href="{{ route('admin.driver.profile', ['driver_id' => $booking->host->id]) }}">
-                                            @if ($booking->host->profile_image)
-                                            <img src="{{ $booking->host->profile_image->getUrl('thumb') }}"
-                                                alt="Profile Image" class="img-circle">
-                                            @else
-                                            <img src="{{ asset('images/icon/userdefault.jpg') }}" class="img-circle"
-                                                alt="Default Image" style="display: inline-block;">
-                                            @endif
-                                            {{ $booking->host->first_name }} {{ $booking->host->last_name }}
-                                        </a>
+                                            <div class="admin-persona">
+                                                <div class="admin-persona__avatar">
+                                                    <a target="_blank"
+                                                        href="{{ route('admin.driver.profile', ['driver_id' => $booking->host->id]) }}">
+                                                        @if ($booking->host->profile_image)
+                                                            <img src="{{ $booking->host->profile_image->getUrl('thumb') }}"
+                                                                alt="Profile Image" class="img-circle">
+                                                        @else
+                                                            <img src="{{ asset('images/icon/userdefault.jpg') }}" class="img-circle"
+                                                                alt="Default Image" style="display: inline-block;">
+                                                        @endif
+                                                    </a>
+                                                </div>
+                                                <div class="admin-persona__meta">
+                                                    <strong><a target="_blank" href="{{ route('admin.driver.profile', ['driver_id' => $booking->host->id]) }}">{{ $booking->host->first_name }} {{ $booking->host->last_name }}</a></strong>
+                                                    <span>Assigned driver</span>
+                                                </div>
+                                            </div>
                                         @else
-                                        <span>--</span>
+                                            <span>--</span>
                                         @endif
                                     </td>
                                     <td>
                                         @if ($booking->user)
-                                        <a target="_blank"
-                                            href="{{route('admin.app-users.show', $booking->user->id)   }}">
-                                            @if ($booking->user->profile_image)
-                                            <img src="{{ $booking->user->profile_image->getUrl('thumb') }}"
-                                                class="img-circle">
-                                            @else
-                                            <img src="{{ asset('images/icon/userdefault.jpg') }}" alt="Default Image"
-                                                style="display: inline-block;">
-                                            @endif
-                                            {{ $booking->user->first_name ?? '' }}
-                                            {{ $booking->user->last_name ?? '' }}
-                                        </a>
+                                            <div class="admin-persona">
+                                                <div class="admin-persona__avatar">
+                                                    <a target="_blank"
+                                                        href="{{route('admin.app-users.show', $booking->user->id)   }}">
+                                                        @if ($booking->user->profile_image)
+                                                            <img src="{{ $booking->user->profile_image->getUrl('thumb') }}"
+                                                                class="img-circle">
+                                                        @else
+                                                            <img src="{{ asset('images/icon/userdefault.jpg') }}" alt="Default Image"
+                                                                class="img-circle" style="display: inline-block;">
+                                                        @endif
+                                                    </a>
+                                                </div>
+                                                <div class="admin-persona__meta">
+                                                    <strong><a target="_blank" href="{{route('admin.app-users.show', $booking->user->id)   }}">{{ $booking->user->first_name ?? '' }} {{ $booking->user->last_name ?? '' }}</a></strong>
+                                                    <span>Rider profile</span>
+                                                </div>
+                                            </div>
                                         @else
-                                        <span>--</span>
+                                            <span>--</span>
                                         @endif
                                     </td>
                                     <td class="car-type-animated">
-                                        <div>
-                                            <div><strong>Type:</strong>
-                                                {{ $booking->item->item_Type->name ?? '-' }}</div>
-                                            <div><strong>Make:</strong> {{ $booking->item->vehicleMake->name ?? '-' }}</div>
-                                            <div><strong>Model:</strong> {{ $booking->item->model ?? '-' }}</div>
-                                            <div><strong>Number:</strong>
-                                                {{ strtoupper(optional($booking->item)->registration_number ?? '-') }}
-                                            </div>
+                                        <div class="admin-list-stack">
+                                            <strong>{{ $booking->item->item_Type->name ?? '-' }}</strong>
+                                            <span>Make: {{ $booking->item->vehicleMake->name ?? '-' }}</span>
+                                            <span>Model: {{ $booking->item->model ?? '-' }}</span>
+                                            <span>Number: {{ strtoupper(optional($booking->item)->registration_number ?? '-') }}</span>
                                         </div>
                                     </td>
                                     <td class="pickup-address">
-                                        <i class="fas fa-map-marker-alt"></i>
-                                        {{ $booking->extension && is_array($booking->extension->pickup_location) ?
-                                        $booking->extension->pickup_location['address'] : '' }}
+                                        <div class="admin-list-stack">
+                                            <strong><i class="fas fa-map-marker-alt"></i> Pickup</strong>
+                                            <span>{{ $booking->extension && is_array($booking->extension->pickup_location) ? $booking->extension->pickup_location['address'] : '' }}</span>
+                                        </div>
                                     </td>
 
                                     <td class="dropoff-address">
-                                        <i class="fas fa-map-pin"></i>
-                                        {{ $booking->extension && is_array($booking->extension->dropoff_location) ?
-                                        $booking->extension->dropoff_location['address'] : '' }}
+                                        <div class="admin-list-stack">
+                                            <strong><i class="fas fa-map-pin"></i> Destination</strong>
+                                            <span>{{ $booking->extension && is_array($booking->extension->dropoff_location) ? $booking->extension->dropoff_location['address'] : '' }}</span>
+                                        </div>
                                     </td>
                                     <td>
-                                        {{ ($booking->total ?? '') . ' ' . ($general_default_currency->meta_value ?? '')
-                                        }}
+                                        <div class="admin-list-stack">
+                                            <strong>{{ ($booking->total ?? '') . ' ' . ($general_default_currency->meta_value ?? '') }}</strong>
+                                            <span>Ride fare</span>
+                                        </div>
                                     </td>
                                     <td>
-                                        {{ $booking->created_at ? $booking->created_at->format('Y-m-d') : '' }}
+                                        <div class="admin-list-stack">
+                                            <strong>{{ $booking->created_at ? $booking->created_at->format('Y-m-d') : '' }}</strong>
+                                            <span>{{ $booking->created_at ? $booking->created_at->format('h:i A') : '' }}</span>
+                                        </div>
                                     </td>
                                     @php
                                     $statusClasses = [
-                                    'Ongoing' => [
+                                    'ongoing' => [
                                     'class' => 'badge badge-pill label-secondary live-badge',
                                     'label' =>
                                     '<span class="live-dot"></span> Live'
                                     ],
-                                    'Cancelled' => ['class' => 'badge badge-pill label-danger', 'label' => 'Cancelled'],
-                                    'Accepted' => ['class' => 'badge badge-pill label-success', 'label' => 'Accepted'],
-                                    'Approved' => ['class' => 'badge badge-pill label-success', 'label' => 'Approved'],
-                                    'Declined' => ['class' => 'badge badge-pill label-warning', 'label' => 'Declined'],
-                                    'Completed' => ['class' => 'badge badge-pill label-info', 'label' => 'Completed'],
-                                    'Refunded' => ['class' => 'badge badge-pill label-primary', 'label' => 'Refunded'],
-                                    'Confirmed' => [
+                                    'cancelled' => ['class' => 'badge badge-pill label-danger', 'label' => 'Cancelled'],
+                                    'accepted' => ['class' => 'badge badge-pill label-success', 'label' => 'Accepted'],
+                                    'approved' => ['class' => 'badge badge-pill label-success', 'label' => 'Approved'],
+                                    'declined' => ['class' => 'badge badge-pill label-warning', 'label' => 'Declined'],
+                                    'rejected' => ['class' => 'badge badge-pill label-warning', 'label' => 'Rejected'],
+                                    'completed' => ['class' => 'badge badge-pill label-info', 'label' => 'Completed'],
+                                    'refunded' => ['class' => 'badge badge-pill label-primary', 'label' => 'Refunded'],
+                                    'confirmed' => [
                                     'class' => 'badge badge-pill label-success',
                                     'label' =>
                                     'Confirmed'
                                     ],
+                                    'pending' => ['class' => 'badge badge-pill label-warning', 'label' => 'Pending'],
                                     ];
+                                    $normalizedStatus = strtolower($booking->status ?? '');
                                     @endphp
 
                                     <td>
-                                        @if(array_key_exists($booking->status, $statusClasses))
-                                        <span class="{!! $statusClasses[$booking->status]['class'] !!}">
-                                            {!! $statusClasses[$booking->status]['label'] !!}
+                                        @if(array_key_exists($normalizedStatus, $statusClasses))
+                                        <span class="{!! $statusClasses[$normalizedStatus]['class'] !!}">
+                                            {!! $statusClasses[$normalizedStatus]['label'] !!}
                                         </span>
                                         @else
                                         {{ $booking->status }}
@@ -382,6 +359,7 @@ $j = 0;
                                         @php
                                         $isTrashPage = request()->is('admin/bookings/trash');
                                         @endphp
+                                        <div class="admin-actions">
                                         <!-- Restore Form -->
                                         @if($isTrashPage)
                                         <form id="restore-form-{{ $booking->id }}"
@@ -389,7 +367,7 @@ $j = 0;
                                             style="display: inline-block;">
                                             @csrf
                                             <button type="button" class="btn btn-xs btn-success restore-btn"
-                                                data-id="{{ $booking->id }}" title="Restore booking">
+                                                data-id="{{ $booking->id }}">
                                                 <i class="fa fa-undo" aria-hidden="true"></i>
                                             </button>
                                         </form>
@@ -400,71 +378,60 @@ $j = 0;
                                             method="POST" style="display: inline-block;">
                                             @csrf
                                             <button type="button" class="btn btn-xs btn-danger permanent-delete"
-                                                data-id="{{ $booking->id }}" title="Delete permanently">
+                                                data-id="{{ $booking->id }}">
                                                 <i class="fa fa-trash" aria-hidden="true"></i>
                                             </button>
                                         </form>
                                         @else
                                         @can('booking_delete')
                                         <button type="button" class="btn btn-xs btn-danger delete-booking-button"
-                                            data-id="{{ $booking->id }}" title="Move to trash">
+                                            data-id="{{ $booking->id }}">
                                             <i class="fa fa-trash" aria-hidden="true"></i>
                                         </button>
                                         @endcan
 
                                         <!-- View Button (always shown) -->
                                         <a target="_blank" class="badge badge-pill badge-primary live-badge"
-                                            href="{{ route('admin.bookings.show', $booking->id) }}" title="View booking">
+                                            href="{{ route('admin.bookings.show', $booking->id) }}">
                                             <i class="fa fa-eye" aria-hidden="true"></i>
                                         </a>
                                         @endif
+                                        </div>
                                     </td>
 
                                 </tr>
                                 @endforeach
-                                @if($bookings->isEmpty())
-                                <tr>
-                                    <td colspan="12">
-                                        <div class="table-empty-state">
-                                            <h4>No bookings match your current filters</h4>
-                                            <p>Try resetting filters or adjust the date/status selection.</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                                @endif
                             </tbody>
-                        </table>
-                        <nav aria-label="...">
-                            <ul class="pagination justify-content-end">
-                                @if ($bookings->currentPage() > 1)
-                                <li class="page-item">
-                                    <a class="page-link" href="{{ $bookings->previousPageUrl() }}" tabindex="-1">{{
-                                        trans('global.previous') }}</a>
-                                </li>
-                                @else
-                                <li class="page-item disabled">
-                                    <span class="page-link">{{ trans('global.previous') }}</span>
-                                </li>
-                                @endif
-                                @for ($i = 1; $i <= $bookings->lastPage(); $i++)
-                                    <li class="page-item {{ $i == $bookings->currentPage() ? 'active' : '' }}">
-                                        <a class="page-link" href="{{ $bookings->url($i) }}">{{ $i }}</a>
-                                    </li>
-                                    @endfor
-                                    @if ($bookings->hasMorePages())
-                                    <li class="page-item">
-                                        <a class="page-link" href="{{ $bookings->nextPageUrl() }}">{{
-                                            trans('global.next') }}</a>
-                                    </li>
-                                    @else
-                                    <li class="page-item disabled">
-                                        <span class="page-link">{{ trans('global.next') }}</span>
-                                    </li>
-                                    @endif
-                            </ul>
-                        </nav>
-                    </div>
-                </div>
+                </table>
+                <nav aria-label="...">
+                    <ul class="pagination justify-content-end">
+                        @if ($bookings->currentPage() > 1)
+                        <li class="page-item">
+                            <a class="page-link" href="{{ $bookings->previousPageUrl() }}" tabindex="-1">{{
+                                trans('global.previous') }}</a>
+                        </li>
+                        @else
+                        <li class="page-item disabled">
+                            <span class="page-link">{{ trans('global.previous') }}</span>
+                        </li>
+                        @endif
+                        @for ($i = 1; $i <= $bookings->lastPage(); $i++)
+                            <li class="page-item {{ $i == $bookings->currentPage() ? 'active' : '' }}">
+                                <a class="page-link" href="{{ $bookings->url($i) }}">{{ $i }}</a>
+                            </li>
+                            @endfor
+                            @if ($bookings->hasMorePages())
+                            <li class="page-item">
+                                <a class="page-link" href="{{ $bookings->nextPageUrl() }}">{{
+                                    trans('global.next') }}</a>
+                            </li>
+                            @else
+                            <li class="page-item disabled">
+                                <span class="page-link">{{ trans('global.next') }}</span>
+                            </li>
+                            @endif
+                    </ul>
+                </nav>
             </div>
         </div>
     </div>

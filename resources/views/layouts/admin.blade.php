@@ -2,6 +2,13 @@
 <html>
 
 <head>
+    @php
+        $routeName = \Illuminate\Support\Facades\Route::currentRouteName();
+        $routeSegments = array_values(array_filter(explode('.', str_replace('admin.', '', (string) $routeName))));
+        $currentArea = count($routeSegments) ? \Illuminate\Support\Str::headline(str_replace('-', ' ', $routeSegments[0])) : 'Dashboard';
+        $currentView = count($routeSegments) > 1 ? \Illuminate\Support\Str::headline(str_replace('-', ' ', end($routeSegments))) : 'Overview';
+        $todayLabel = now()->format('d M Y');
+    @endphp
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
@@ -13,7 +20,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"
         rel="stylesheet" />
     <link href="https://use.fontawesome.com/releases/v5.2.0/css/all.css" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css" rel="stylesheet" />
     <link href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdn.datatables.net/buttons/1.2.4/css/buttons.dataTables.min.css" rel="stylesheet" />
@@ -38,8 +46,8 @@
 
 </head>
 
-<body class="sidebar-mini skin-purple" style="height: auto; min-height: 100%;">
-    <div class="wrapper" style="height: auto; min-height: 100%;">
+<body class="sidebar-mini skin-purple admin-theme admin-modern" style="height: auto; min-height: 100%;">
+    <div class="wrapper admin-layout-shell" style="height: auto; min-height: 100%;">
         <header class="main-header cvvv">
             <a href="/admin/" class="logo">
                 <span class="logo-mini">
@@ -63,15 +71,23 @@
                     <span class="sr-only">{{ trans('global.toggleNavigation') }}</span>
                 </a>
 
+                <div class="admin-topbar-copy hidden-xs">
+                    <div class="admin-topbar-copy__title">{{ $siteName ?? trans('global.site_title') }}</div>
+                    <div class="admin-topbar-copy__subtitle">{{ $currentArea }} workspace</div>
+                </div>
 
-                <div class="navbar-custom-menu" style="display: none;">
+                <div class="admin-topbar-meta hidden-sm hidden-xs">
+                    <span class="admin-topbar-pill">{{ $currentView }}</span>
+                    <span class="admin-topbar-pill admin-topbar-pill--subtle">{{ $todayLabel }}</span>
+                </div>
+
+                <div class="navbar-custom-menu">
                     <ul class="nav navbar-nav">
-
                         @can('language_setting_access')
                             @if (count(config('global.available_languages', [])) > 1)
                                 <li class="dropdown notifications-menu">
                                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                        {{ strtoupper(app()->getLocale()) }}
+                                        <i class="fa fa-globe"></i> {{ strtoupper(app()->getLocale()) }}
                                     </a>
                                     <ul class="dropdown-menu">
                                         <li>
@@ -88,17 +104,48 @@
                                 </li>
                             @endif
                         @endcan
+                        <li class="dropdown user user-menu">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                <span class="admin-user-chip">
+                                    <span class="admin-user-chip__avatar">{{ strtoupper(substr(auth()->user()->name ?? 'A', 0, 1)) }}</span>
+                                    <span class="admin-user-chip__label hidden-xs">{{ auth()->user()->name ?? 'Admin' }}</span>
+                                </span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li class="user-footer">
+                                    <div class="pull-left">
+                                        <a href="{{ route('admin.home') }}" class="btn btn-default btn-flat">Dashboard</a>
+                                    </div>
+                                    <div class="pull-right">
+                                        <a href="#" class="btn btn-default btn-flat"
+                                            onclick="event.preventDefault(); document.getElementById('logoutform').submit();">
+                                            {{ trans('global.logout') }}
+                                        </a>
+                                    </div>
+                                </li>
+                            </ul>
+                        </li>
                     </ul>
                 </div>
-
-
-
             </nav>
         </header>
 
         @include('partials.menu')
 
         <div class="content-wrapper" style="min-height: 960px;">
+            @unless (request()->routeIs('admin.home'))
+                <div class="admin-page-intro">
+                    <div>
+                        <span class="admin-page-intro__eyebrow">{{ $currentArea }}</span>
+                        <h1 class="admin-page-intro__title">{{ $currentView }}</h1>
+                        <p class="admin-page-intro__subtitle">Manage live operations, configuration, and data with a cleaner control surface.</p>
+                    </div>
+                    <div class="admin-page-intro__meta">
+                        <span>{{ $siteName ?? trans('global.site_title') }}</span>
+                        <strong>{{ $todayLabel }}</strong>
+                    </div>
+                </div>
+            @endunless
             @if (session('message'))
                 <div class="row" style='padding:20px 20px 0 20px;'>
                     <div class="col-lg-12">
@@ -119,14 +166,13 @@
                     </div>
                 </div>
             @endif
-            @yield('content')
+            <div class="admin-page-shell">
+                @yield('content')
+            </div>
         </div>
         <footer class="main-footer text-center">
-            <strong>{{ $siteName }} &copy;</strong> {{ trans('global.allRightsReserved') }} <a
-                href='https://qrides.in/' target="_blank">QRIDES by BAMIRA TRANSPORTATION PRIVATE LIMITED</a>
-            <span>|</span>
-            <a href='https://rareus.in' target="_blank">Designed, developed and maintained by Rareus Private
-                Limited</a>
+            <strong>{{ $siteName }} &copy;</strong> {{ trans('global.allRightsReserved') }} Powered by <a
+                href='https://cravecabs.com/' target="_blank">CraveCabs</a>
         </footer>
 
         <form id="logoutform" action="{{ route('logout') }}" method="POST" style="display: none;">

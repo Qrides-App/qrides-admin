@@ -9,6 +9,7 @@ use App\Models\CancellationPolicy;
 use App\Models\City;
 use App\Models\Module;
 use App\Models\Review;
+use App\Models\SubCategory;
 use App\Models\VehicleMake;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -380,5 +381,45 @@ class Item extends Model implements HasMedia
     public function vehicleMake()
     {
         return $this->belongsTo(VehicleMake::class, 'make');
+    }
+
+    public function subCategory()
+    {
+        return $this->belongsTo(SubCategory::class, 'subcategory_id');
+    }
+
+    public function getMakeAttribute($value)
+    {
+        if (! empty($value)) {
+            return $value;
+        }
+
+        return $this->attributes['category_id'] ?? null;
+    }
+
+    public function getModelAttribute($value)
+    {
+        if (! empty($value)) {
+            return $value;
+        }
+
+        if ($this->relationLoaded('subCategory')) {
+            return $this->subCategory?->name;
+        }
+
+        return $this->subcategory_id ? $this->subCategory()?->value('name') : null;
+    }
+
+    public function getRegistrationNumberAttribute($value)
+    {
+        if (! empty($value)) {
+            return $value;
+        }
+
+        if ($this->relationLoaded('itemVehicle')) {
+            return $this->itemVehicle?->vehicle_registration_number;
+        }
+
+        return $this->itemVehicle()?->value('vehicle_registration_number');
     }
 }

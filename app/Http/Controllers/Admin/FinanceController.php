@@ -16,6 +16,8 @@ use App\Models\Booking;
 use App\Models\GeneralSetting;
 use App\Models\Modern\Item;
 use App\Models\Module;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 
 class FinanceController extends Controller
 {
@@ -41,7 +43,7 @@ class FinanceController extends Controller
             'item:id,title', // Optional: if you use item in the view
         ])
             ->where('payment_status', 'paid')
-            ->whereIn('status', ['Pending', 'Cancelled', 'Confirmed', 'Completed']);
+            ->whereIn(\DB::raw('LOWER(status)'), ['pending', 'cancelled', 'confirmed', 'completed']);
 
         // Filter by date range
         if ($from && $to) {
@@ -53,9 +55,7 @@ class FinanceController extends Controller
         }
 
         // Status filter
-        if (in_array($status, ['pending', 'confirmed', 'cancelled', 'completed'])) {
-            $query->where('bookings.status', $status);
-        }
+        $this->applyStatusFilter($query, $status);
 
         // Vendor, Admin, Item filters
         if ($vendor) {
@@ -131,5 +131,14 @@ class FinanceController extends Controller
             }
         }
 
+    }
+
+    private function applyStatusFilter(Builder $query, ?string $status): void
+    {
+        $status = strtolower(trim((string) $status));
+
+        if (in_array($status, ['pending', 'confirmed', 'cancelled', 'completed'], true)) {
+            $query->whereRaw('LOWER(bookings.status) = ?', [$status]);
+        }
     }
 }

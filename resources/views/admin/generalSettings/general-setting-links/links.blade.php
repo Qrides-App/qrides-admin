@@ -1,46 +1,38 @@
-<ul class="nav navbar-pills nav-tabs nav-stacked no-margin" role="tablist">
-    <li class="{{ request()->routeIs('admin.settings') ? 'active' : '' }}">
-        <a href="{{ route('admin.settings') }}" data-group="profile">{{ trans('global.general_title') }}</a>
-    </li>
-    <li class="{{ request()->routeIs('admin.project_setup') ? 'active' : '' }}">
-        <a href="{{ route('admin.project_setup') }}" data-group="profile">{{ trans('global.project_setup') }}</a>
-    </li>
-    <li class="{{ request()->routeIs('admin.preferences') ? 'active' : '' }}" style=" display: none ">
-        <a href="{{ route('admin.preferences') }}" data-group="profile">{{ trans('global.preferences_title') }}</a>
-    </li>
-    <li
-        class="{{ request()->routeIs('admin.smssetting') || request()->routeIs('admin.msg91') || request()->routeIs('admin.twilliosetting') || request()->routeIs('admin.nexmosetting') || request()->routeIs('admin.twofactor') ? 'active' : '' }}">
-        <a href="{{ route('admin.smssetting') }}" data-group="sms">{{ trans('global.smssettings_title') }}</a>
-    </li>
-    <li class="{{ request()->routeIs('admin.settings.app.show') ? 'active' : '' }}">
-        <a href="{{ route('admin.settings.app.show') }}" data-group="sms">{{ trans('global.app_settings') }}</a>
-    </li>
-    <li class="{{ request()->routeIs('admin.email') ? 'active' : '' }}">
-        <a href="{{ route('admin.email') }}" data-group="sms">{{ trans('global.emailSettings_title') }}</a>
-    </li>
-    <li class="{{ request()->routeIs('admin.currencySetting') ? 'active' : '' }}">
-        <a href="{{ route('admin.currencySetting') }}" data-group="sms">Currency Settings</a>
-    </li>
-    <li class="{{ request()->routeIs('admin.fareSetting') ? 'active' : '' }}">
-        <a href="{{ route('admin.fareSetting') }}" data-group="sms">Fare Settings</a>
-    </li>
-    <li class="{{ request()->routeIs('admin.fareTest') ? 'active' : '' }}">
-        <a href="{{ route('admin.fareTest') }}" data-group="sms">Fare Test</a>
-    </li>
-    <li class="{{ request()->routeIs('admin.pushnotification') ? 'active' : '' }}">
-        <a href="{{ route('admin.pushnotification') }}"
-            data-group="sms">{{ trans('global.push_notification_setting') }}</a>
-    </li>
-    <li class="{{ request()->routeIs('admin.api-informations') ? 'active' : '' }}">
-        <a href="{{ route('admin.api-informations') }}" data-group="sms">{{ trans('global.apiCredentials_title') }}
-        </a>
-    </li>
-    <li class="{{ request()->routeIs('admin.hireSetting') ? 'active' : '' }}">
-        <a href="{{ route('admin.hireSetting') }}" data-group="sms">QR Hire Settings</a>
-    </li>
-    <li class="{{ request()->routeIs('admin.payment_methods.index') ? 'active' : '' }}">
-        <a href="{{ route('admin.payment_methods.index', 'paypal') }}" data-group="sms">
-            {{ trans('global.paymentMethods_title') }}
-        </a>
-    </li>
-</ul>
+@php
+    $links = [
+        ['route' => 'admin.settings', 'label' => trans('global.general_title'), 'icon' => 'fa-sliders', 'patterns' => ['admin.settings']],
+        ['route' => 'admin.project_setup', 'label' => trans('global.project_setup'), 'icon' => 'fa-cubes'],
+        [
+            'route' => 'admin.smssetting',
+            'label' => trans('global.smssettings_title'),
+            'icon' => 'fa-commenting',
+            'patterns' => ['admin.smssetting', 'admin.msg91', 'admin.twilliosetting', 'admin.sinchSetting', 'admin.twofactor', 'admin.nexmosetting'],
+        ],
+        ['route' => 'admin.settings.app.show', 'label' => trans('global.app_settings'), 'icon' => 'fa-mobile', 'patterns' => ['admin.settings.app.*']],
+        ['route' => 'admin.email', 'label' => trans('global.emailSettings_title'), 'icon' => 'fa-envelope', 'patterns' => ['admin.email']],
+        ['route' => 'admin.currencySetting', 'label' => 'Currency Settings', 'icon' => 'fa-money', 'patterns' => ['admin.currencySetting']],
+        ['route' => 'admin.fees', 'label' => 'Financial Settings', 'icon' => 'fa-calculator', 'patterns' => ['admin.fees']],
+        ['route' => 'admin.pushnotification', 'label' => trans('global.push_notification_setting'), 'icon' => 'fa-bell', 'patterns' => ['admin.pushnotification']],
+        ['route' => 'admin.api-informations', 'label' => trans('global.apiCredentials_title'), 'icon' => 'fa-plug', 'patterns' => ['admin.api-informations']],
+        ['route' => 'admin.payment_methods.index', 'label' => trans('global.paymentMethods_title'), 'icon' => 'fa-credit-card', 'params' => ['method' => 'paypal'], 'patterns' => ['admin.payment_methods.*']],
+    ];
+@endphp
+
+<div class="settings-nav">
+    <div class="settings-nav__eyebrow">Workspace</div>
+    <ul class="settings-nav__list">
+        @foreach ($links as $link)
+            @php
+                $patterns = $link['patterns'] ?? [$link['route']];
+                $isActive = collect($patterns)->contains(fn ($pattern) => request()->routeIs($pattern));
+                $params = $link['params'] ?? [];
+            @endphp
+            <li class="settings-nav__item {{ $isActive ? 'is-active' : '' }}">
+                <a href="{{ route($link['route'], $params) }}">
+                    <i class="fa {{ $link['icon'] }}"></i>
+                    <span>{{ $link['label'] }}</span>
+                </a>
+            </li>
+        @endforeach
+    </ul>
+</div>

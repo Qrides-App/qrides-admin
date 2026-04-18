@@ -362,9 +362,10 @@
                                                 <div>
                                                     <div><strong>Type:</strong>
                                                         {{ $booking->item->item_Type->name ?? '-' }}</div>
-                                                    <div><strong>Make:</strong> {{ $booking->item->make ?? '-' }}</div>
+                                                    <div><strong>Make:</strong> {{ $booking->item->vehicleMake->name ?? '-' }}</div>
                                                     <div><strong>Model:</strong> {{ $booking->item->model ?? '-' }}</div>
                                                     <div><strong>Number:</strong>
+                                                        {{ strtoupper(optional($booking->item)->registration_number ?? '-') }}
                                                       </div>
                                                 </div>
                                             </td>
@@ -385,24 +386,25 @@
                                                 {{ $booking->created_at ? $booking->created_at->format('Y-m-d') : '' }}
                                             </td>
 
+                                            @php $normalizedStatus = strtolower($booking->status ?? ''); @endphp
                                             <td>
-                                                @if ($booking->status === 'Ongoing')
+                                                @if ($normalizedStatus === 'ongoing')
                                                     <span class="badge badge-pill label-secondary live-badge">
                                                         <span class="live-dot"></span> Live
                                                     </span>
-                                                @elseif ($booking->status === 'Cancelled')
+                                                @elseif ($normalizedStatus === 'cancelled')
                                                     <span class="badge badge-pill label-danger">Cancelled</span>
-                                                @elseif ($booking->status === 'Accepted')
+                                                @elseif ($normalizedStatus === 'accepted')
                                                     <span class="badge badge-pill label-success">Accepted</span>
-                                                @elseif ($booking->status === 'Approved')
+                                                @elseif ($normalizedStatus === 'approved')
                                                     <span class="badge badge-pill label-success">Approved</span>
-                                                @elseif ($booking->status === 'Declined')
+                                                @elseif ($normalizedStatus === 'declined' || $normalizedStatus === 'rejected')
                                                     <span class="badge badge-pill label-warning">Declined</span>
-                                                @elseif ($booking->status === 'Completed')
+                                                @elseif ($normalizedStatus === 'completed')
                                                     <span class="badge badge-pill label-info">Completed</span>
-                                                @elseif ($booking->status === 'Refunded')
+                                                @elseif ($normalizedStatus === 'refunded')
                                                     <span class="badge badge-pill label-primary">Refunded</span>
-                                                @elseif ($booking->status === 'Confirmed')
+                                                @elseif ($normalizedStatus === 'confirmed')
                                                     <span class="badge badge-pill label-success">Confirmed</span>
                                                 @else
                                                     {{ $booking->status }}

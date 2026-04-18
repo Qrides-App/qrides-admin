@@ -1,7 +1,7 @@
-<ul class="nav nav-tabs" style="display: inline-block;">
+<ul class="settings-tab-nav">
     @php
         $currentMethod = request()->route('method');
-        $methodsToShow = ['paypal', 'stripe', 'razorpay', 'cashfree', 'cash'];
+        $methodsToShow = ['paypal', 'stripe', 'razorpay', 'cash'];
     @endphp
 
     @foreach($methodsToShow as $methodKey)

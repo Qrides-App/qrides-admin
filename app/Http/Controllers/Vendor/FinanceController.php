@@ -16,6 +16,7 @@ use App\Models\Booking;
 use App\Models\GeneralSetting;
 use App\Models\Modern\Item;
 use App\Models\Module;
+use Illuminate\Database\Eloquent\Builder;
 
 class FinanceController extends Controller
 {
@@ -39,7 +40,7 @@ class FinanceController extends Controller
             ->where('payment_status', 'paid')
             ->where('host_id', $vendorId)
             ->where('module', $currentModule->id)
-            ->whereIn('status', ['Pending', 'Cancelled', 'Confirmed', 'Completed'])
+            ->whereIn(\DB::raw('LOWER(status)'), ['pending', 'cancelled', 'confirmed', 'completed'])
             ->orderBy('id', 'desc');
 
         // Add date range filter if both 'from' and 'to' are provided
@@ -50,18 +51,7 @@ class FinanceController extends Controller
         } elseif ($to) {
             $query->where('bookings.created_at', '<=', $to.' 23:59:59');
         }
-        if ($status == 'pending') {
-            $query->where('bookings.status', 'pending');
-        }
-        if ($status == 'confirmed') {
-            $query->where('bookings.status', 'confirmed');
-        }
-        if ($status == 'cancelled') {
-            $query->where('bookings.status', 'cancelled');
-        }
-        if ($status == 'completed') {
-            $query->where('bookings.status', 'completed');
-        }
+        $this->applyStatusFilter($query, $status);
 
         if ($customer) {
             $query->where('userid', $customer);
@@ -134,5 +124,14 @@ class FinanceController extends Controller
         $general_default_currency = GeneralSetting::where('meta_key', 'general_default_currency')->first();
 
         return view('vendor.finance.index', compact('bookings', 'admin_commission', 'vendor_commission', 'searchfieldItem', 'searchfieldItemId', 'customersearch', 'customersearchId', 'general_default_currency', 'adminsearch', 'adminsearchId', 'currentModule'));
+    }
+
+    private function applyStatusFilter(Builder $query, ?string $status): void
+    {
+        $status = strtolower(trim((string) $status));
+
+        if (in_array($status, ['pending', 'confirmed', 'cancelled', 'completed'], true)) {
+            $query->whereRaw('LOWER(bookings.status) = ?', [$status]);
+        }
     }
 }

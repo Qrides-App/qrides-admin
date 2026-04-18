@@ -1,90 +1,67 @@
-	@extends('layouts.admin')
+@extends('layouts.admin')
+
 @section('content')
-<section class="content">
-			<div class="row">
-				<div class="col-md-3 settings_bar_gap">
-					<div class="box box-info box_info">
-	<div class="">
-	<h4 class="all_settings f-18 mt-1" style="margin-left:15px;">{{ trans('global.manage_settings') }}</h4>
-		@include('admin.generalSettings.general-setting-links.links')
-	</div>
-</div>
-				</div>
+    <section class="content">
+        <div class="row">
+            <div class="col-md-3 settings_bar_gap">
+                <div class="box box-info box_info settings-sidebar-card">
+                    <h4 class="all_settings f-18 mt-1">Manage Settings</h4>
+                    @include('admin.generalSettings.general-setting-links.links')
+                </div>
+            </div>
 
-				<div class="col-md-9">
-					<div class="box box-info">
-                        
-						<div class="box-header with-border">
-							<h3 class="box-title">{{ trans('global.fees_title_singular') }}</h3><span class="email_status" style="display: none;">(<span class="text-green"><i class="fa fa-check" aria-hidden="true"></i>Verified</span>)</span>
-						</div>
+            <div class="col-md-9">
+                <div class="settings-page-header">
+                    <div>
+                        <span class="settings-page-header__eyebrow">Pricing controls</span>
+                        <h1 class="settings-page-header__title">{{ trans('global.fees_title_singular') }}</h1>
+                        <p class="settings-page-header__subtitle">Tune the tax and platform commission values that influence ride and booking-related financial calculations across the admin platform.</p>
+                    </div>
+                </div>
 
-						<form id="fees_setting" method="post" action="{{ route('admin.FeesSetupadd') }}" class="form-horizontal " novalidate="novalidate">
-							{{ csrf_field() }}
-							<div class="box-body">
-																	<!-- <div class="form-group guest_service_charge">
-			<label for="inputEmail3" class="col-sm-3 control-label">{{ trans('global.guest_service_charge') }} <span class="text-danger">*</span></label>
-		<div class="col-sm-6">
-		<input type="text" name="feesetup_guest_service_charge" class="form-control " id="guest_service_charge" value="{{ $feesetup_guest_service_charge->meta_value ?? '' }}" placeholder="Guest service charge (%)">
-		<span class="text-danger"></span>
-	</div> -->
-	<!-- <div class="col-sm-3">
-		<small>
-			 <input type="radio" id="admin" name="feesetup_guest_service_charge_get" value="admin" {{ ($feesetup_guest_service_charge_get->meta_value ?? 'admin') === 'admin' ? 'checked' : '' }}>
-        <label for="admin">{{ trans('global.admin') }}</label>
+                <form id="fees_setting" method="POST" action="{{ route('admin.FeesSetupadd') }}"
+                    class="settings-card settings-form-card" novalidate="novalidate">
+                    @csrf
+                    <input type="hidden" name="feesetup_accomodation_tax_get"
+                        value="{{ $feesetup_accomodation_tax_get->meta_value ?? 'admin' }}">
 
-        <input type="radio" id="vendor" name="feesetup_guest_service_charge_get" value="vendor" {{ ($feesetup_guest_service_charge_get->meta_value ?? 'admin') === 'vendor' ? 'checked' : '' }}>
-        <label for="vendor">{{ trans('global.vendor') }}</label>
-	</small>
-	</div> 
-</div>		-->														
-	<!-- <div class="form-group iva_tax">
-			<label for="inputEmail3" class="col-sm-3 control-label">{{ trans('global.iva_tax') }} <span class="text-danger">*</span></label>
-		<div class="col-sm-6">
-		<input type="text" name="feesetup_iva_tax" class="form-control " id="iva_tax" value="{{ $feesetup_iva_tax->meta_value ?? '' }}" placeholder="I.V.A Tax (%)">
-		<span class="text-danger"></span>
-	</div>
-	<div class="col-sm-3">
-		<small><input type="radio" id="admin" name="feesetup_iva_tax_get" value="admin" {{ ($feesetup_iva_tax_get->meta_value ?? 'admin') === 'admin' ? 'checked' : '' }}>
-<label for="admin">{{ trans('global.admin') }}</label>
+                    <div class="settings-card__header">
+                        <div>
+                            <h3>Financial rules</h3>
+                            <p>Keep these values as percentages. They are used as platform defaults in financial summaries and downstream ride calculations.</p>
+                        </div>
+                    </div>
 
-<input type="radio" id="vendor" name="feesetup_iva_tax_get" value="vendor" {{ ($feesetup_iva_tax_get->meta_value ?? 'vendor') === 'vendor' ? 'checked' : '' }}>
-<label for="vendor">{{ trans('global.vendor') }}</label>
-</small>
-	</div>
-</div>		 -->															
+                    <div class="settings-callout settings-callout--soft">
+                        <i class="fa fa-calculator"></i>
+                        <span>Update these values carefully. Changes here affect all future pricing and finance views that rely on global fee defaults.</span>
+                    </div>
 
-<div class="form-group accomodation_tax">
-			<label for="inputEmail3" class="col-sm-3 control-label">{{ trans('global.iva_tax') }} <span class="text-danger">*</span></label>
-		<div class="col-sm-6">
-		<input type="text" name="feesetup_iva_tax" class="form-control " id="accomodation_tax" value="{{ $feesetup_iva_tax->meta_value ?? '' }}" placeholder="Accomadation Tax (%)">
-		<span class="text-danger"></span>
-	</div>
-	<div class="col-sm-3" style="display: none;">
-		<small><input type="radio" id="admin" name="feesetup_accomodation_tax_get" value="admin" {{ ($feesetup_accomodation_tax_get->meta_value ?? 'admin') === 'admin' ? 'checked' : '' }}>
-<label for="admin">{{ trans('global.admin') }}</label> 
+                    <div class="settings-form-grid">
+                        <div class="settings-field">
+                            <label for="feesetup_iva_tax">{{ trans('global.iva_tax') }} <span class="text-danger">*</span></label>
+                            <input type="text" name="feesetup_iva_tax" class="form-control" id="feesetup_iva_tax"
+                                value="{{ old('feesetup_iva_tax', $feesetup_iva_tax->meta_value ?? '') }}"
+                                placeholder="e.g. 5 or 18">
+                            <p class="help-block settings-help-copy">Enter the platform tax rate as a percentage without the % symbol.</p>
+                        </div>
 
- <!-- <input type="radio" id="vendor" name="feesetup_accomodation_tax_get" value="vendor" {{ ($feesetup_accomodation_tax_get->meta_value ?? 'vendor') === 'vendor' ? 'checked' : '' }}>
-<label for="vendor">{{ trans('global.vendor') }}</label>  -->
-</small>
-	</div>
-</div>				<div class="form-group accomodation_tax">
-			<label for="inputEmail3" class="col-sm-3 control-label">{{ trans('global.admin_commission') }}  <span class="text-danger">*</span></label>
-		<div class="col-sm-6">
-		<input type="text" name="feesetup_admin_commission" class="form-control " id="admin_commission" value="{{ $feesetup_admin_commission->meta_value ?? '' }}" placeholder="Admin Commission">
-		<span class="text-danger"></span>
-	</div>
-	
-</div>														<div class="text-center" id="error-message"></div>
-							</div>
+                        <div class="settings-field">
+                            <label for="feesetup_admin_commission">{{ trans('global.admin_commission') }} <span class="text-danger">*</span></label>
+                            <input type="text" name="feesetup_admin_commission" class="form-control"
+                                id="feesetup_admin_commission"
+                                value="{{ old('feesetup_admin_commission', $feesetup_admin_commission->meta_value ?? '') }}"
+                                placeholder="e.g. 10 or 15">
+                            <p class="help-block settings-help-copy">This percentage is retained as the admin commission on eligible bookings and rides.</p>
+                        </div>
+                    </div>
 
-							<div class="box-footer">
-								<button type="submit" class="btn btn-info btn-space">{{ trans('global.save') }}</button>
-								<a class="btn btn-danger" href="{{ route('admin.settings') }}">{{ trans('global.cancel') }}</a>
-															</div>
-						</form>
-					</div>
-				</div>
-			</div>
-		</section>
-		@endsection
-		
+                    <div class="settings-actions">
+                        <a class="btn settings-btn-secondary" href="{{ route('admin.settings') }}">{{ trans('global.cancel') }}</a>
+                        <button type="submit" class="btn btn-primary settings-btn-primary">{{ trans('global.save') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+@endsection

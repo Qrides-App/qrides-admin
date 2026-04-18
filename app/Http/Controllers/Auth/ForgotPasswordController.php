@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\GeneralSetting;
+use App\Support\MailSettings;
 use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Password;
 
 class ForgotPasswordController extends Controller
@@ -26,50 +25,18 @@ class ForgotPasswordController extends Controller
 
     public function __construct()
     {
-
-        $settingsKeys = [
-            'emailwizard_driver',
-            'host',
-            'port',
-            'from_email',
-            'encryption',
-            'username',
-            'password',
-        ];
-
-        $settings = GeneralSetting::whereIn('meta_key', $settingsKeys)->get()->keyBy('meta_key');
-
-        $smtpConfig = [
-            'transport' => $settings->get('emailwizard_driver')->meta_value ?? 'smtp',
-            'host' => $settings->get('host')->meta_value ?? 'test',
-            'port' => $settings->get('port')->meta_value ?? '',
-            'encryption' => $settings->get('encryption')->meta_value ?? '',
-            'username' => $settings->get('username')->meta_value ?? '',
-            'password' => $settings->get('password')->meta_value ?? '',
-            'timeout' => null,
-            'auth_mode' => null,
-        ];
-
-        // if (empty($smtpConfig['host']) || $smtpConfig['host'] == 'test' || empty($smtpConfig['username']) || empty($smtpConfig['password'])) {
-
-        //     redirect()
-        //         ->route('login')
-        //         ->with('error', 'Email configuration is missing or incorrect. Please update SMTP settings from General Settings')
-        //         ->send();
-        // }
-
-        Config::set('mail.mailers.smtp', $smtpConfig);
-
-        Config::set('mail.from', [
-            'address' => $smtpConfig['username'],
-            'name' => config('app.name', 'Vehicle Unibooker'),
-        ]);
+        MailSettings::apply();
     }
 
     public function sendResetLinkEmail(Request $request)
     {
 
         $request->validate(['email' => 'required|email']);
+
+        if (! MailSettings::isConfigured()) {
+            return redirect()->route('password.request')
+                ->with('error', 'Email configuration is incomplete or disabled. Please contact the administrator.');
+        }
         try {
 
             $response = $this->broker()->sendResetLink(

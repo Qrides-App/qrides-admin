@@ -27,6 +27,7 @@ use DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class BookingApiController extends Controller
 {
@@ -55,15 +56,6 @@ class BookingApiController extends Controller
             'discount_price' => 'nullable|numeric',
             'amount_to_pay' => 'nullable|numeric',
             'estimated_duration_min' => 'nullable|numeric',
-            'pickup_distance_km' => 'nullable|numeric|min:0',
-            'waiting_minutes' => 'nullable|numeric|min:0',
-            'toll_charge' => 'nullable|numeric|min:0',
-            'parking_charge' => 'nullable|numeric|min:0',
-            'airport_fee' => 'nullable|numeric|min:0',
-            'apply_airport_fee' => 'nullable|boolean',
-            'weather_condition' => 'nullable|string|max:50',
-            'event_key' => 'nullable|string|max:120',
-            'pickup_city_id' => 'nullable|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -82,10 +74,7 @@ class BookingApiController extends Controller
         $currencyCode = $request->currency_code ?? 'USD';
         $itemId = $request->input('item_id');
         $conversionRate = Currency::getValueByCurrencyCode($currencyCode);
-        $durationMin = (float) $request->input('duration_minutes', 0);
-        $surge = (float) $request->input('surge', 1);
-        $fareExtras = $this->extractFareExtras($request);
-        $pricingResult = $this->getItemPricesDetails($itemTypeId, $distance, $couponCode, $walletAmount, $currencyCode, $conversionRate, $durationMin, $surge, $fareExtras);
+        $pricingResult = $this->getItemPricesDetails($itemTypeId, $distance, $couponCode, $walletAmount, $currencyCode, $conversionRate);
         $pricing = $pricingResult->getData(true)['data'];
 
         $booking = new Booking;
@@ -147,7 +136,6 @@ class BookingApiController extends Controller
         $bookingExtension->estimated_duration_min = $estimatedDurationMin ?? null;
         $bookingExtension->pick_otp = $this->createPickDropOTP();
         $bookingExtension->ride_id = $request->ride_id;
-        $bookingExtension->offer_boost_amount = 0;
         $bookingExtension->save();
 
         if ($booking->wall_amt > 0) {
@@ -158,12 +146,9 @@ class BookingApiController extends Controller
             $booking->payment_status = 'paid';
             $booking->payment_method = 'wallet';
             $booking->save();
-            $offerBoostConfig = $this->getOfferBoostConfigPayload();
             $responseData = [
                 'booking_id' => $booking->id,
                 'status' => $booking->status,
-                'offer_boost_amount' => (float) ($bookingExtension->offer_boost_amount ?? 0),
-                'offer_boost' => $offerBoostConfig,
                 'payment_url' => route('payment_success', ['booking' => $booking->id]),
             ];
 
@@ -182,7 +167,6 @@ class BookingApiController extends Controller
             // $template_id = 10;
             $booking->save();
             $firstBookingCoupon = GeneralSetting::where('meta_key', 'first_booking_coupon')->value('meta_value');
-            $offerBoostConfig = $this->getOfferBoostConfigPayload();
 
             $responseData = [
                 'booking_id' => $booking->id,
@@ -190,8 +174,6 @@ class BookingApiController extends Controller
                 'booking_token' => $booking->token ?? 0,
                 'pickup_otp' => $booking->extension->pick_otp ?? 0,
                 'status' => $booking->status,
-                'offer_boost_amount' => (float) ($bookingExtension->offer_boost_amount ?? 0),
-                'offer_boost' => $offerBoostConfig,
                 'bookingCount' => $bookingCount ?? 0,
                 'coupon' => $firstBookingCoupon ?: null,
                 'payment_url' => route('payment_methods', ['booking' => $booking->id]),
@@ -264,7 +246,11 @@ class BookingApiController extends Controller
                 $booking['pickup_location'] = $extension->pickup_location ?? null;
                 $booking['dropoff_location'] = $extension->dropoff_location ?? null;
                 $booking['estimated_distance_km'] = $extension->estimated_distance_km ?? 0;
-                $booking['offer_boost_amount'] = $extension->offer_boost_amount ?? 0;
+                $booking['share_tracking_enabled'] = (bool) ($extension->share_tracking_enabled ?? false);
+                $booking['share_tracking_url'] = ! empty($extension->share_tracking_enabled) && ! empty($extension->share_token)
+                    ? route('ride-tracking.show', ['token' => $extension->share_token])
+                    : null;
+                $booking['share_tracking_expires_at'] = optional($extension->share_token_expires_at)->toDateTimeString();
                 $booking['firebase_json'] = json_decode($booking->firebase_json);
                 unset($booking->extension, $booking->review, $booking->host);
 
@@ -275,7 +261,6 @@ class BookingApiController extends Controller
 
         return $this->addSuccessResponse(200, trans('global.booking_list'), [
             'Bookings' => $bookings,
-            'offer_boost' => $this->getOfferBoostConfigPayload(),
             'offset' => $nextOffset,
             'limit' => $limit,
         ]);
@@ -340,7 +325,11 @@ class BookingApiController extends Controller
                 $booking['dropoff_location'] = $booking->extension->dropoff_location ?? null;
                 $booking['estimated_distance_km'] = $booking->extension->estimated_distance_km ?? 0;
                 $booking['estimated_duration_min'] = $booking->extension->estimated_duration_min ?? 0;
-                $booking['offer_boost_amount'] = $booking->extension->offer_boost_amount ?? 0;
+                $booking['share_tracking_enabled'] = (bool) ($booking->extension->share_tracking_enabled ?? false);
+                $booking['share_tracking_url'] = ! empty($booking->extension->share_tracking_enabled) && ! empty($booking->extension->share_token)
+                    ? route('ride-tracking.show', ['token' => $booking->extension->share_token])
+                    : null;
+                $booking['share_tracking_expires_at'] = optional($booking->extension->share_token_expires_at)->toDateTimeString();
                 unset($booking->extension);
                 $today = now()->format('Y-m-d');
                 $booking['is_item_delivered_button'] = ($booking->check_in === $today && $booking->is_item_received == 0 && $booking->is_item_delivered == 0) ? 'yes' : 'no';
@@ -360,7 +349,6 @@ class BookingApiController extends Controller
 
         return $this->addSuccessResponse(200, trans("global.vendor_{$type}_bookings_is"), [
             'Bookings' => $bookings,
-            'offer_boost' => $this->getOfferBoostConfigPayload(),
             'offset' => $nextOffset,
             'limit' => $limit,
         ]);
@@ -531,21 +519,10 @@ class BookingApiController extends Controller
         $validator = Validator::make($request->all(), [
             'item_type_id' => 'required|exists:rental_item_types,id',
             'distance' => 'required|numeric|min:0',
-            'duration_minutes' => 'nullable|numeric|min:0',
-            'surge' => 'nullable|numeric|min:0.1',
             'coupon_code' => 'nullable|string',
             'wallet_amount' => 'nullable|numeric|min:0',
             'selected_currency_code' => 'nullable|string',
             'token' => 'required|exists:app_users,token',
-            'pickup_distance_km' => 'nullable|numeric|min:0',
-            'waiting_minutes' => 'nullable|numeric|min:0',
-            'toll_charge' => 'nullable|numeric|min:0',
-            'parking_charge' => 'nullable|numeric|min:0',
-            'airport_fee' => 'nullable|numeric|min:0',
-            'apply_airport_fee' => 'nullable|boolean',
-            'weather_condition' => 'nullable|string|max:50',
-            'event_key' => 'nullable|string|max:120',
-            'pickup_city_id' => 'nullable|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -567,13 +544,10 @@ class BookingApiController extends Controller
 
         $itemTypeId = $request->input('item_type_id');
         $distance = $request->input('distance');
-        $durationMin = (float) $request->input('duration_minutes', 0);
-        $surge = (float) $request->input('surge', 1);
         $couponCode = $request->input('coupon_code');
         $walletAmount = $request->input('wallet_amount', 0);
         $selectedCurrencyCode = $request->input('selected_currency_code', 'USD');
         $conversionRate = Currency::getValueByCurrencyCode($selectedCurrencyCode);
-        $fareExtras = $this->extractFareExtras($request);
 
         $coupon = null;
 
@@ -611,7 +585,7 @@ class BookingApiController extends Controller
             }
         }
 
-        $pricingResult = $this->getItemPricesDetails($itemTypeId, $distance, $couponCode, $walletAmount, $selectedCurrencyCode, $conversionRate, $durationMin, $surge, $fareExtras);
+        $pricingResult = $this->getItemPricesDetails($itemTypeId, $distance, $couponCode, $walletAmount, $selectedCurrencyCode, $conversionRate);
         $pricing = $pricingResult->getData(true)['data'];
         $booking->price_per_km = $pricing['price_per_km'];
         $booking->base_price = $pricing['price_before_discount'];
@@ -784,187 +758,84 @@ class BookingApiController extends Controller
         ]);
     }
 
-    public function addOfferBoost(Request $request)
+    public function generateShareTrackingLink(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'booking_id' => 'required|exists:bookings,id',
             'token' => 'required|exists:app_users,token',
-            'boost_amount' => 'required|numeric|min:0.01',
+            'expires_in_hours' => 'nullable|integer|min:1|max:168',
         ]);
 
         if ($validator->fails()) {
             return $this->errorComputing($validator);
         }
 
-        $userid = $this->checkUserByToken($request->token);
-        if (! $userid) {
+        $userId = $this->checkUserByToken($request->token);
+        if (! $userId) {
             return $this->addErrorResponse(419, trans('global.token_not_match'), '');
         }
 
-        $booking = Booking::where('id', $request->input('booking_id'))
-            ->where('userid', $userid)
+        $booking = Booking::with('extension')
+            ->where('id', $request->booking_id)
+            ->where('userid', $userId)
             ->first();
 
         if (! $booking) {
             return $this->addErrorResponse(404, trans('global.booking_not_found'), '');
         }
 
-        if (in_array($booking->status, ['Ongoing', 'Completed', 'Cancelled', 'Rejected'], true)) {
-            return $this->addErrorResponse(400, 'Boost can only be added before ride starts.', '');
+        $extension = $booking->extension ?: new BookingExtension(['booking_id' => $booking->id]);
+        $expiresAt = now()->addHours((int) ($request->input('expires_in_hours', 24)));
+
+        if (! $extension->share_token || optional($extension->share_token_expires_at)->isPast()) {
+            $extension->share_token = Str::random(48);
         }
 
-        $boostEnabled = filter_var((string) (GeneralSetting::getMetaValue('fare_offer_boost_enabled') ?? '1'), FILTER_VALIDATE_BOOLEAN);
-        if (! $boostEnabled) {
-            return $this->addErrorResponse(400, 'Offer boost is disabled by admin.', '');
-        }
-
-        $rawOptions = (string) (GeneralSetting::getMetaValue('fare_offer_boost_options') ?? '10,20');
-        $allowedOptions = collect(explode(',', $rawOptions))
-            ->map(fn ($v) => trim($v))
-            ->filter(fn ($v) => $v !== '' && is_numeric($v) && (float) $v > 0)
-            ->map(fn ($v) => round((float) $v, 2))
-            ->unique()
-            ->values()
-            ->all();
-        if (empty($allowedOptions)) {
-            $allowedOptions = [10.0, 20.0];
-        }
-
-        $boostAmount = round((float) $request->input('boost_amount'), 2);
-        if (! in_array($boostAmount, $allowedOptions, true)) {
-            return $this->addErrorResponse(400, 'Invalid boost amount. Use configured values only.', [
-                'allowed_options' => $allowedOptions,
-            ]);
-        }
-
-        $maxBoostTotal = max((float) (GeneralSetting::getMetaValue('fare_offer_boost_max_total') ?? 100), max($allowedOptions));
-
-        $extension = BookingExtension::firstOrCreate(
-            ['booking_id' => $booking->id],
-            [
-                'pickup_location' => null,
-                'dropoff_location' => null,
-                'offer_boost_amount' => 0,
-            ]
-        );
-
-        $currentBoost = round((float) ($extension->offer_boost_amount ?? 0), 2);
-        $newBoost = round($currentBoost + $boostAmount, 2);
-        if ($newBoost > $maxBoostTotal) {
-            return $this->addErrorResponse(400, 'Boost limit exceeded for this booking.', [
-                'current_boost' => $currentBoost,
-                'max_boost_total' => $maxBoostTotal,
-            ]);
-        }
-
-        $currentAmountToPay = (float) $this->convertFormattedNumber((string) ($booking->amount_to_pay ?? 0));
-        $currentTotal = (float) $this->convertFormattedNumber((string) ($booking->total ?? 0));
-        $currentBase = (float) $this->convertFormattedNumber((string) ($booking->base_price ?? 0));
-
-        $booking->amount_to_pay = round($currentAmountToPay + $boostAmount, 2);
-        $booking->total = round($currentTotal + $boostAmount, 2);
-        $booking->base_price = round($currentBase + $boostAmount, 2);
-
-        $item = Item::find($booking->itemid);
-        if ($item && ! empty($item->item_type_id)) {
-            $commissions = $this->calculateCommissions((float) $booking->amount_to_pay, (int) $item->item_type_id);
-            $booking->admin_commission = $commissions['admin_commission'];
-            $booking->vendor_commission = $commissions['vendor_commission'];
-        }
-
-        $booking->save();
-        $extension->offer_boost_amount = $newBoost;
+        $extension->share_tracking_enabled = true;
+        $extension->share_token_expires_at = $expiresAt;
         $extension->save();
 
-        return $this->addSuccessResponse(200, 'Offer boost added successfully.', [
+        return $this->addSuccessResponse(200, 'Ride share link created successfully.', [
             'booking_id' => $booking->id,
-            'applied_boost' => $boostAmount,
-            'total_offer_boost' => $newBoost,
-            'offer_boost' => $this->getOfferBoostConfigPayload(),
-            'amount_to_pay' => $booking->amount_to_pay,
-            'status' => $booking->status,
+            'share_tracking_enabled' => true,
+            'share_token' => $extension->share_token,
+            'expires_at' => optional($extension->share_token_expires_at)->toDateTimeString(),
+            'share_url' => route('ride-tracking.show', ['token' => $extension->share_token]),
         ]);
     }
 
-    public function getOfferBoostConfig(Request $request)
+    public function revokeShareTrackingLink(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'booking_id' => 'nullable|exists:bookings,id',
-            'token' => 'nullable|string',
+            'booking_id' => 'required|exists:bookings,id',
+            'token' => 'required|exists:app_users,token',
         ]);
 
         if ($validator->fails()) {
             return $this->errorComputing($validator);
         }
 
-        $config = $this->getOfferBoostConfigPayload();
-        $bookingInfo = null;
-
-        if ($request->filled('booking_id')) {
-            $booking = Booking::with('extension')->find($request->input('booking_id'));
-            if ($booking) {
-                $bookingInfo = [
-                    'booking_id' => $booking->id,
-                    'status' => $booking->status,
-                    'amount_to_pay' => $booking->amount_to_pay,
-                    'offer_boost_amount' => (float) optional($booking->extension)->offer_boost_amount,
-                ];
-            }
+        $userId = $this->checkUserByToken($request->token);
+        if (! $userId) {
+            return $this->addErrorResponse(419, trans('global.token_not_match'), '');
         }
 
-        return $this->addSuccessResponse(200, 'Offer boost config fetched successfully.', [
-            'offer_boost' => $config,
-            'booking' => $bookingInfo,
+        $booking = Booking::with('extension')
+            ->where('id', $request->booking_id)
+            ->where('userid', $userId)
+            ->first();
+
+        if (! $booking || ! $booking->extension) {
+            return $this->addErrorResponse(404, trans('global.booking_not_found'), '');
+        }
+
+        $booking->extension->share_tracking_enabled = false;
+        $booking->extension->share_token_expires_at = now();
+        $booking->extension->save();
+
+        return $this->addSuccessResponse(200, 'Ride share link disabled successfully.', [
+            'booking_id' => $booking->id,
+            'share_tracking_enabled' => false,
         ]);
-    }
-
-    private function getOfferBoostConfigPayload(): array
-    {
-        $enabled = filter_var((string) (GeneralSetting::getMetaValue('fare_offer_boost_enabled') ?? '1'), FILTER_VALIDATE_BOOLEAN);
-        $rawOptions = (string) (GeneralSetting::getMetaValue('fare_offer_boost_options') ?? '10,20');
-        $allowedOptions = collect(explode(',', $rawOptions))
-            ->map(fn ($v) => trim($v))
-            ->filter(fn ($v) => $v !== '' && is_numeric($v) && (float) $v > 0)
-            ->map(fn ($v) => round((float) $v, 2))
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
-        if (empty($allowedOptions)) {
-            $allowedOptions = [10.0, 20.0];
-        }
-
-        $maxBoostTotal = max((float) (GeneralSetting::getMetaValue('fare_offer_boost_max_total') ?? 100), max($allowedOptions));
-        $currencyCode = strtoupper((string) (GeneralSetting::getMetaValue('driver_recharge_currency') ?: GeneralSetting::getMetaValue('general_default_currency') ?: 'INR'));
-
-        $quickActions = collect($allowedOptions)->map(function ($amount) use ($currencyCode) {
-            return [
-                'amount' => $amount,
-                'label' => '+' . rtrim(rtrim(number_format((float) $amount, 2, '.', ''), '0'), '.') . ' ' . $currencyCode,
-            ];
-        })->values()->all();
-
-        return [
-            'enabled' => $enabled,
-            'allowed_options' => $allowedOptions,
-            'max_boost_total' => $maxBoostTotal,
-            'currency_code' => $currencyCode,
-            'quick_actions' => $quickActions,
-        ];
-    }
-
-    private function extractFareExtras(Request $request): array
-    {
-        return [
-            'pickup_distance_km' => (float) $request->input('pickup_distance_km', 0),
-            'waiting_minutes' => (float) $request->input('waiting_minutes', 0),
-            'toll_charge' => (float) $request->input('toll_charge', 0),
-            'parking_charge' => (float) $request->input('parking_charge', 0),
-            'airport_fee' => (float) $request->input('airport_fee', 0),
-            'apply_airport_fee' => filter_var($request->input('apply_airport_fee', true), FILTER_VALIDATE_BOOLEAN),
-            'weather_condition' => $request->input('weather_condition'),
-            'event_key' => $request->input('event_key'),
-            'pickup_city_id' => $request->input('pickup_city_id'),
-        ];
     }
 }

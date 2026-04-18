@@ -25,7 +25,9 @@ use App\Models\User;
 use App\Models\VendorWallet;
 use App\Models\Wallet;
 use Gate;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
 
 class BookingController extends Controller
@@ -49,10 +51,12 @@ class BookingController extends Controller
         $query = Booking::with([
             'host:id,first_name,last_name,phone,phone_country',
             'user:id,first_name,last_name,phone,phone_country',
-            'item:id,title,item_type_id,make,model,registration_number',
+            'item:id,title,item_type_id,category_id,subcategory_id',
             'extension',
             'item.itemVehicle',
             'item.item_Type',
+            'item.vehicleMake',
+            'item.subCategory',
             'host.media',
             'user.media',
         ]);
@@ -79,10 +83,7 @@ class BookingController extends Controller
             $query->where('itemid', $item);
         }
 
-        $validStatuses = ['pending', 'confirmed', 'ongoing', 'cancelled', 'declined', 'completed', 'refunded', 'accepted', 'rejected'];
-        if ($status && in_array($status, $validStatuses)) {
-            $query->where('status', $status);
-        }
+        $this->applyStatusFilter($query, $status);
 
         $countsQuery = Booking::query();
 
@@ -104,25 +105,8 @@ class BookingController extends Controller
             $countsQuery->where('itemid', $item);
         }
 
-        $statusCountsRaw = (clone $countsQuery)
-            ->selectRaw('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status')
-            ->toArray();
-
-        $statusCounts = [
-            'all' => array_sum($statusCountsRaw),
-            'ongoing' => $statusCountsRaw['Ongoing'] ?? 0,
-            'pending' => $statusCountsRaw['Pending'] ?? 0,
-            'accepted' => $statusCountsRaw['Accepted'] ?? 0,
-            'confirmed' => $statusCountsRaw['Confirmed'] ?? 0,
-            'cancelled' => $statusCountsRaw['Cancelled'] ?? 0,
-            'completed' => $statusCountsRaw['Completed'] ?? 0,
-            'rejected' => $statusCountsRaw['Rejected'] ?? 0,
-            'declined' => $statusCountsRaw['Declined'] ?? 0,
-            'refunded' => $statusCountsRaw['Refunded'] ?? 0,
-            'trash' => Booking::onlyTrashed()->count(),
-        ];
+        $statusCounts = $this->buildStatusCounts($countsQuery);
+        $statusCounts['trash'] = Booking::onlyTrashed()->count();
 
         $query = $query->orderBy('id', 'desc');
         $bookings = $query->paginate(50);
@@ -149,11 +133,7 @@ class BookingController extends Controller
         $searchfieldItem = $itemData ? $itemData->title : 'All';
         $searchfieldItemId = $itemData ? $itemData->id : '';
 
-        $general_default_currency = cache()->remember(
-            'general_default_currency',
-            now()->addHours(24),
-            fn () => GeneralSetting::where('meta_key', 'general_default_currency')->first()
-        );
+        $general_default_currency = cache()->remember('general_default_currency', now()->addHours(24), fn () => View::shared('general_default_currency'));
 
         return view('admin.bookings.index', compact(
             'bookings',
@@ -208,7 +188,15 @@ class BookingController extends Controller
     {
         abort_if(Gate::denies('booking_show'), Response::HTTP_FORBIDDEN, '403 Forbidden');
         $bookingId = $booking->id;
-        $bookingData = Booking::with(['host:id,first_name,last_name,phone,phone_country,ave_host_rate,email', 'user:id,first_name,last_name,phone,phone_country,email,avr_guest_rate', 'item:id,title,item_type_id,make,model,registration_number'])
+        $bookingData = Booking::with([
+            'host:id,first_name,last_name,phone,phone_country,ave_host_rate,email',
+            'user:id,first_name,last_name,phone,phone_country,email,avr_guest_rate',
+            'item:id,title,item_type_id,category_id,subcategory_id',
+            'item.itemVehicle',
+            'item.item_Type',
+            'item.vehicleMake',
+            'item.subCategory',
+        ])
             ->where('id', $bookingId)
             ->orderBy('id', 'desc')
             ->first();
@@ -329,9 +317,7 @@ class BookingController extends Controller
             $query->where('check_out', '<=', $to.' 23:59:59');
         }
 
-        if ($status !== null) {
-            $query->where('status', $status);
-        }
+        $this->applyStatusFilter($query, $status);
 
         if ($item) {
             $query->where('itemid', $item);
@@ -384,24 +370,7 @@ class BookingController extends Controller
             $query->where('updated_at', '<=', $to.' 23:59:59');
         }
 
-        if ($status == 'pending') {
-            $query->where('status', 'pending');
-        }
-        if ($status == 'confirmed') {
-            $query->where('status', 'confirmed');
-        }
-        if ($status == 'cancelled') {
-            $query->where('status', 'cancelled');
-        }
-        if ($status == 'declined') {
-            $query->where('status', 'declined');
-        }
-        if ($status == 'completed') {
-            $query->where('status', 'completed');
-        }
-        if ($status == 'refunded') {
-            $query->where('status', 'refunded');
-        }
+        $this->applyStatusFilter($query, $status);
         if ($customer) {
             $query->where('userid', $customer);
         }
@@ -632,18 +601,10 @@ class BookingController extends Controller
             ->where('module', $currentModule->id)
             ->orderBy('id', 'desc');
 
-        $statusCounts = [
-            'all' => (clone $queryLive)->where('bookings.status', '!=', 'trash')->count(),
-            'ongoing' => (clone $queryLive)->where('bookings.status', 'ongoing')->count(),
-            'pending' => (clone $queryLive)->where('bookings.status', 'pending')->count(),
-            'accepted' => (clone $queryLive)->where('bookings.status', 'accepted')->count(),
-            'confirmed' => (clone $queryLive)->where('bookings.status', 'confirmed')->count(),
-            'cancelled' => (clone $queryLive)->where('bookings.status', 'cancelled')->count(),
-            'completed' => (clone $queryLive)->where('bookings.status', 'completed')->count(),
-            'rejected' => (clone $queryLive)->where('bookings.status', 'rejected')->count(),
-            'trash' => (clone $queryLive)->onlyTrashed('status', 'trash')->count(),
-
-        ];
+        $statusCounts = $this->buildStatusCounts($queryLive);
+        $statusCounts['trash'] = Booking::onlyTrashed()
+            ->where('module', $currentModule->id)
+            ->count();
         $query = Booking::onlyTrashed()
             ->with(['host:id,first_name,last_name', 'user:id,first_name,last_name', 'item:id,title'])
             ->where('module', $currentModule->id)
@@ -665,9 +626,7 @@ class BookingController extends Controller
         if ($item) {
             $query->where('itemid', $item);
         }
-        if ($status) {
-            $query->where('status', $status);
-        }
+        $this->applyStatusFilter($query, $status);
 
         $filteredBookingsQuery = clone $query;
         $totalSum = $filteredBookingsQuery->sum('total');
@@ -764,5 +723,49 @@ class BookingController extends Controller
         }
 
         return response()->json(['message' => 'No entries selected'], 400);
+    }
+
+    private function normalizeStatus(?string $status): ?string
+    {
+        if ($status === null) {
+            return null;
+        }
+
+        $status = strtolower(trim($status));
+
+        return $status !== '' ? $status : null;
+    }
+
+    private function applyStatusFilter(Builder $query, ?string $status): void
+    {
+        $status = $this->normalizeStatus($status);
+        $validStatuses = ['pending', 'confirmed', 'ongoing', 'cancelled', 'declined', 'completed', 'refunded', 'accepted', 'rejected'];
+
+        if ($status && in_array($status, $validStatuses, true)) {
+            $query->whereRaw('LOWER(status) = ?', [$status]);
+        }
+    }
+
+    private function buildStatusCounts(Builder $query): array
+    {
+        $statusCountsRaw = (clone $query)
+            ->selectRaw('LOWER(status) as normalized_status, COUNT(*) as count')
+            ->groupByRaw('LOWER(status)')
+            ->pluck('count', 'normalized_status')
+            ->toArray();
+
+        return [
+            'all' => array_sum($statusCountsRaw),
+            'ongoing' => $statusCountsRaw['ongoing'] ?? 0,
+            'pending' => $statusCountsRaw['pending'] ?? 0,
+            'accepted' => $statusCountsRaw['accepted'] ?? 0,
+            'confirmed' => $statusCountsRaw['confirmed'] ?? 0,
+            'cancelled' => $statusCountsRaw['cancelled'] ?? 0,
+            'completed' => $statusCountsRaw['completed'] ?? 0,
+            'rejected' => $statusCountsRaw['rejected'] ?? 0,
+            'declined' => $statusCountsRaw['declined'] ?? 0,
+            'refunded' => $statusCountsRaw['refunded'] ?? 0,
+            'trash' => 0,
+        ];
     }
 }

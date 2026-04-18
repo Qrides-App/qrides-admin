@@ -9,61 +9,43 @@ use App\Models\Modern\Item;
 use App\Models\Module;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 class HomeController
 {
+    private const STATUS_ALIASES = [
+        'ongoing' => ['ongoing', 'Ongoing'],
+        'completed' => ['completed', 'Completed'],
+        'cancelled' => ['cancelled', 'Cancelled'],
+        'rejected' => ['rejected', 'Rejected'],
+        'accepted' => ['accepted', 'Accepted', 'approved', 'Approved'],
+    ];
+
     public function index()
     {
-        try {
-            $module = Cache::remember('default_module', 3600, function () {
-                if (! Schema::hasTable('module')) {
-                    return null;
-                }
 
-                return Module::where('default_module', '1')->first() ?? Module::first();
-            });
+        $module = Cache::remember('default_module', 3600, function () {
+            return Module::where('default_module', '1')->firstOrFail();
+        });
 
-            $moduleId = $module->id ?? 1;
-            $moduleName = $module->name ?? 'Qrides';
-            $currency = Cache::remember('general_default_currency', 3600, function () {
-                if (! Schema::hasTable('general_settings')) {
-                    return null;
-                }
+        $moduleId = $module->id;
+        $moduleName = $module->name;
+        $currency = Cache::remember('general_default_currency', 3600, function () {
+            return GeneralSetting::where('meta_key', 'general_default_currency')->first();
+        });
 
-                return GeneralSetting::where('meta_key', 'general_default_currency')->first();
-            });
+        $installerWarning = installerExists();
+        $metrics = $this->fetchDashboardMetrics($moduleId);
+        $latestBookings = Booking::with(['host', 'user', 'item'])
+            ->where('module', $moduleId)
+            ->where('payment_status', 'paid')
+            ->where('created_at', '>=', Carbon::now()->startOfYear())
+            ->latest()
+            ->take(5)
+            ->get();
 
-            $installerWarning = installerExists();
-            $metrics = $this->fetchDashboardMetrics($moduleId);
-            $latestBookings = collect();
-            if (Schema::hasTable('bookings')) {
-                $latestBookings = Booking::with(['host', 'user', 'item'])
-                    ->where('module', $moduleId)
-                    ->where('payment_status', 'paid')
-                    ->where('created_at', '>=', Carbon::now()->startOfYear())
-                    ->latest()
-                    ->take(5)
-                    ->get();
-            }
-
-            $latestUsersData = $this->getLatestUsersData();
-            $latestBookingsData = $this->getLatestBookingsData($moduleId);
-        } catch (\Throwable $e) {
-            Log::error('Admin dashboard bootstrap failed, serving fallback view', [
-                'error' => $e->getMessage(),
-            ]);
-
-            $moduleId = 1;
-            $moduleName = 'Qrides';
-            $currency = null;
-            $installerWarning = installerExists();
-            $metrics = $this->defaultMetrics();
-            $latestBookings = collect();
-            $latestUsersData = collect();
-            $latestBookingsData = collect();
-        }
+        $latestUsersData = $this->getLatestUsersData();
+        $latestBookingsData = $this->getLatestBookingsData($moduleId);
 
         return view('home', compact(
             'metrics',
@@ -79,9 +61,6 @@ class HomeController
 
     private function fetchDashboardMetrics($moduleId)
     {
-        if (! Schema::hasTable('app_users') || ! Schema::hasTable('bookings')) {
-            return $this->defaultMetrics();
-        }
 
         $driverMetrics = Cache::remember('driver_metrics', 3600, function () {
             $today = Carbon::today()->toDateString();
@@ -115,15 +94,19 @@ class HomeController
         // Cache::forget("booking_metrics_{$moduleId}");
         $bookingMetrics = Cache::remember("booking_metrics_{$moduleId}", 3600, function () use ($moduleId) {
             $today = Carbon::today()->toDateString();
+            $ongoing = $this->quotedStatusList(self::STATUS_ALIASES['ongoing']);
+            $completed = $this->quotedStatusList(self::STATUS_ALIASES['completed']);
+            $cancelled = $this->quotedStatusList(self::STATUS_ALIASES['cancelled']);
+            $rejected = $this->quotedStatusList(self::STATUS_ALIASES['rejected']);
 
             return Booking::selectRaw("
         COUNT(*) as total_paid_bookings,
-        SUM(CASE WHEN status = 'Ongoing' THEN 1 ELSE 0 END) as running_rides,
-        SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed_rides,
-        SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_rides,
-        SUM(CASE WHEN status = 'Rejected' THEN 1 ELSE 0 END) as rejected_rides,
-        SUM(CASE WHEN status = 'Ongoing' AND DATE(created_at) = ? THEN 1 ELSE 0 END) as today_running_rides,
-        SUM(CASE WHEN status = 'Completed' AND DATE(created_at) = ? THEN 1 ELSE 0 END) as today_completed_rides,
+        SUM(CASE WHEN status IN ({$ongoing}) THEN 1 ELSE 0 END) as running_rides,
+        SUM(CASE WHEN status IN ({$completed}) THEN 1 ELSE 0 END) as completed_rides,
+        SUM(CASE WHEN status IN ({$cancelled}) THEN 1 ELSE 0 END) as cancelled_rides,
+        SUM(CASE WHEN status IN ({$rejected}) THEN 1 ELSE 0 END) as rejected_rides,
+        SUM(CASE WHEN status IN ({$ongoing}) AND DATE(created_at) = ? THEN 1 ELSE 0 END) as today_running_rides,
+        SUM(CASE WHEN status IN ({$completed}) AND DATE(created_at) = ? THEN 1 ELSE 0 END) as today_completed_rides,
         SUM(CASE WHEN payment_status = 'paid' AND module = ? AND deleted_at IS NULL THEN total ELSE 0 END) as total_income,
         SUM(CASE WHEN payment_status = 'paid' AND module = ? AND deleted_at IS NULL THEN admin_commission ELSE 0 END) as total_revenue,
         SUM(CASE WHEN payment_status = 'paid' AND module = ? AND deleted_at IS NULL AND DATE(created_at) = ? THEN admin_commission ELSE 0 END) as today_revenue
@@ -138,10 +121,6 @@ class HomeController
                 ->where('module', $moduleId)
                 ->first();
         });
-
-        if (! $driverMetrics || ! $riderMetrics || ! $bookingMetrics) {
-            return $this->defaultMetrics();
-        }
 
         return [
             'total_drivers' => [
@@ -221,10 +200,6 @@ class HomeController
 
     private function getLatestUsersData()
     {
-        if (! Schema::hasTable('app_users')) {
-            return collect();
-        }
-
         return Cache::remember('latest_users_data', 3600, function () {
             $startDate = Carbon::now()->subWeek()->startOfDay();
             $endDate = Carbon::now()->endOfDay();
@@ -245,10 +220,6 @@ class HomeController
 
     private function getLatestBookingsData($moduleId)
     {
-        if (! Schema::hasTable('bookings')) {
-            return collect();
-        }
-
         return Cache::remember("latest_bookings_data_{$moduleId}", 3600, function () use ($moduleId) {
             $startDate = Carbon::now()->subWeek()->startOfDay();
             $endDate = Carbon::now()->endOfDay();
@@ -268,38 +239,11 @@ class HomeController
         });
     }
 
-    private function defaultMetrics(): array
+    private function quotedStatusList(array $statuses): string
     {
-        $keys = [
-            'total_drivers',
-            'total_active_drivers',
-            'total_inactive_drivers',
-            'total_requested_drivers',
-            'total_riders',
-            'total_active_riders',
-            'today_new_riders',
-            'total_paid_bookings',
-            'running_rides',
-            'completed_rides',
-            'cancelled_rides',
-            'rejected_rides',
-            'today_new_drivers',
-            'today_running_rides',
-            'today_completed_rides',
-            'total_revenue',
-            'today_revenue',
-            'total_income',
-        ];
-
-        $metrics = [];
-        foreach ($keys as $key) {
-            $metrics[$key] = [
-                'chart_title' => str_replace('_', ' ', $key),
-                'total_number' => 0,
-            ];
-        }
-
-        return $metrics;
+        return collect($statuses)
+            ->map(fn ($status) => DB::getPdo()->quote($status))
+            ->implode(', ');
     }
 
     public function deleteInstaller()

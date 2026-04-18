@@ -21,13 +21,16 @@ class BookingExtension extends Model
         'estimated_duration_min',
         'pick_otp',
         'ride_id',
-        'offer_boost_amount',
+        'share_token',
+        'share_tracking_enabled',
+        'share_token_expires_at',
     ];
 
     protected $casts = [
         'pickup_location' => 'array',
         'dropoff_location' => 'array',
-        'offer_boost_amount' => 'float',
+        'share_tracking_enabled' => 'boolean',
+        'share_token_expires_at' => 'datetime',
     ];
 
     // Relationship to the Booking model

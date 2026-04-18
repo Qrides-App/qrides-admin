@@ -1,23 +1,26 @@
 <?php
 
-use App\Http\Controllers\InstallerController;
 use Illuminate\Support\Facades\Route;
 
-Route::group(['prefix' => 'install', 'as' => 'installer.'], function () {
-    Route::get('/', [InstallerController::class, 'index'])->name('index');
-    Route::get('/requirements', [InstallerController::class, 'requirements'])->name('requirements');
-    Route::get('/permissions', [InstallerController::class, 'permissions'])->name('permissions');
-    Route::get('/purchaseValidation', [InstallerController::class, 'purchaseValidation'])->name('purchaseValidation');
-    Route::post('/purchaseValidation', [InstallerController::class, 'purchaseValidationStore'])->name('purchaseValidation.store');
-    Route::get('/purchaseValidation-error', [InstallerController::class, 'purchaseValidationError'])->name('purchaseValidation-error');
-    Route::get('/database', [InstallerController::class, 'databaseForm'])->name('database')->middleware('purchase.validated');
-    Route::post('/database', [InstallerController::class, 'databaseStore'])->name('database.store');
-    Route::get('/database-error', [InstallerController::class, 'databaseError'])->name('database-error');
-    Route::get('/migrate', [InstallerController::class, 'migrate'])->name('migrate');
-    Route::get('/DBmigrate', [InstallerController::class, 'databaseMigration'])->name('database.migrate');
-    Route::get('/forcemigrate', [InstallerController::class, 'databaseForceMigration'])->name('database.forcemigrate');
-    Route::get('/seed', [InstallerController::class, 'seed'])->name('seed');
-    Route::get('/admin', [InstallerController::class, 'adminForm'])->name('admin');
-    Route::post('/admin', [InstallerController::class, 'adminStore'])->name('admin.store');
-    Route::get('/finish', [InstallerController::class, 'finish'])->name('finish');
-});
+if (file_exists(app_path('Http/Controllers/InstallerController.php'))) {
+    Route::group(['prefix' => 'install', 'as' => 'installer.'], function () {
+        $installerController = 'App\\Http\\Controllers\\InstallerController';
+
+        Route::get('/', [$installerController, 'index'])->name('index');
+        Route::get('/requirements', [$installerController, 'requirements'])->name('requirements');
+        Route::get('/permissions', [$installerController, 'permissions'])->name('permissions');
+        Route::get('/purchaseValidation', [$installerController, 'purchaseValidation'])->name('purchaseValidation');
+        Route::post('/purchaseValidation', [$installerController, 'purchaseValidationStore'])->name('purchaseValidation.store');
+        Route::get('/purchaseValidation-error', [$installerController, 'purchaseValidationError'])->name('purchaseValidation-error');
+        Route::get('/database', [$installerController, 'databaseForm'])->name('database')->middleware('purchase.validated');
+        Route::post('/database', [$installerController, 'databaseStore'])->name('database.store');
+        Route::get('/database-error', [$installerController, 'databaseError'])->name('database-error');
+        Route::get('/migrate', [$installerController, 'migrate'])->name('migrate');
+        Route::get('/DBmigrate', [$installerController, 'databaseMigration'])->name('database.migrate');
+        Route::get('/forcemigrate', [$installerController, 'databaseForceMigration'])->name('database.forcemigrate');
+        Route::get('/seed', [$installerController, 'seed'])->name('seed');
+        Route::get('/admin', [$installerController, 'adminForm'])->name('admin');
+        Route::post('/admin', [$installerController, 'adminStore'])->name('admin.store');
+        Route::get('/finish', [$installerController, 'finish'])->name('finish');
+    });
+}

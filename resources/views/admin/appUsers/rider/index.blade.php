@@ -220,7 +220,7 @@
                                 @if($appUser->item)
                                 <div class="text-muted small">
                                     <strong>{{ trans('vehicle.make') }}:</strong>
-                                    {{ $appUser->item->make ?? 'N/A'
+                                    {{ $appUser->item->vehicleMake->name ?? 'N/A'
                                     }}<br>
                                     <strong>{{ trans('vehicle.model') }}::</strong>
                                     {{ $appUser->item->model ?? 'N/A'

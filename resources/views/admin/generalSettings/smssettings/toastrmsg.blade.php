@@ -1,101 +1,98 @@
 <script>
     $(document).ready(function() {
-        $('.smssettingform').submit(function(event) {
+        function notifySuccess(message) {
+            toastr.success(message, 'Success', {
+                closeButton: true,
+                progressBar: true,
+                positionClass: 'toast-bottom-right'
+            });
+        }
+
+        function notifyError(message) {
+            toastr.error(message || 'An unexpected error occurred. Please try again.', 'Error', {
+                closeButton: true,
+                progressBar: true,
+                positionClass: 'toast-bottom-right'
+            });
+        }
+
+        $('.smssettingform').on('submit', function(event) {
             event.preventDefault();
-            
-           
-            var formData = $(this).serialize();
-          
-         $.ajax({
-    url: $(this).attr('action'), 
-    type: $(this).attr('method'), 
-    data: formData, 
-    success: function(response) {
-        // Assuming the server sends a JSON response with an 'error' property if there's a logical error
-        if (response.status === 403) {
-            toastr.error(response.error, 'Error', {
-                closeButton: true,
-                progressBar: true,
-                positionClass: "toast-bottom-right"
-            });
-        } else {
-            toastr.success(response.message || '{{ trans("global.data_has_been_submitted") }}', 'Success', {
-                closeButton: true,
-                progressBar: true,
-                positionClass: "toast-bottom-right"
-            });
-        }
-    },
-    error: function(xhr) {
-        // Check if the status is 403 to display a specific message
-        if (xhr.status === 403) {
-            toastr.error('Form submission is disabled in demo mode.', 'Error', {
-                closeButton: true,
-                progressBar: true,
-                positionClass: "toast-bottom-right"
-            });
-        } else {
-            // General error message for other statuses
-            toastr.error('An error occurred. Please try again.', 'Error', {
-                closeButton: true,
-                progressBar: true,
-                positionClass: "toast-bottom-right"
-            });
-        }
-    }
-});
+            const $form = $(this);
 
+            $.ajax({
+                url: $form.attr('action'),
+                type: $form.attr('method') || 'POST',
+                data: $form.serialize(),
+                success: function(response) {
+                    if (response && response.error) {
+                        notifyError(response.error);
+                        return;
+                    }
 
+                    notifySuccess(response.message || '{{ trans('global.data_has_been_submitted') }}');
+                },
+                error: function(xhr) {
+                    const response = xhr.responseJSON || {};
+                    notifyError(response.error || response.message || 'An error occurred while saving SMS settings.');
+                }
+            });
         });
-    });
-</script>
 
-<script>
-    $(document).ready(function() {
+        $('#autofillotp').on('change', function() {
+            const $toggle = $(this);
+            const status = $toggle.is(':checked') ? 'Active' : 'Inactive';
 
-        $('#autofillotp').change(function() {
-                    var status = $(this).prop('checked') ? 'Active' : 'Inactive';
-                    var $toggleButton = $(this);
+            $.ajax({
+                url: "{{ route('admin.update-auto-fill-otp') }}",
+                type: 'POST',
+                data: {
+                    status: status,
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    notifySuccess(response.message || 'OTP auto-fill updated successfully.');
+                },
+                error: function(xhr) {
+                    const response = xhr.responseJSON || {};
+                    $toggle.prop('checked', !$toggle.is(':checked'));
+                    notifyError(response.error || response.message || 'Unable to update OTP auto-fill.');
+                }
+            });
+        });
 
-                    $.ajax({
-                        url: "{{ route('admin.update-auto-fill-otp') }}",
-                        type: "POST",
-                        data: {
-                            status: status,
-                            _token: '{{ csrf_token() }}'
-                        },
-                        success: function(response) {
+        $('.statusdata').on('change', function() {
+            const $toggle = $(this);
 
-                            toastr.success('Status updated successfully', 'success', {
-                        CloseButton: true,
-                        ProgressBar: true,
-                        positionClass: "toast-bottom-right"
-                    });
-                        },
-                        error: function(xhr) { //remove code in error block when not in demo mode
-                            if (xhr.status === 403) {
-                                var response = JSON.parse(xhr.responseText);
-                                if (status === 'Active') {
-                                    $toggleButton.prop('checked', false); // Revert to unchecked
-                                } else {
-                                    $toggleButton.prop('checked', true); // Revert to checked
-                                }
-                                toastr.error(response.error, 'Error', {
-                                    CloseButton: true,
-                                    ProgressBar: true,
-                                    positionClass: "toast-bottom-right"
-                                });
-                            } else {
-                                // General error handling
-                                toastr.error('An unexpected error occurred', 'Error', {
-                                    CloseButton: true,
-                                    ProgressBar: true,
-                                    positionClass: "toast-bottom-right"
-                                });
-                            }
-                        }
-                    });
-                });
+            if (!$toggle.is(':checked')) {
+                notifyError('Keep at least one SMS provider active.');
+                $toggle.prop('checked', true);
+                return;
+            }
 
+            $.ajax({
+                url: $toggle.data('url'),
+                type: 'POST',
+                data: {
+                    status: 'Active',
+                    userValue: $toggle.data('user-value'),
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    if (response && response.success === false) {
+                        $toggle.prop('checked', false);
+                        notifyError(response.message || 'Unable to update the active SMS provider.');
+                        return;
+                    }
+
+                    notifySuccess('SMS provider updated successfully.');
+                },
+                error: function(xhr) {
+                    const response = xhr.responseJSON || {};
+                    $toggle.prop('checked', false);
+                    notifyError(response.error || response.message || 'Unable to update the active SMS provider.');
+                }
+            });
+        });
     });
 </script>

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\MediaUploadingTrait;
-use App\Http\Controllers\Traits\MiscellaneousTrait;
 use App\Http\Controllers\Traits\NotificationTrait;
 use App\Http\Controllers\Traits\PushNotificationTrait;
 use App\Http\Controllers\Traits\ResponseTrait;
@@ -23,21 +22,20 @@ use App\Models\Modern\ItemType;
 use App\Models\PersonalAccessToken;
 use App\Models\RentalItemRule;
 use App\Models\Review;
+use App\Support\MailSettings;
 use App\Models\VehicleMake;
 use App\Models\VehicleOdometer;
 use Gate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 
 class GeneralSettingController extends Controller
 {
-    use MediaUploadingTrait, NotificationTrait, PushNotificationTrait, ResponseTrait, MiscellaneousTrait;
+    use MediaUploadingTrait, NotificationTrait, PushNotificationTrait, ResponseTrait;
 
     public function index(Request $request)
     {
@@ -107,11 +105,6 @@ class GeneralSettingController extends Controller
             'general_default_language',
             'general_favicon',
             'general_logo',
-            'hire_rate_per_hour',
-            'hire_currency',
-            'hire_custom_min_hours',
-            'hire_custom_max_hours',
-            'hire_duration_options_json',
         ];
         $settings = GeneralSetting::whereIn('meta_key', $metaKeys)->get()->keyBy('meta_key');
         $general_name = $settings['general_name'] ?? null;
@@ -123,416 +116,10 @@ class GeneralSettingController extends Controller
         $general_default_language = $settings['general_default_language'] ?? null;
         $general_favicon = $settings['general_favicon'] ?? null;
         $general_logo = $settings['general_logo'] ?? null;
-        $hire_rate_per_hour = $settings['hire_rate_per_hour']->meta_value ?? 100;
-        $hire_currency = $settings['hire_currency']->meta_value ?? ($general_default_currency->meta_value ?? 'INR');
-        $hire_custom_min_hours = $settings['hire_custom_min_hours']->meta_value ?? 1;
-        $hire_custom_max_hours = $settings['hire_custom_max_hours']->meta_value ?? 720;
-        $hire_duration_options_json = $settings['hire_duration_options_json']->meta_value ?? '';
-        $languagedata = Schema::hasTable('languages') ? Language::all() : collect();
+        $languagedata = Language::all();
         $allcurrency = Currency::where('status', 1)->get();
 
-        return view('admin.generalSettings.general.basic-configuration-form', compact(
-            'general_name',
-            'general_email',
-            'general_phone',
-            'general_default_phone_country',
-            'general_default_currency',
-            'general_default_language',
-            'general_favicon',
-            'general_logo',
-            'allcurrency',
-            'languagedata',
-            'general_description',
-            'hire_rate_per_hour',
-            'hire_currency',
-            'hire_custom_min_hours',
-            'hire_custom_max_hours',
-            'hire_duration_options_json'
-        ));
-    }
-
-    public function hireSetting()
-    {
-        abort_if(Gate::denies('general_setting_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        $keys = [
-            'hire_rate_per_hour',
-            'hire_currency',
-            'hire_custom_min_hours',
-            'hire_custom_max_hours',
-            'hire_duration_options_json',
-        ];
-        $settings = GeneralSetting::whereIn('meta_key', $keys)->get()->keyBy('meta_key');
-
-        $hire_rate_per_hour = $settings['hire_rate_per_hour']->meta_value ?? 100;
-        $hire_currency = $settings['hire_currency']->meta_value ?? (GeneralSetting::getMetaValue('driver_recharge_currency') ?: 'INR');
-        $hire_custom_min_hours = $settings['hire_custom_min_hours']->meta_value ?? 1;
-        $hire_custom_max_hours = $settings['hire_custom_max_hours']->meta_value ?? 720;
-        $hire_duration_options_json = $settings['hire_duration_options_json']->meta_value ?? '';
-
-        return view('admin.generalSettings.hire.pricing', compact(
-            'hire_rate_per_hour',
-            'hire_currency',
-            'hire_custom_min_hours',
-            'hire_custom_max_hours',
-            'hire_duration_options_json'
-        ));
-    }
-
-    public function hireSettingUpdate(Request $request)
-    {
-        abort_if(Gate::denies('general_setting_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        $data = $request->validate([
-            'hire_rate_per_hour' => 'required|numeric|min:0',
-            'hire_currency' => 'required|string|max:10',
-            'hire_custom_min_hours' => 'required|integer|min:1',
-            'hire_custom_max_hours' => 'required|integer|min:1',
-            'hire_duration_options_json' => 'nullable|string',
-        ]);
-
-        // Normalize currency to upper-case and clamp hours
-        $data['hire_currency'] = strtoupper(trim($data['hire_currency']));
-        $data['hire_custom_min_hours'] = max(1, (int) $data['hire_custom_min_hours']);
-        $data['hire_custom_max_hours'] = max($data['hire_custom_min_hours'], (int) $data['hire_custom_max_hours']);
-
-        // Store JSON pretty-encoded if valid
-        if (! empty($data['hire_duration_options_json'])) {
-            $decoded = json_decode($data['hire_duration_options_json'], true);
-            if (is_array($decoded)) {
-                $data['hire_duration_options_json'] = json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-            }
-        }
-
-        foreach ($data as $metaKey => $metaValue) {
-            GeneralSetting::updateOrCreate(
-                ['meta_key' => $metaKey],
-                ['meta_value' => $metaValue]
-            );
-        }
-
-        return redirect()->route('admin.hireSetting')->with('success', 'QR Hire settings updated successfully.');
-    }
-
-    public function fareSetting()
-    {
-        abort_if(Gate::denies('general_setting_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        $meta = GeneralSetting::whereIn('meta_key', [
-            'fare_base',
-            'fare_included_km',
-            'fare_per_min',
-            'fare_min_fare',
-            'fare_booking_fee',
-            'fare_pickup_included_km',
-            'fare_pickup_per_km',
-            'fare_waiting_per_min',
-            'fare_tax_percent',
-            'fare_airport_fee',
-            'fare_surge_cap',
-            'fare_surge_floor',
-            'fare_time_surge_rules',
-            'fare_dynamic_surge_enabled',
-            'fare_dynamic_surge_window_min',
-            'fare_dynamic_surge_sensitivity',
-            'fare_dynamic_surge_min',
-            'fare_dynamic_surge_max',
-            'fare_weather_multipliers_json',
-            'fare_event_multipliers_json',
-            'fare_offer_boost_enabled',
-            'fare_offer_boost_options',
-            'fare_offer_boost_max_total',
-        ])->pluck('meta_value', 'meta_key');
-
-        $fare_base = $meta['fare_base'] ?? 30;
-        $fare_included_km = $meta['fare_included_km'] ?? 3;
-        $fare_per_min = $meta['fare_per_min'] ?? 0;
-        $fare_min_fare = $meta['fare_min_fare'] ?? $fare_base;
-        $fare_booking_fee = $meta['fare_booking_fee'] ?? 0;
-        $fare_pickup_included_km = $meta['fare_pickup_included_km'] ?? 1;
-        $fare_pickup_per_km = $meta['fare_pickup_per_km'] ?? 0;
-        $fare_waiting_per_min = $meta['fare_waiting_per_min'] ?? 0;
-        $fare_tax_percent = $meta['fare_tax_percent'] ?? 0;
-        $fare_airport_fee = $meta['fare_airport_fee'] ?? 0;
-        $fare_surge_cap = $meta['fare_surge_cap'] ?? 2.0;
-        $fare_surge_floor = $meta['fare_surge_floor'] ?? 1.0;
-        $fare_time_surge_rules = $meta['fare_time_surge_rules'] ?? '';
-        $fare_dynamic_surge_enabled = (int) ($meta['fare_dynamic_surge_enabled'] ?? 1);
-        $fare_dynamic_surge_window_min = $meta['fare_dynamic_surge_window_min'] ?? 15;
-        $fare_dynamic_surge_sensitivity = $meta['fare_dynamic_surge_sensitivity'] ?? 0.35;
-        $fare_dynamic_surge_min = $meta['fare_dynamic_surge_min'] ?? 1.0;
-        $fare_dynamic_surge_max = $meta['fare_dynamic_surge_max'] ?? 1.8;
-        $fare_weather_multipliers_json = $meta['fare_weather_multipliers_json'] ?? '{"rain":1.25,"storm":1.5}';
-        $fare_event_multipliers_json = $meta['fare_event_multipliers_json'] ?? '';
-        $decodedTimeRules = is_string($fare_time_surge_rules) ? json_decode($fare_time_surge_rules, true) : [];
-        $weekdayMorningRule = collect(is_array($decodedTimeRules) ? $decodedTimeRules : [])->first(function ($rule) {
-            if (! is_array($rule)) {
-                return false;
-            }
-            $days = $rule['days'] ?? [];
-
-            return is_array($days) && count(array_intersect([1, 2, 3, 4, 5], $days)) > 0;
-        });
-        $weekendNightRule = collect(is_array($decodedTimeRules) ? $decodedTimeRules : [])->first(function ($rule) {
-            if (! is_array($rule)) {
-                return false;
-            }
-            $days = $rule['days'] ?? [];
-
-            return is_array($days) && count(array_intersect([0, 6], $days)) > 0;
-        });
-        $fare_weekday_morning_multiplier = $weekdayMorningRule['multiplier'] ?? 1.4;
-        $fare_weekend_night_multiplier = $weekendNightRule['multiplier'] ?? 1.6;
-
-        $decodedWeatherRules = is_string($fare_weather_multipliers_json) ? json_decode($fare_weather_multipliers_json, true) : [];
-        $fare_weather_rain_multiplier = is_array($decodedWeatherRules) ? ($decodedWeatherRules['rain'] ?? 1.25) : 1.25;
-        $fare_weather_storm_multiplier = is_array($decodedWeatherRules) ? ($decodedWeatherRules['storm'] ?? 1.5) : 1.5;
-
-        $decodedEventRules = is_string($fare_event_multipliers_json) ? json_decode($fare_event_multipliers_json, true) : [];
-        $firstEventRule = (is_array($decodedEventRules) && ! empty($decodedEventRules) && is_array($decodedEventRules[0])) ? $decodedEventRules[0] : [];
-        $fare_event_key = $firstEventRule['key'] ?? ($firstEventRule['name'] ?? '');
-        $fare_event_multiplier = $firstEventRule['multiplier'] ?? null;
-        $fare_offer_boost_enabled = (int) ($meta['fare_offer_boost_enabled'] ?? 1);
-        $fare_offer_boost_options = $meta['fare_offer_boost_options'] ?? '10,20';
-        $fare_offer_boost_max_total = $meta['fare_offer_boost_max_total'] ?? 100;
-
-        return view('admin.generalSettings.fare.pricing', compact(
-            'fare_base',
-            'fare_included_km',
-            'fare_per_min',
-            'fare_min_fare',
-            'fare_booking_fee',
-            'fare_pickup_included_km',
-            'fare_pickup_per_km',
-            'fare_waiting_per_min',
-            'fare_tax_percent',
-            'fare_airport_fee',
-            'fare_surge_cap',
-            'fare_surge_floor',
-            'fare_time_surge_rules',
-            'fare_dynamic_surge_enabled',
-            'fare_dynamic_surge_window_min',
-            'fare_dynamic_surge_sensitivity',
-            'fare_dynamic_surge_min',
-            'fare_dynamic_surge_max',
-            'fare_weather_multipliers_json',
-            'fare_event_multipliers_json',
-            'fare_weekday_morning_multiplier',
-            'fare_weekend_night_multiplier',
-            'fare_weather_rain_multiplier',
-            'fare_weather_storm_multiplier',
-            'fare_event_key',
-            'fare_event_multiplier',
-            'fare_offer_boost_enabled',
-            'fare_offer_boost_options',
-            'fare_offer_boost_max_total'
-        ));
-    }
-
-    public function fareSettingUpdate(Request $request)
-    {
-        abort_if(Gate::denies('general_setting_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        $data = $request->validate([
-            'fare_base' => 'required|numeric|min:0',
-            'fare_included_km' => 'required|numeric|min:0',
-            'fare_per_min' => 'required|numeric|min:0',
-            'fare_min_fare' => 'required|numeric|min:0',
-            'fare_booking_fee' => 'required|numeric|min:0',
-            'fare_pickup_included_km' => 'required|numeric|min:0',
-            'fare_pickup_per_km' => 'required|numeric|min:0',
-            'fare_waiting_per_min' => 'required|numeric|min:0',
-            'fare_tax_percent' => 'required|numeric|min:0|max:100',
-            'fare_airport_fee' => 'required|numeric|min:0',
-            'fare_surge_cap' => 'required|numeric|min:0.1',
-            'fare_surge_floor' => 'required|numeric|min:0.1',
-            'fare_dynamic_surge_enabled' => 'required|in:0,1',
-            'fare_dynamic_surge_window_min' => 'required|integer|min:1|max:240',
-            'fare_dynamic_surge_sensitivity' => 'required|numeric|min:0|max:2',
-            'fare_dynamic_surge_min' => 'required|numeric|min:0.1|max:5',
-            'fare_dynamic_surge_max' => 'required|numeric|min:0.1|max:10',
-            'fare_weekday_morning_multiplier' => 'nullable|numeric|min:0.1|max:10',
-            'fare_weekend_night_multiplier' => 'nullable|numeric|min:0.1|max:10',
-            'fare_weather_rain_multiplier' => 'nullable|numeric|min:0.1|max:10',
-            'fare_weather_storm_multiplier' => 'nullable|numeric|min:0.1|max:10',
-            'fare_event_key' => 'nullable|string|max:120',
-            'fare_event_multiplier' => 'nullable|numeric|min:0.1|max:10',
-            'fare_offer_boost_enabled' => 'required|in:0,1',
-            'fare_offer_boost_options' => 'required|string',
-            'fare_offer_boost_max_total' => 'required|numeric|min:0',
-        ]);
-
-        // clamp cap >= floor
-        $data['fare_surge_cap'] = max((float) $data['fare_surge_cap'], (float) $data['fare_surge_floor']);
-        $data['fare_dynamic_surge_max'] = max((float) $data['fare_dynamic_surge_max'], (float) $data['fare_dynamic_surge_min']);
-
-        $timeRules = [];
-        if (! empty($data['fare_weekday_morning_multiplier'])) {
-            $timeRules[] = [
-                'name' => 'Weekday Morning',
-                'days' => [1, 2, 3, 4, 5],
-                'start' => '08:00',
-                'end' => '11:00',
-                'multiplier' => (float) $data['fare_weekday_morning_multiplier'],
-            ];
-        }
-        if (! empty($data['fare_weekend_night_multiplier'])) {
-            $timeRules[] = [
-                'name' => 'Weekend Night',
-                'days' => [6, 0],
-                'start' => '18:00',
-                'end' => '23:30',
-                'multiplier' => (float) $data['fare_weekend_night_multiplier'],
-            ];
-        }
-        $data['fare_time_surge_rules'] = json_encode($timeRules, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-        $weatherRules = [];
-        if (! empty($data['fare_weather_rain_multiplier'])) {
-            $weatherRules['rain'] = (float) $data['fare_weather_rain_multiplier'];
-        }
-        if (! empty($data['fare_weather_storm_multiplier'])) {
-            $weatherRules['storm'] = (float) $data['fare_weather_storm_multiplier'];
-        }
-        $data['fare_weather_multipliers_json'] = json_encode($weatherRules, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-        $eventRules = [];
-        if (! empty($data['fare_event_key']) && ! empty($data['fare_event_multiplier'])) {
-            $eventRules[] = [
-                'key' => trim((string) $data['fare_event_key']),
-                'multiplier' => (float) $data['fare_event_multiplier'],
-            ];
-        }
-        $data['fare_event_multipliers_json'] = json_encode($eventRules, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-        unset(
-            $data['fare_weekday_morning_multiplier'],
-            $data['fare_weekend_night_multiplier'],
-            $data['fare_weather_rain_multiplier'],
-            $data['fare_weather_storm_multiplier'],
-            $data['fare_event_key'],
-            $data['fare_event_multiplier']
-        );
-
-        $boostOptions = collect(explode(',', (string) $data['fare_offer_boost_options']))
-            ->map(fn ($value) => trim($value))
-            ->filter(fn ($value) => $value !== '' && is_numeric($value) && (float) $value > 0)
-            ->map(fn ($value) => (int) round((float) $value))
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
-
-        if (empty($boostOptions)) {
-            return back()->withErrors(['fare_offer_boost_options' => 'Provide at least one valid amount, e.g. 10,20'])->withInput();
-        }
-        $data['fare_offer_boost_options'] = implode(',', $boostOptions);
-        $data['fare_offer_boost_max_total'] = max((float) $data['fare_offer_boost_max_total'], (float) max($boostOptions));
-
-        foreach ($data as $k => $v) {
-            GeneralSetting::updateOrCreate(['meta_key' => $k], ['meta_value' => $v]);
-        }
-
-        return redirect()->route('admin.fareSetting')->with('success', 'Fare settings updated.');
-    }
-
-    public function fareTest(Request $request)
-    {
-        abort_if(Gate::denies('general_setting_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        $input = $request->validate([
-            'distance' => 'nullable|numeric|min:0',
-            'duration_minutes' => 'nullable|numeric|min:0',
-            'surge' => 'nullable|numeric|min:0.1',
-            'wallet_amount' => 'nullable|numeric|min:0',
-            'pickup_distance_km' => 'nullable|numeric|min:0',
-            'waiting_minutes' => 'nullable|numeric|min:0',
-            'toll_charge' => 'nullable|numeric|min:0',
-            'parking_charge' => 'nullable|numeric|min:0',
-            'airport_fee' => 'nullable|numeric|min:0',
-            'apply_airport_fee' => 'nullable|in:0,1',
-            'weather_condition' => 'nullable|string|max:50',
-            'event_key' => 'nullable|string|max:100',
-            'currency_code' => 'nullable|string|max:10',
-        ]);
-
-        $distance = (float) ($input['distance'] ?? 12.5);
-        $durationMinutes = (float) ($input['duration_minutes'] ?? 28);
-        $surge = (float) ($input['surge'] ?? 1.2);
-        $walletAmount = (float) ($input['wallet_amount'] ?? 0);
-        $currencyCode = strtoupper((string) ($input['currency_code'] ?? 'INR'));
-        $fareExtras = [
-            'pickup_distance_km' => (float) ($input['pickup_distance_km'] ?? 2),
-            'waiting_minutes' => (float) ($input['waiting_minutes'] ?? 5),
-            'toll_charge' => (float) ($input['toll_charge'] ?? 0),
-            'parking_charge' => (float) ($input['parking_charge'] ?? 0),
-            'airport_fee' => (float) ($input['airport_fee'] ?? 0),
-            'apply_airport_fee' => (bool) ($input['apply_airport_fee'] ?? 0),
-            'weather_condition' => $input['weather_condition'] ?? null,
-            'event_key' => $input['event_key'] ?? null,
-        ];
-
-        $itemTypes = ItemType::with('cityFare')->orderBy('id')->get();
-
-        $results = [];
-        foreach ($itemTypes as $itemType) {
-            try {
-                $pricingResponse = $this->getItemPricesDetails(
-                    $itemType->id,
-                    $distance,
-                    null,
-                    $walletAmount,
-                    $currencyCode,
-                    1,
-                    $durationMinutes,
-                    $surge,
-                    $fareExtras
-                );
-                $payload = $pricingResponse->getData(true);
-                $data = $payload['data'] ?? [];
-                $errorMessage = null;
-            } catch (\Throwable $e) {
-                $data = [];
-                $errorMessage = $e->getMessage();
-            }
-
-            $results[] = [
-                'item_type_id' => $itemType->id,
-                'item_type_name' => $itemType->name,
-                'item_type_status' => (string) ($itemType->status ?? ''),
-                'per_km' => $data['price_per_km'] ?? '0',
-                'base_fare' => $data['base_fare'] ?? '0',
-                'time_component' => $data['price_per_min'] ?? '0',
-                'surge' => $data['surge_multiplier'] ?? 1,
-                'ride_fare_after_surge' => $data['ride_fare_after_surge'] ?? '0',
-                'booking_fee' => $data['booking_fee'] ?? '0',
-                'pickup_charge' => $data['pickup_charge'] ?? '0',
-                'waiting_charge' => $data['waiting_charge'] ?? '0',
-                'tax_amount' => $data['tax_amount'] ?? '0',
-                'total_price' => $data['total_price'] ?? '0',
-                'pricing_type' => $data['pricing_type'] ?? '',
-                'error' => $errorMessage,
-            ];
-        }
-
-        return view('admin.generalSettings.fare.test', [
-            'results' => $results,
-            'inputs' => [
-                'distance' => $distance,
-                'duration_minutes' => $durationMinutes,
-                'surge' => $surge,
-                'wallet_amount' => $walletAmount,
-                'pickup_distance_km' => $fareExtras['pickup_distance_km'],
-                'waiting_minutes' => $fareExtras['waiting_minutes'],
-                'toll_charge' => $fareExtras['toll_charge'],
-                'parking_charge' => $fareExtras['parking_charge'],
-                'airport_fee' => $fareExtras['airport_fee'],
-                'apply_airport_fee' => $fareExtras['apply_airport_fee'] ? 1 : 0,
-                'weather_condition' => $fareExtras['weather_condition'],
-                'event_key' => $fareExtras['event_key'],
-                'currency_code' => $currencyCode,
-            ],
-        ]);
+        return view('admin.generalSettings.general.basic-configuration-form', compact('general_name', 'general_email', 'general_phone', 'general_default_phone_country', 'general_default_currency', 'general_default_language', 'general_favicon', 'general_logo', 'allcurrency', 'languagedata', 'general_description'));
     }
 
     public function addConfigurationWizard(Request $request)
@@ -720,10 +307,15 @@ class GeneralSettingController extends Controller
 
     public function nexmoSetting()
     {
-        $nexmo_key = GeneralSetting::where('meta_key', 'nexmo_key')->first();
-        $nexmo_secret = GeneralSetting::where('meta_key', 'nexmo_secret')->first();
+        $settings = GeneralSetting::whereIn('meta_key', ['nexmo_key', 'nexmo_secret', 'sms_provider_name', 'auto_fill_otp'])
+            ->get()
+            ->keyBy('meta_key');
+        $nexmo_key = $settings->get('nexmo_key') ?? null;
+        $nexmo_secret = $settings->get('nexmo_secret') ?? null;
+        $sms_provider_name = $settings->get('sms_provider_name') ?? null;
+        $auto_fill_otp = $settings->get('auto_fill_otp') ?? null;
 
-        return view('admin.generalSettings.smssettings.nexmo', compact('nexmo_key', 'nexmo_secret'));
+        return view('admin.generalSettings.smssettings.nexmo', compact('nexmo_key', 'nexmo_secret', 'sms_provider_name', 'auto_fill_otp'));
     }
 
     public function UpdateNexmoSetting(Request $request)
@@ -779,16 +371,36 @@ class GeneralSettingController extends Controller
 
     public function twoFactor()
     {
-        $twofactor_key = GeneralSetting::where('meta_key', 'twofactor_key')->first();
-        $twofactor_secret = GeneralSetting::where('meta_key', 'twofactor_secret')->first();
-        $twofactor_merchant_id = GeneralSetting::where('meta_key', 'twofactor_merchant_id')->first();
-        $twofactor_authentication_token = GeneralSetting::where('meta_key', 'twofactor_authentication_token')->first();
+        $settings = GeneralSetting::whereIn('meta_key', [
+            'twofactor_key',
+            'twofactor_secret',
+            'twofactor_merchant_id',
+            'twofactor_authentication_token',
+            'sms_provider_name',
+            'auto_fill_otp',
+        ])->get()->keyBy('meta_key');
+        $twofactor_key = $settings->get('twofactor_key') ?? null;
+        $twofactor_secret = $settings->get('twofactor_secret') ?? null;
+        $twofactor_merchant_id = $settings->get('twofactor_merchant_id') ?? null;
+        $twofactor_authentication_token = $settings->get('twofactor_authentication_token') ?? null;
+        $sms_provider_name = $settings->get('sms_provider_name') ?? null;
+        $auto_fill_otp = $settings->get('auto_fill_otp') ?? null;
 
-        return view('admin.generalSettings.smssettings.twofactor', compact('twofactor_key', 'twofactor_secret', 'twofactor_merchant_id', 'twofactor_authentication_token'));
+        return view('admin.generalSettings.smssettings.twofactor', compact(
+            'twofactor_key',
+            'twofactor_secret',
+            'twofactor_merchant_id',
+            'twofactor_authentication_token',
+            'sms_provider_name',
+            'auto_fill_otp'
+        ));
     }
 
     public function UpdateTwofactor(Request $request)
     {
+        if (Gate::denies('general_setting_edit')) {
+            return response()->json(['error' => 'Form submission is disabled in demo mode.'], 403);
+        }
         $formData = $request->except('_token');
         foreach ($formData as $metaKey => $metaValue) {
             $existingSetting = GeneralSetting::where('meta_key', $metaKey)->first();
@@ -799,13 +411,103 @@ class GeneralSettingController extends Controller
             }
         }
 
-        return redirect()->route('admin.twofactor');
+        return response()->json(['message' => trans('global.data_has_been_submitted')], 200);
     }
 
     public function emailSetting()
     {
+        abort_if(Gate::denies('general_setting_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        return view('admin.generalSettings.email-setting.index');
+        $mailSettings = MailSettings::normalize();
+        $branding = GeneralSetting::whereIn('meta_key', [
+            'general_name',
+            'general_email',
+            'general_phone',
+            'general_default_phone_country',
+            'general_logo',
+        ])->pluck('meta_value', 'meta_key')->toArray();
+
+        return view('admin.generalSettings.email-setting.index', compact('mailSettings', 'branding'));
+    }
+
+    public function emailSettingUpdate(Request $request)
+    {
+        if (Gate::denies('general_setting_edit')) {
+            return redirect()->back()->with('error', 'Form submission is disabled in demo mode.');
+        }
+
+        $validated = $request->validate([
+            'emailwizard_enabled' => 'nullable|boolean',
+            'mailer_name' => 'required|string|max:120',
+            'driver' => 'required|string|max:40',
+            'host' => 'required|string|max:190',
+            'port' => 'required|integer|min:1|max:65535',
+            'username' => 'required|string|max:190',
+            'from_email' => 'required|email|max:190',
+            'encryption' => 'nullable|string|max:40',
+            'password' => 'nullable|string|max:255',
+        ]);
+
+        $settingsToPersist = [
+            'emailwizard_enabled' => $request->boolean('emailwizard_enabled') ? '1' : '0',
+            'emailwizard_mailer_name' => $validated['mailer_name'],
+            'emailwizard_driver' => $validated['driver'],
+            'host' => $validated['host'],
+            'port' => (string) $validated['port'],
+            'username' => $validated['username'],
+            'from_email' => $validated['from_email'],
+            'encryption' => $validated['encryption'] ?? '',
+        ];
+
+        if ($request->filled('password')) {
+            $settingsToPersist['password'] = $validated['password'];
+        }
+
+        foreach ($settingsToPersist as $metaKey => $metaValue) {
+            GeneralSetting::updateOrCreate(
+                ['meta_key' => $metaKey],
+                ['meta_value' => $metaValue]
+            );
+        }
+
+        return redirect()->route('admin.email')->with('success', 'Mail settings updated successfully.');
+    }
+
+    public function sendTestMail(Request $request)
+    {
+        if (Gate::denies('general_setting_edit')) {
+            return redirect()->back()->with('error', 'Form submission is disabled in demo mode.');
+        }
+
+        $validated = $request->validate([
+            'recipient_email' => 'required|email|max:190',
+            'subject' => 'nullable|string|max:190',
+        ]);
+
+        $mailConfig = MailSettings::normalize();
+        if (! MailSettings::isConfigured($mailConfig)) {
+            return redirect()->back()->with('error', 'Mail configuration is incomplete or disabled. Save valid SMTP settings first.');
+        }
+
+        $appName = GeneralSetting::getMetaValue('general_name') ?: $mailConfig['mailer_name'] ?: config('app.name');
+        $body = '
+            <h2 style="margin:0 0 16px;">Mail configuration verified</h2>
+            <p>This is a test email from <strong>'.$appName.'</strong>.</p>
+            <p>If you received this, SMTP delivery is working with the current settings.</p>
+            <p><strong>Sent at:</strong> '.now()->format('d M Y, h:i A').'</p>
+        ';
+
+        $result = $this->sendMail(
+            trim((string) ($validated['subject'] ?? '')) ?: $appName.' Test Mail',
+            $body,
+            $validated['recipient_email']
+        );
+
+        if (str_starts_with($result, 'Mail sent successfully')) {
+            return redirect()->route('admin.email')->with('success', 'Test mail sent to '.$validated['recipient_email'].'.');
+        }
+
+        return redirect()->route('admin.email')->with('error', $result);
     }
 
     public function fees()
@@ -869,31 +571,11 @@ class GeneralSettingController extends Controller
             'general_captcha',
             'site_key',
             'private_key',
-            'exotel_sid',
-            'exotel_token',
-            'exotel_virtual_number',
-            'exotel_base_url',
-            'exotel_callback_token',
         ];
         $settings = GeneralSetting::whereIn('meta_key', $meta_keys)->get()->keyBy('meta_key');
-        $sensitiveKeys = ['exotel_token', 'exotel_callback_token'];
         $data = [];
         foreach ($meta_keys as $key) {
-            if (! $settings->has($key)) {
-                $data[$key] = '';
-                continue;
-            }
-
-            $setting = $settings->get($key);
-            if (in_array($key, $sensitiveKeys, true) && ! empty($setting->meta_value)) {
-                try {
-                    $setting->meta_value = Crypt::decryptString($setting->meta_value);
-                } catch (\Throwable $e) {
-                    // Backward compatibility if old values are not encrypted.
-                }
-            }
-
-            $data[$key] = $setting;
+            $data[$key] = $settings->has($key) ? $settings->get($key) : '';
         }
 
         return view('admin.generalSettings.apicredentials.apikeymanagementform', $data);
@@ -904,30 +586,9 @@ class GeneralSettingController extends Controller
         if (Gate::denies('general_setting_edit')) {
             return redirect()->back()->with('error', 'Form submission is disabled in demo mode.');
         }
-        $allowedMetaKeys = [
-            'api_facebook_client_id',
-            'api_facebook_client_secret',
-            'api_google_client_id',
-            'api_google_client_secret',
-            'api_google_map_key',
-            'general_captcha',
-            'site_key',
-            'private_key',
-            'exotel_sid',
-            'exotel_token',
-            'exotel_virtual_number',
-            'exotel_base_url',
-            'exotel_callback_token',
-        ];
-        $sensitiveKeys = ['exotel_token', 'exotel_callback_token'];
-
-        $formData = $request->only($allowedMetaKeys);
+        $formData = $request->except('_token');
         foreach ($formData as $metaKey => $metaValue) {
             if (! empty($metaValue)) {
-                if (in_array($metaKey, $sensitiveKeys, true)) {
-                    $metaValue = Crypt::encryptString((string) $metaValue);
-                }
-
                 GeneralSetting::updateOrCreate(
                     ['meta_key' => $metaKey],
                     ['meta_value' => $metaValue]
@@ -1014,17 +675,12 @@ class GeneralSettingController extends Controller
     public function updateNonageStatus(Request $request)
     {
         if (Gate::denies('general_setting_edit')) {
-            return redirect()->back()->with('error', 'Form submission is disabled in demo mode.');
+            return response()->json(['error' => 'Form submission is disabled in demo mode.'], 403);
         }
-        error_log('Update Nonage Status called'); // Debug log
         $status = $request->input('status');
-        $id = $request->input('id');
-        error_log('Status: ' . $status . ', ID: ' . $id); // Log received status and id
-        // Update Nonage status
         $nonageSetting = GeneralSetting::firstOrNew(['meta_key' => 'nonage_status']);
         $nonageSetting->meta_value = $status;
         $nonageSetting->save();
-        // If Nonage is activated, deactivate Twillio
         if ($status === 'Active') {
             $twillioSetting = GeneralSetting::where('meta_key', 'twillio_status')->first();
             if ($twillioSetting) {
@@ -1039,17 +695,12 @@ class GeneralSettingController extends Controller
     public function updateTwillioeStatus(Request $request)
     {
         if (Gate::denies('general_setting_edit')) {
-            return redirect()->back()->with('error', 'Form submission is disabled in demo mode.');
+            return response()->json(['error' => 'Form submission is disabled in demo mode.'], 403);
         }
-        error_log('Update Twillio Status called'); // Debug log
         $status = $request->input('status');
-        $id = $request->input('id');
-        error_log('Status: ' . $status . ', ID: ' . $id); // Log received status and id
-        // Update Twillio status
         $twillioSetting = GeneralSetting::firstOrNew(['meta_key' => 'twillio_status']);
         $twillioSetting->meta_value = $status;
         $twillioSetting->save();
-        // If Twillio is activated, deactivate Nonage
         if ($status === 'Active') {
             $nonageSetting = GeneralSetting::where('meta_key', 'nonage_status')->first();
             if ($nonageSetting) {
@@ -1064,14 +715,12 @@ class GeneralSettingController extends Controller
     public function updateSMSProviderName(Request $request)
     {
         if (Gate::denies('general_setting_edit')) {
-            return redirect()->back()->with('error', 'Form submission is disabled in demo mode.');
+            return response()->json(['error' => 'Form submission is disabled in demo mode.'], 403);
         }
-        error_log('Update Sinch Status called'); // Debug log
-        $status = $request->input('status');
-        $id = $request->input('id');
         $userValue = $request->input('userValue');
-        error_log('Status: ' . $status . ', ID: ' . $id); // Log received status and id
-        // Update sinch status
+        if (! in_array($userValue, ['nonage', 'msg91', 'twillio', 'sinch', 'twofactor', 'nexmo'], true)) {
+            return response()->json(['success' => false, 'message' => 'Invalid SMS provider selected.'], 422);
+        }
         $smsSetting = GeneralSetting::firstOrNew(['meta_key' => 'sms_provider_name']);
         $smsSetting->meta_value = $userValue;
         $smsSetting->save();
@@ -1084,18 +733,20 @@ class GeneralSettingController extends Controller
     {
         $settings = GeneralSetting::whereIn('meta_key', [
             'push_notification_status',
-            'firebase_server_key',
+            'onesignal_app_id',
+            'onesignal_rest_api_key',
+            'onesignal_app_id_driver',
+            'onesignal_rest_api_key_driver',
         ])->pluck('meta_value', 'meta_key');
-        $pushnotification_status = $settings['push_notification_status'] ?? 'firebase';
-        $firebase_server_key = $settings['firebase_server_key'] ?? '';
+        $pushnotification_status = $settings['push_notification_status'] ?? null;
+        $onesignal_app_id = $settings['onesignal_app_id'] ?? null;
+        $onesignal_rest_api_key = $settings['onesignal_rest_api_key'] ?? null;
+        $onesignal_app_id_driver = $settings['onesignal_app_id_driver'] ?? null;
+        $onesignal_rest_api_key_driver = $settings['onesignal_rest_api_key_driver'] ?? null;
         $userids = AppUser::where('user_type', 'user')->where('status', 1)->get()->mapWithKeys(function ($user) {
             return [$user->id => $user->first_name . ' - ' . $user->phone . ' - ' . $user->email];
         })->prepend(trans('global.pleaseSelect'), '');
-        $driversQuery = AppUser::where('user_type', 'driver')->where('status', 1);
-        if (Schema::hasColumn((new AppUser)->getTable(), 'document_verify')) {
-            $driversQuery->where('document_verify', 1);
-        }
-        $drivers = $driversQuery->get()->mapWithKeys(function ($user) {
+        $drivers = AppUser::where('user_type', 'driver')->where('status', 1)->where('document_verify', 1)->get()->mapWithKeys(function ($user) {
             return [$user->id => $user->first_name . ' - ' . $user->phone . ' - ' . $user->email];
         })->prepend(trans('global.pleaseSelect'), '');
 
@@ -1103,7 +754,10 @@ class GeneralSettingController extends Controller
             'userids',
             'drivers',
             'pushnotification_status',
-            'firebase_server_key'
+            'onesignal_app_id',
+            'onesignal_rest_api_key',
+            'onesignal_app_id_driver',
+            'onesignal_rest_api_key_driver'
         ));
     }
 
@@ -1113,18 +767,29 @@ class GeneralSettingController extends Controller
             return response()->json(['error' => 'Form submission is disabled in demo mode.'], 403);
         }
         $request->validate([
-            'firebase_server_key' => 'required|string',
+            'onesignal_app_id' => 'required|string',
+            'onesignal_rest_api_key' => 'required|string',
+            'onesignal_app_id_driver' => 'required|string',
+            'onesignal_rest_api_key_driver' => 'required|string',
         ]);
         GeneralSetting::updateOrCreate(
-            ['meta_key' => 'firebase_server_key'],
-            ['meta_value' => $request->firebase_server_key]
+            ['meta_key' => 'onesignal_app_id'],
+            ['meta_value' => $request->onesignal_app_id]
         );
         GeneralSetting::updateOrCreate(
-            ['meta_key' => 'push_notification_status'],
-            ['meta_value' => 'firebase']
+            ['meta_key' => 'onesignal_rest_api_key'],
+            ['meta_value' => $request->onesignal_rest_api_key]
+        );
+        GeneralSetting::updateOrCreate(
+            ['meta_key' => 'onesignal_app_id_driver'],
+            ['meta_value' => $request->onesignal_app_id_driver]
+        );
+        GeneralSetting::updateOrCreate(
+            ['meta_key' => 'onesignal_rest_api_key_driver'],
+            ['meta_value' => $request->onesignal_rest_api_key_driver]
         );
 
-        return response()->json(['success' => 'Firebase push key updated successfully!']);
+        return response()->json(['success' => 'Push notification key updated successfully!']);
     }
 
     public function sendUserMessage(Request $request)
@@ -1138,16 +803,23 @@ class GeneralSettingController extends Controller
         ]);
         $message = $request->message ?? '';
         $subject = $request->subject ?? '';
+        $settings = GeneralSetting::whereIn('meta_key', [
+            'push_notification_status',
+        ])->get()->pluck('meta_value', 'meta_key')->toArray();
+
         if ($request->userid_id == 'All') {
             $users = AppUser::with('metadata')->where('user_type', $request->user_type)->get();
         } else {
             $users = AppUser::with('metadata')->where('id', $request->userid_id)->where('user_type', $request->user_type)->get();
         }
         foreach ($users as $user) {
-            $playerId = optional($user->metadata->firstWhere('meta_key', 'player_id'))->meta_value;
-            $deviceToken = $user->fcm ?: $playerId;
-            if (! empty($deviceToken)) {
-                $this->sendPushNotification($deviceToken, $subject, $message, $user->user_type);
+            if ($settings['push_notification_status'] == 'onesignal') {
+                $playerId = $user->metadata->firstWhere('meta_key', 'player_id')->meta_value ?? null;
+                if ($playerId) {
+                    $this->sendPushNotification($playerId, $subject, $message, $user->user_type);
+                }
+            } else {
+                $this->sendPushNotification($user['fcm'], $subject, $message, $user->user_type);
             }
         }
 
@@ -1167,12 +839,12 @@ class GeneralSettingController extends Controller
         if (Gate::denies('general_setting_edit')) {
             return redirect()->back()->with('error', 'Form submission is disabled in demo mode.');
         }
-        $type = $request->input('type') === 'firebase' ? 'firebase' : 'firebase';
+        $type = $request->input('type');
         $pushNotificationStatus = GeneralSetting::firstOrNew(['meta_key' => 'push_notification_status']);
         $pushNotificationStatus->meta_value = $type;
         $pushNotificationStatus->save();
 
-        return response()->json(['success' => 'Firebase push mode enabled.']);
+        return response()->json(['success' => true]);
     }
 
     public function currencySetting()
@@ -1223,14 +895,12 @@ class GeneralSettingController extends Controller
         } else {
             $stat = 0;
         }
-        $id = $request->input('id');
-        // Using updateOrCreate to update or insert the setting
-        $setting = GeneralSetting::updateOrCreate(
+        GeneralSetting::updateOrCreate(
             ['meta_key' => 'auto_fill_otp'],
             ['meta_value' => $stat]
         );
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'message' => 'OTP auto-fill preference updated successfully.']);
     }
 
     public function setMulticurrency(Request $request)
@@ -1259,29 +929,13 @@ class GeneralSettingController extends Controller
             Artisan::call('config:clear');
             Artisan::call('route:clear');
             Artisan::call('view:clear');
-            function deleteDirectory($dirPath)
-            {
-                if (! is_dir($dirPath)) {
-                    return;
-                }
-                $files = scandir($dirPath);
-                foreach ($files as $file) {
-                    if ($file === '.' || $file === '..') {
-                        continue;
-                    }
-                    $filePath = $dirPath . DIRECTORY_SEPARATOR . $file;
-                    is_dir($filePath) ? deleteDirectory($filePath) : unlink($filePath);
-                }
-                rmdir($dirPath);
-            }
+
             $publicStoragePath = public_path('storage');
-            if (is_link($publicStoragePath)) {
-                unlink($publicStoragePath);  // If it's a symlink, remove it
-            } elseif (is_dir($publicStoragePath)) {
-                deleteDirectory($publicStoragePath);  // If it's a directory, delete recursively
-            }
-            // Create storage link if not exists
-            if (! file_exists(public_path('storage'))) {
+
+            if (! file_exists($publicStoragePath)) {
+                Artisan::call('storage:link');
+            } elseif (is_link($publicStoragePath) && ! file_exists(readlink($publicStoragePath))) {
+                @unlink($publicStoragePath);
                 Artisan::call('storage:link');
             }
 
@@ -1299,8 +953,6 @@ class GeneralSettingController extends Controller
 
     public function projectCleanupUpdate(Request $request)
     {
-
- return;
         abort_if(Gate::denies('general_setting_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
         Media::whereIn('model_type', ['App\Models\AppUser', 'App\Models\Modern\Item'])->forceDelete();
         Item::query()->forceDelete();
@@ -1341,6 +993,9 @@ class GeneralSettingController extends Controller
             'auto_fill_otp' => 1,
             'general_captcha' => 'no',
             'onlinepayment' => 'Inactive',
+            'emailwizard_enabled' => 1,
+            'emailwizard_driver' => 'smtp',
+            'emailwizard_mailer_name' => 'QRides',
             'api_google_map_key' => 'test',
             'site_key' => 'test',
             'private_key' => 'test',
@@ -1362,8 +1017,8 @@ class GeneralSettingController extends Controller
             'encryption' => 'test',
             'from_email' => 'test',
             'currency_auth_key' => 'test',
-            'firebase_server_key' => 'test',
-            'push_notification_status' => 'firebase',
+            'onesignal_app_id' => 'test',
+            'onesignal_rest_api_key' => 'test',
             'test_paypal_client_id' => 'test',
             'test_paypal_secret_key' => 'test',
             'live_paypal_client_id' => 'test',

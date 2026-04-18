@@ -8,7 +8,6 @@ use App\Http\Controllers\Traits\MediaUploadingTrait;
 use App\Http\Controllers\Traits\NotificationTrait;
 use App\Http\Controllers\Traits\UserWalletTrait;
 use App\Http\Controllers\Traits\VendorWalletTrait;
-use App\Models\HireBooking;
 use App\Http\Requests\UpdateAppUserRequest;
 use App\Models\AllPackage;
 use App\Models\AppUser;
@@ -24,7 +23,6 @@ use Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
-use Carbon\Carbon;
 
 class AppDriverController extends Controller
 {
@@ -35,7 +33,7 @@ class AppDriverController extends Controller
         abort_if(Gate::denies('app_user_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
         $filters = request()->only(['from', 'to', 'status', 'driver', 'host_status']);
         $userType = 'driver';
-        $query = AppUser::with(['media', 'metadata', 'item.itemVehicle', 'hostBookings'])
+        $query = AppUser::with(['media', 'metadata', 'item.itemVehicle', 'item.vehicleMake', 'item.subCategory', 'hostBookings'])
             ->where('user_type', $userType)
             ->orderBy('id', 'desc');
         if (isset($filters['from']) && isset($filters['to'])) {
@@ -126,7 +124,7 @@ class AppDriverController extends Controller
         $vehicleType = ItemType::where('module', 2)->get();
         $storeMedia = 'admin.storeMedia';
         $vehicleYear = optional($itemVehicle)->year;
-        $vehicleNumber = optional($vehicle)->registration_number;
+        $vehicleNumber = $vehicle->registration_number;
         $vehicleMake = $vehicle->make;
         $vehicleModel = $vehicle->model;
 
@@ -142,66 +140,6 @@ class AppDriverController extends Controller
             'vehicleModel'
         ));
 
-    }
-
-    public function driverHireView(Request $request, $driverId)
-    {
-        abort_if(Gate::denies('booking_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
-
-        $driver = AppUser::where('id', $driverId)
-            ->where('user_type', 'driver')
-            ->firstOrFail();
-
-        $filters = $request->only(['status', 'from', 'to']);
-
-        $query = HireBooking::with(['rider:id,first_name,last_name,phone'])
-            ->where('driver_id', $driverId);
-
-        if (! empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
-        if (! empty($filters['from'])) {
-            try {
-                $from = Carbon::parse($filters['from'])->startOfDay();
-                $query->where('start_at', '>=', $from);
-            } catch (\Throwable $e) {
-                // ignore invalid date
-            }
-        }
-
-        if (! empty($filters['to'])) {
-            try {
-                $to = Carbon::parse($filters['to'])->endOfDay();
-                $query->where('start_at', '<=', $to);
-            } catch (\Throwable $e) {
-                // ignore invalid date
-            }
-        }
-
-        $bookings = $query->orderByDesc('start_at')->paginate(20)->appends($filters);
-
-        $stats = [
-            'total' => HireBooking::where('driver_id', $driverId)->count(),
-            'booked' => HireBooking::where('driver_id', $driverId)->where('status', 'booked')->count(),
-            'ongoing' => HireBooking::where('driver_id', $driverId)->where('status', 'ongoing')->count(),
-            'completed' => HireBooking::where('driver_id', $driverId)->where('status', 'completed')->count(),
-            'cancelled' => HireBooking::where('driver_id', $driverId)->where('status', 'cancelled')->count(),
-        ];
-
-        $qrPayload = 'qrides://hire?driver_id='.$driverId;
-        $currency = GeneralSetting::getMetaValue('hire_currency')
-            ?: GeneralSetting::getMetaValue('driver_recharge_currency')
-            ?: 'INR';
-
-        return view('admin.appUsers.driver.hire', compact(
-            'driver',
-            'bookings',
-            'filters',
-            'stats',
-            'qrPayload',
-            'currency'
-        ));
     }
 
     public function driverFinanceView(Request $request, $userId)
@@ -234,7 +172,7 @@ class AppDriverController extends Controller
             abort(404, 'Invalid user ID');
         }
 
-        $appUser = AppUser::with(['hostBookings', 'items'])->findOrFail($userId);
+        $appUser = AppUser::with(['hostBookings', 'items.itemVehicle', 'items.vehicleMake', 'items.subCategory'])->findOrFail($userId);
 
         $today = now()->startOfDay();
         $aggregates = $appUser->hostBookings()
@@ -270,7 +208,7 @@ class AppDriverController extends Controller
             'vehicle_model' => $vehicle->model ?? 'N/A',
             'vehicle_verified' => $vehicle ? $vehicle->status : 'N/A',
             'vehicle_registration_number' => $vehicle->registration_number ?? 'N/A',
-            'vehicle_year' => $vehicle->year ?? 'N/A',
+            'vehicle_year' => $vehicle?->itemVehicle?->year ?? 'N/A',
         ];
 
         return view('admin.appUsers.driver.profile', compact('appUser', 'data', 'userId', 'general_default_currency'));
@@ -380,10 +318,8 @@ class AppDriverController extends Controller
             $documentFields = [
                 'driving_licence_front',
                 'driving_licence_back',
-                'aadhaar_front',
-                'aadhaar_back',
-                'pan_card',
-                'vehicle_insurance_doc',
+                'driver_id_front',
+                'driver_id_back',
             ];
 
             $documents = [];

@@ -12,6 +12,7 @@ use App\Models\GeneralSetting;
 use App\Models\Modern\Item;
 use App\Models\Property;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -53,38 +54,17 @@ class OrderController extends Controller
         }
 
         $statusCounts = [
-            'live' => (clone $query)->where('status', '!=', 'trash')->count(),
-            'pending' => (clone $query)->where('status', 'pending')->count(),
-            'confirmed' => (clone $query)->where('status', 'confirmed')->count(),
-            'cancelled' => (clone $query)->where('status', 'cancelled')->count(),
-            'declined' => (clone $query)->where('status', 'declined')->count(),
-            'completed' => (clone $query)->where('status', 'completed')->count(),
-            'refunded' => (clone $query)->where('status', 'refunded')->count(),
+            'live' => (clone $query)->whereRaw("LOWER(status) != 'trash'")->count(),
+            'pending' => (clone $query)->whereRaw("LOWER(status) = 'pending'")->count(),
+            'confirmed' => (clone $query)->whereRaw("LOWER(status) = 'confirmed'")->count(),
+            'cancelled' => (clone $query)->whereRaw("LOWER(status) = 'cancelled'")->count(),
+            'declined' => (clone $query)->whereRaw("LOWER(status) = 'declined'")->count(),
+            'completed' => (clone $query)->whereRaw("LOWER(status) = 'completed'")->count(),
+            'refunded' => (clone $query)->whereRaw("LOWER(status) = 'refunded'")->count(),
             'trash' => (clone $query)->onlyTrashed()->count(),
         ];
 
-        if ($status) {
-            $query->where('status', $status);
-        }
-
-        if ($status == 'pending') {
-            $query->where('status', 'pending');
-        }
-        if ($status == 'confirmed') {
-            $query->where('status', 'confirmed');
-        }
-        if ($status == 'cancelled') {
-            $query->where('status', 'cancelled');
-        }
-        if ($status == 'declined') {
-            $query->where('status', 'declined');
-        }
-        if ($status == 'completed') {
-            $query->where('status', 'completed');
-        }
-        if ($status == 'refunded') {
-            $query->where('status', 'refunded');
-        }
+        $this->applyStatusFilter($query, $status);
         $query->orderBy('created_at', 'desc');
         // count price and customer
         $filteredBookingsQuery = clone $query;
@@ -94,10 +74,10 @@ class OrderController extends Controller
         $totalCustomers = $filteredBookingsQuery->distinct('userid')->count('userid');
 
         $totalEarningsQuery = clone $query;
-        $totalEarnings = $totalEarningsQuery->whereIn('status', ['Confirmed', 'Completed'])->sum('total');
+        $totalEarnings = $totalEarningsQuery->whereRaw("LOWER(status) IN ('confirmed', 'completed')")->sum('total');
 
         $totalRefundedQuery = clone $query;
-        $totalRefunded = $totalRefundedQuery->where('status', 'Cancelled')->sum('refundableAmount');
+        $totalRefunded = $totalRefundedQuery->whereRaw("LOWER(status) = 'cancelled'")->sum('refundableAmount');
 
         $bookings = $query->paginate(50);
 
@@ -252,5 +232,14 @@ class OrderController extends Controller
             'status' => 200,
             'data' => $reasons,
         ]);
+    }
+
+    private function applyStatusFilter(Builder $query, ?string $status): void
+    {
+        $status = strtolower(trim((string) $status));
+
+        if (in_array($status, ['pending', 'confirmed', 'cancelled', 'declined', 'completed', 'refunded'], true)) {
+            $query->whereRaw('LOWER(status) = ?', [$status]);
+        }
     }
 }
