@@ -18,7 +18,7 @@
                         <p class="settings-page-header__subtitle">Configure provider credentials and broadcast alerts to riders and drivers from one screen.</p>
                     </div>
                     <div class="settings-page-header__actions">
-                        <span class="settings-status-pill {{ $pushnotification_status === 'firebase' ? 'is-muted' : 'is-live' }}">
+                        <span class="settings-status-pill {{ $pushnotification_status === 'firebase' ? ($firebaseReadyTone ?? 'is-muted') : 'is-live' }}">
                             {{ $pushnotification_status === 'firebase' ? 'Firebase active' : 'OneSignal active' }}
                         </span>
                     </div>
@@ -133,8 +133,8 @@
                             </div>
 
                             <div class="settings-field settings-field--full">
-                                <div class="settings-status-pill {{ $firebaseReady ? 'is-live' : 'is-muted' }}">
-                                    {{ $firebaseReady ? 'Firebase is ready to send notifications' : 'Firebase is not ready yet' }}
+                                <div class="settings-status-pill {{ $firebaseReadyTone ?? ($firebaseReady ? 'is-live' : 'is-muted') }}">
+                                    {{ $firebaseReadyLabel ?? ($firebaseReady ? 'Firebase is ready to send notifications' : 'Firebase is not ready yet') }}
                                 </div>
                             </div>
                         </div>
@@ -322,7 +322,7 @@
                 if ($(this).prop('checked')) {
                     $('#onesignal_status').prop('checked', false);
                     updateCheckboxStatus('firebase');
-                    $('.settings-page-header__actions .settings-status-pill').removeClass('is-live').addClass('is-muted').text('Firebase active');
+                    $('.settings-page-header__actions .settings-status-pill').removeClass('is-live is-warning').addClass('{{ $firebaseReadyTone ?? 'is-muted' }}').text('Firebase active');
                     toggleProviderPane('firebase');
                     return;
                 }
@@ -334,7 +334,7 @@
                 if ($(this).prop('checked')) {
                     $('#firebase_status').prop('checked', false);
                     updateCheckboxStatus('onesignal');
-                    $('.settings-page-header__actions .settings-status-pill').removeClass('is-muted').addClass('is-live').text('OneSignal active');
+                    $('.settings-page-header__actions .settings-status-pill').removeClass('is-muted is-warning').addClass('is-live').text('OneSignal active');
                     toggleProviderPane('onesignal');
                     return;
                 }

@@ -748,7 +748,20 @@ class GeneralSettingController extends Controller
         $firebaseCredentialsPath = $this->getFirebaseCredentialsPath();
         $firebaseCredentialsExists = is_readable($firebaseCredentialsPath);
         $firebaseProjectId = $this->getFirebaseProjectId();
-        $firebaseReady = $this->shouldUseFcmHttpV1() || ! empty($firebase_server_key);
+        $firebaseHttpV1Ready = $this->shouldUseFcmHttpV1();
+        $firebaseLegacyReady = ! empty($firebase_server_key);
+        $firebaseReady = $firebaseHttpV1Ready || $firebaseLegacyReady;
+
+        if ($firebaseHttpV1Ready) {
+            $firebaseReadyLabel = 'Firebase HTTP v1 is ready';
+            $firebaseReadyTone = 'is-live';
+        } elseif ($firebaseLegacyReady) {
+            $firebaseReadyLabel = 'Firebase legacy mode is ready';
+            $firebaseReadyTone = 'is-warning';
+        } else {
+            $firebaseReadyLabel = 'Firebase is not configured yet';
+            $firebaseReadyTone = 'is-muted';
+        }
         $userids = AppUser::where('user_type', 'user')->where('status', 1)->get()->mapWithKeys(function ($user) {
             return [$user->id => $user->first_name . ' - ' . $user->phone . ' - ' . $user->email];
         })->prepend(trans('global.pleaseSelect'), '');
@@ -772,7 +785,11 @@ class GeneralSettingController extends Controller
             'firebaseCredentialsPath',
             'firebaseCredentialsExists',
             'firebaseProjectId',
-            'firebaseReady'
+            'firebaseReady',
+            'firebaseHttpV1Ready',
+            'firebaseLegacyReady',
+            'firebaseReadyLabel',
+            'firebaseReadyTone'
         ));
     }
 

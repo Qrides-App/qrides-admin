@@ -2028,6 +2028,11 @@ body.admin-theme {
   color: #475569;
 }
 
+.settings-status-pill.is-warning {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
 .settings-card {
   margin-bottom: 20px;
 }
@@ -3336,33 +3341,35 @@ body.admin-modern .admin-page-intro__meta strong {
 body.admin-modern .main-footer {
   margin-right: 18px;
   margin-bottom: 18px;
-  padding: 18px 24px;
+  padding: 20px 28px;
   border-radius: 24px;
-  border: 1px solid rgba(203, 213, 225, 0.8);
-  background: #ffffff;
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
-  color: #334155;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.98));
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.1);
+  color: #0f172a;
 }
 
 body.admin-modern .main-footer a {
   font-weight: 700;
   color: #1d4ed8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 body.admin-modern .admin-footer-copy {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
-  line-height: 1.7;
-  color: #1f2937;
+  line-height: 1.75;
+  color: #0f172a;
 }
 
 body.admin-modern .admin-footer-copy strong {
-  color: #1e3a8a;
+  color: #0f172a;
 }
 
 body.admin-modern .admin-footer-copy--muted {
   margin-top: 6px;
-  color: #334155;
+  color: #1e293b;
 }
 
 body.admin-modern .alert {
