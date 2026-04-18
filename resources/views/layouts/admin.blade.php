@@ -569,10 +569,9 @@
 
                 if (currentScrollY <= 24) {
                     header.classList.remove('admin-header-hidden');
-                } else if (currentScrollY > lastScrollY) {
-                    header.classList.remove('admin-header-hidden');
                 } else {
-                    header.classList.add('admin-header-hidden');
+                    const scrollingDown = currentScrollY > lastScrollY;
+                    header.classList.toggle('admin-header-hidden', scrollingDown);
                 }
 
                 lastScrollY = currentScrollY;
