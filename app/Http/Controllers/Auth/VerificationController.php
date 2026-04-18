@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Providers\RouteServiceProvider;
-use Illuminate\Foundation\Auth\VerifiesEmails;
+use Illuminate\Auth\Events\Verified;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\Request;
 
 class VerificationController extends Controller
 {
@@ -18,8 +20,6 @@ class VerificationController extends Controller
     | be re-sent if the user didn't receive the original email message.
     |
     */
-
-    use VerifiesEmails;
 
     /**
      * Where to redirect users after verification.
@@ -38,5 +38,29 @@ class VerificationController extends Controller
         $this->middleware('auth');
         $this->middleware('signed')->only('verify');
         $this->middleware('throttle:6,1')->only('verify', 'resend');
+    }
+
+    public function verify(EmailVerificationRequest $request)
+    {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect()->intended($this->redirectTo.'?verified=1');
+        }
+
+        if ($request->user()->markEmailAsVerified()) {
+            event(new Verified($request->user()));
+        }
+
+        return redirect()->intended($this->redirectTo.'?verified=1');
+    }
+
+    public function resend(Request $request)
+    {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect()->intended($this->redirectTo);
+        }
+
+        $request->user()->sendEmailVerificationNotification();
+
+        return back()->with('resent', true);
     }
 }

@@ -3,6 +3,9 @@
 use App\Http\Controllers\Admin\CurrencyController;
 use App\Http\Controllers\Admin\GeneralSettingController;
 use App\Http\Controllers\Admin\UsersController;
+use App\Http\Controllers\Auth\ConfirmPasswordController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\VerificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/privacy-policy', 'App\Http\Controllers\Front\ExternalPagesController@privacyPolicy')->name('privacy-policy');
@@ -37,11 +40,26 @@ Route::middleware('auth')->group(function () {
 });
 // end
 
-// Forgot Password Routes
-Route::get('password/reset', 'App\Http\Controllers\Auth\ForgotPasswordController@showLinkRequestForm')->name('password.request');
-Route::post('password/email', 'App\Http\Controllers\Auth\ForgotPasswordController@sendResetLinkEmail')->name('password.email');
-Route::get('password/reset/{token}', 'App\Http\Controllers\Auth\ResetPasswordController@showResetForm')->name('password.reset');
-Route::post('password/reset', 'App\Http\Controllers\Auth\ResetPasswordController@reset')->name('password.update');
+Route::middleware('guest')->group(function () {
+    Route::get('login', [LoginController::class, 'showLoginForm'])->name('login');
+    Route::post('login', [LoginController::class, 'login']);
+    Route::get('password/reset', 'App\Http\Controllers\Auth\ForgotPasswordController@showLinkRequestForm')->name('password.request');
+    Route::post('password/email', 'App\Http\Controllers\Auth\ForgotPasswordController@sendResetLinkEmail')->name('password.email');
+    Route::get('password/reset/{token}', 'App\Http\Controllers\Auth\ResetPasswordController@showResetForm')->name('password.reset');
+    Route::post('password/reset', 'App\Http\Controllers\Auth\ResetPasswordController@reset')->name('password.update');
+});
+
+Route::post('logout', [LoginController::class, 'logout'])->name('logout');
+
+Route::middleware('auth')->group(function () {
+    Route::get('password/confirm', [ConfirmPasswordController::class, 'showConfirmForm'])->name('password.confirm');
+    Route::post('password/confirm', [ConfirmPasswordController::class, 'confirm']);
+    Route::get('email/verify', function () {
+        return view('auth.verify');
+    })->name('verification.notice');
+    Route::get('email/verify/{id}/{hash}', [VerificationController::class, 'verify'])->name('verification.verify');
+    Route::post('email/verification-notification', [VerificationController::class, 'resend'])->name('verification.resend');
+});
 
 Route::redirect('/', '/login');
 Route::get('/home', function () {
@@ -51,8 +69,6 @@ Route::get('/home', function () {
 
     return redirect()->route('admin.home');
 });
-
-Auth::routes(['register' => false]);
 
 /*********** Front End ****/
 

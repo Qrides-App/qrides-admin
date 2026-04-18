@@ -1,85 +1,37 @@
 @extends('layouts.app')
-
-@section('styles')
-<style>
-    .lockscreen-image-fallback {
-        width: 70px;
-        height: 70px;
-        background: #3c8dbc;
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 18px;
-    }
-    .text-white {
-        color: #fff !important;
-    }
-    .text-danger {
-        color: #dd4b39 !important;
-    }
-</style>
-@endsection
-
 @section('content')
-
-<div class="lockscreen">
-    <div class="lockscreen-wrapper">
-        <div class="lockscreen-logo">
-            <a href="{{ route('admin.home') }}">
-               {{ trans('global.site_title') }}
-            </a>
-        </div>
-
-        <div class="lockscreen-name">
-            {{ auth()->user()->name ?? '' }}
-        </div>
-
-        <div class="lockscreen-item">
-            <div class="lockscreen-image">
-                {{-- <img src="https://adminlte.io/themes/AdminLTE/dist/img/user1-128x128.jpg" alt="User Image"> --}}
-
-                <div class="lockscreen-image-fallback text-uppercase text-white">
-                    @if(auth()->user()->name)
-                        {{ substr(auth()->user()->name, 0, 2) }}
-                    @endif
-                </div>
-            </div>
-
-            <form method="POST" action="{{ route('password.confirm') }}" class="lockscreen-credentials">
-                @csrf
-
-                <div class="input-group">
-                  <div class="fas fa-lock form-control-feedback"></div>
-                    <input id="password" type="password" name="password" class="form-control" placeholder="{{ __('Confirm Password') }}" required>
-
-                    <div class="input-group-btn">
-                        <button type="submit" class="btn">
-                            <i class="fa fa-arrow-right text-muted"></i>
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        @error('password')
-            <div class="help-block text-center text-danger">
-                {{ $message }}
-            </div>
-        @enderror
-
-        <div class="help-block text-center">
+<div class="login-box reset">
+    <div class="login-logo">
+        <a href="{{ route('admin.home') }}">
+            {{ trans('global.site_title') }}
+        </a>
+    </div>
+    <div class="login-box-body">
+        <p class="login-box-msg">
             {{ __('Please confirm your password before continuing.') }}
-        </div>
+        </p>
 
-        <div class="text-center">
-            @if(Route::has('password.request'))
-                <a href="{{ route('password.request') }}">
-                    {{ trans('global.forgot_password') }}
-                </a>
-            @endif
-        </div>
+        <form method="POST" action="{{ route('password.confirm') }}">
+            @csrf
+
+            <div class="form-group{{ $errors->has('password') ? ' has-error' : '' }}">
+                <input id="password" type="password" class="form-control" name="password" required autocomplete="current-password" placeholder="{{ trans('global.login_password') }}">
+
+                @if ($errors->has('password'))
+                    <span class="help-block" role="alert">
+                        {{ $errors->first('password') }}
+                    </span>
+                @endif
+            </div>
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <button type="submit" class="btn btn-primary btn-flat btn-block">
+                        {{ __('Confirm Password') }}
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
-
 @endsection
