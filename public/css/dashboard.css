@@ -3,6 +3,55 @@
     background: transparent;
 }
 
+.dashboard-filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+    padding: 14px 18px;
+    border: 1px solid #dbe4ec;
+    border-radius: 20px;
+    background: linear-gradient(145deg, #ffffff, #f8fbfd);
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+}
+
+.dashboard-filter-bar__group,
+.dashboard-filter-bar__fields {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.dashboard-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid #dbe4ec;
+    border-radius: 999px;
+    background: #fff;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.dashboard-filter-chip:hover,
+.dashboard-filter-chip:focus,
+.dashboard-filter-chip.is-active {
+    background: #edf4ff;
+    border-color: #bcd0fa;
+    color: #1f57c9;
+    text-decoration: none;
+}
+
+.dashboard-filter-bar__fields .form-control {
+    min-width: 150px;
+}
+
 .dashboard-hero {
     display: flex;
     align-items: stretch;
@@ -76,15 +125,15 @@
 
 .dashboard-grid .col-sm-6,
 .dashboard-grid .col-lg-3 {
-    margin-bottom: 18px;
+    margin-bottom: 14px;
 }
 
 .dashboard-stat-card {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    min-height: 200px;
-    padding: 22px;
+    gap: 8px;
+    min-height: 158px;
+    padding: 18px 20px;
     border: 1px solid #dbe4ec;
     border-radius: 24px;
     background: #fff;
@@ -131,13 +180,18 @@
 }
 
 .dashboard-stat-card__label {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #475569;
 }
 
+.dashboard-stat-card__meta {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
 .dashboard-stat-card__value {
-    font-size: 34px;
+    font-size: 30px;
     line-height: 1.1;
     color: #0f172a;
 }
@@ -299,6 +353,11 @@
 }
 
 @media (max-width: 991px) {
+    .dashboard-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
     .dashboard-hero {
         flex-direction: column;
     }
@@ -313,6 +372,10 @@
 }
 
 @media (max-width: 767px) {
+    .dashboard-filter-bar {
+        padding: 14px;
+    }
+
     .dashboard-hero__copy {
         padding: 22px;
     }
@@ -340,6 +403,7 @@
 
 body.admin-modern .dashboard-hero__copy,
 body.admin-modern .dashboard-hero__meta-card,
+body.admin-modern .dashboard-filter-bar,
 body.admin-modern .dashboard-stat-card,
 body.admin-modern .dashboard-status-pill,
 body.admin-modern .dashboard-panel {

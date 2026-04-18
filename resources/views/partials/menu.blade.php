@@ -162,7 +162,7 @@
                                 class="{{ (request()->is('admin/drivers') || request()->is('admin/drivers/*')) && request()->input('host_status') === '2' ? 'active' : '' }}">
                                 <a href="{{ route('admin.drivers.index', ['host_status' => '2']) }}">
                                     <i class="fas fa-dot-circle"></i>
-                                    <span>{{ trans('menu.requested') }} {{ trans('menu.drivers') }}</span>
+                                    <span>Captain Requests</span>
                                 </a>
                             </li>
                         @endcan

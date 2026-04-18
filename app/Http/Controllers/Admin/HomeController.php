@@ -5,11 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Models\AppUser;
 use App\Models\Booking;
 use App\Models\GeneralSetting;
-use App\Models\Modern\Item;
 use App\Models\Module;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 class HomeController
 {
@@ -21,8 +20,9 @@ class HomeController
         'accepted' => ['accepted', 'Accepted', 'approved', 'Approved'],
     ];
 
-    public function index()
+    public function index(Request $request)
     {
+        [$rangeStart, $rangeEnd, $rangePreset] = $this->resolveDashboardRange($request);
 
         $module = Cache::remember('default_module', 3600, function () {
             return Module::where('default_module', '1')->firstOrFail();
@@ -35,17 +35,28 @@ class HomeController
         });
 
         $installerWarning = installerExists();
-        $metrics = $this->fetchDashboardMetrics($moduleId);
+        $metrics = $this->fetchDashboardMetrics($moduleId, $rangeStart, $rangeEnd);
         $latestBookings = Booking::with(['host', 'user', 'item'])
             ->where('module', $moduleId)
             ->where('payment_status', 'paid')
-            ->where('created_at', '>=', Carbon::now()->startOfYear())
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
             ->latest()
             ->take(5)
             ->get();
 
-        $latestUsersData = $this->getLatestUsersData();
-        $latestBookingsData = $this->getLatestBookingsData($moduleId);
+        $latestUsersData = $this->getLatestUsersData($rangeStart, $rangeEnd);
+        $latestBookingsData = $this->getLatestBookingsData($moduleId, $rangeStart, $rangeEnd);
+        $pendingCaptainRequests = AppUser::query()
+            ->where('user_type', 'driver')
+            ->where('host_status', '2')
+            ->latest()
+            ->take(5)
+            ->get();
+        $dashboardFilters = [
+            'from' => $rangeStart->toDateString(),
+            'to' => $rangeEnd->toDateString(),
+            'preset' => $rangePreset,
+        ];
 
         return view('home', compact(
             'metrics',
@@ -56,13 +67,15 @@ class HomeController
             'latestUsersData',
             'latestBookingsData',
             'installerWarning',
+            'pendingCaptainRequests',
+            'dashboardFilters',
         ));
     }
 
-    private function fetchDashboardMetrics($moduleId)
+    private function fetchDashboardMetrics($moduleId, Carbon $rangeStart, Carbon $rangeEnd)
     {
 
-        $driverMetrics = Cache::remember('driver_metrics', 3600, function () {
+        $driverMetrics = Cache::remember("driver_metrics_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($rangeStart, $rangeEnd) {
             $today = Carbon::today()->toDateString();
 
             return AppUser::selectRaw("
@@ -70,29 +83,28 @@ class HomeController
                 SUM(CASE WHEN user_type = 'driver' AND status = 1 THEN 1 ELSE 0 END) as active_drivers,
                 SUM(CASE WHEN user_type = 'driver' AND status = 0 THEN 1 ELSE 0 END) as inactive_drivers,
                 SUM(CASE WHEN user_type = 'driver' AND host_status = '2' THEN 1 ELSE 0 END) as requested_drivers,
-                SUM(CASE WHEN user_type = 'driver' AND DATE(created_at) = ? THEN 1 ELSE 0 END) as today_new_drivers
-            ", [$today])
+                SUM(CASE WHEN user_type = 'driver' AND DATE(created_at) = ? THEN 1 ELSE 0 END) as today_new_drivers,
+                SUM(CASE WHEN user_type = 'driver' AND created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as filtered_drivers
+            ", [$today, $rangeStart, $rangeEnd])
                 ->where('user_type', 'driver')
                 ->first();
         });
 
-        // Fetch ride (item) metrics
-        $riderMetrics = Cache::remember('rider_metrics', 3600, function () {
+        $riderMetrics = Cache::remember("rider_metrics_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($rangeStart, $rangeEnd) {
             $today = Carbon::today()->toDateString();
 
             return AppUser::selectRaw("
         COUNT(*) as total_riders,
         SUM(CASE WHEN user_type = 'user' AND status = 1 THEN 1 ELSE 0 END) as active_riders,
         SUM(CASE WHEN user_type = 'user' AND status = 0 THEN 1 ELSE 0 END) as inactive_riders,
-        SUM(CASE WHEN user_type = 'user' AND DATE(created_at) = ? THEN 1 ELSE 0 END) as today_new_riders
-    ", [$today])
+        SUM(CASE WHEN user_type = 'user' AND DATE(created_at) = ? THEN 1 ELSE 0 END) as today_new_riders,
+        SUM(CASE WHEN user_type = 'user' AND created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as filtered_riders
+    ", [$today, $rangeStart, $rangeEnd])
                 ->where('user_type', 'user')
                 ->first();
         });
 
-        // Fetch booking (ride status) metrics
-        // Cache::forget("booking_metrics_{$moduleId}");
-        $bookingMetrics = Cache::remember("booking_metrics_{$moduleId}", 3600, function () use ($moduleId) {
+        $bookingMetrics = Cache::remember("booking_metrics_{$moduleId}_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($moduleId, $rangeStart, $rangeEnd) {
             $today = Carbon::today()->toDateString();
             $ongoing = $this->quotedStatusList(self::STATUS_ALIASES['ongoing']);
             $completed = $this->quotedStatusList(self::STATUS_ALIASES['completed']);
@@ -101,20 +113,28 @@ class HomeController
 
             return Booking::selectRaw("
         COUNT(*) as total_paid_bookings,
+        SUM(CASE WHEN payment_status = 'paid' AND module = ? AND deleted_at IS NULL AND created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as filtered_paid_bookings,
         SUM(CASE WHEN status IN ({$ongoing}) THEN 1 ELSE 0 END) as running_rides,
         SUM(CASE WHEN status IN ({$completed}) THEN 1 ELSE 0 END) as completed_rides,
         SUM(CASE WHEN status IN ({$cancelled}) THEN 1 ELSE 0 END) as cancelled_rides,
         SUM(CASE WHEN status IN ({$rejected}) THEN 1 ELSE 0 END) as rejected_rides,
         SUM(CASE WHEN status IN ({$ongoing}) AND DATE(created_at) = ? THEN 1 ELSE 0 END) as today_running_rides,
         SUM(CASE WHEN status IN ({$completed}) AND DATE(created_at) = ? THEN 1 ELSE 0 END) as today_completed_rides,
-        SUM(CASE WHEN payment_status = 'paid' AND module = ? AND deleted_at IS NULL THEN total ELSE 0 END) as total_income,
-        SUM(CASE WHEN payment_status = 'paid' AND module = ? AND deleted_at IS NULL THEN admin_commission ELSE 0 END) as total_revenue,
+        SUM(CASE WHEN payment_status = 'paid' AND module = ? AND deleted_at IS NULL AND created_at BETWEEN ? AND ? THEN total ELSE 0 END) as total_income,
+        SUM(CASE WHEN payment_status = 'paid' AND module = ? AND deleted_at IS NULL AND created_at BETWEEN ? AND ? THEN admin_commission ELSE 0 END) as total_revenue,
         SUM(CASE WHEN payment_status = 'paid' AND module = ? AND deleted_at IS NULL AND DATE(created_at) = ? THEN admin_commission ELSE 0 END) as today_revenue
     ", [
+                $moduleId,
+                $rangeStart,
+                $rangeEnd,
                 $today,        // for today_running_rides
                 $today,        // for today_completed_rides
-                $moduleId,     // for total_income
-                $moduleId,     // for total_revenue
+                $moduleId,
+                $rangeStart,
+                $rangeEnd,
+                $moduleId,
+                $rangeStart,
+                $rangeEnd,
                 $moduleId,     // for today_revenue (module check)
                 $today,         // for today_revenue (date check)
             ])
@@ -136,8 +156,12 @@ class HomeController
                 'total_number' => $driverMetrics->inactive_drivers,
             ],
             'total_requested_drivers' => [
-                'chart_title' => 'total requested drivers',
+                'chart_title' => 'captain requests',
                 'total_number' => $driverMetrics->requested_drivers,
+            ],
+            'filtered_paid_bookings' => [
+                'chart_title' => 'bookings in range',
+                'total_number' => $bookingMetrics->filtered_paid_bookings,
             ],
             'total_riders' => [
                 'chart_title' => 'total riders',
@@ -198,14 +222,11 @@ class HomeController
         ];
     }
 
-    private function getLatestUsersData()
+    private function getLatestUsersData(Carbon $rangeStart, Carbon $rangeEnd)
     {
-        return Cache::remember('latest_users_data', 3600, function () {
-            $startDate = Carbon::now()->subWeek()->startOfDay();
-            $endDate = Carbon::now()->endOfDay();
-
+        return Cache::remember("latest_users_data_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($rangeStart, $rangeEnd) {
             return AppUser::selectRaw('DATE(created_at) as date, COUNT(*) as count')
-                ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$rangeStart, $rangeEnd])
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get()
@@ -218,15 +239,12 @@ class HomeController
         });
     }
 
-    private function getLatestBookingsData($moduleId)
+    private function getLatestBookingsData($moduleId, Carbon $rangeStart, Carbon $rangeEnd)
     {
-        return Cache::remember("latest_bookings_data_{$moduleId}", 3600, function () use ($moduleId) {
-            $startDate = Carbon::now()->subWeek()->startOfDay();
-            $endDate = Carbon::now()->endOfDay();
-
+        return Cache::remember("latest_bookings_data_{$moduleId}_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($moduleId, $rangeStart, $rangeEnd) {
             return Booking::selectRaw('DATE(created_at) as date, COUNT(*) as count')
                 ->where('module', $moduleId)
-                ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('created_at', [$rangeStart, $rangeEnd])
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get()
@@ -237,6 +255,29 @@ class HomeController
                     ];
                 });
         });
+    }
+
+    private function resolveDashboardRange(Request $request): array
+    {
+        $preset = $request->string('range')->toString() ?: '7d';
+        $fromInput = $request->input('from');
+        $toInput = $request->input('to');
+
+        try {
+            if ($fromInput || $toInput) {
+                $start = $fromInput ? Carbon::parse($fromInput)->startOfDay() : Carbon::now()->subDays(6)->startOfDay();
+                $end = $toInput ? Carbon::parse($toInput)->endOfDay() : Carbon::now()->endOfDay();
+                return [$start, $end, 'custom'];
+            }
+        } catch (\Throwable $e) {
+            // fall back to preset
+        }
+
+        return match ($preset) {
+            'today' => [Carbon::today()->startOfDay(), Carbon::today()->endOfDay(), 'today'],
+            '30d' => [Carbon::now()->subDays(29)->startOfDay(), Carbon::now()->endOfDay(), '30d'],
+            default => [Carbon::now()->subDays(6)->startOfDay(), Carbon::now()->endOfDay(), '7d'],
+        };
     }
 
     private function quotedStatusList(array $statuses): string
