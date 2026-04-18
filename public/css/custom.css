@@ -2691,6 +2691,39 @@ body.admin-modern * {
   font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
 }
 
+body.admin-modern .fa,
+body.admin-modern .fas,
+body.admin-modern .far,
+body.admin-modern .fal,
+body.admin-modern .fab,
+body.admin-modern .glyphicon,
+body.admin-modern .ion,
+body.admin-modern .material-icons,
+body.admin-modern [class^="icon-"],
+body.admin-modern [class*=" icon-"] {
+  font-family: inherit;
+}
+
+body.admin-modern .fa,
+body.admin-modern .fas,
+body.admin-modern .far,
+body.admin-modern .fal,
+body.admin-modern .fab {
+  font-family: "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome" !important;
+}
+
+body.admin-modern .fab {
+  font-family: "Font Awesome 5 Brands", "Font Awesome 5 Free", "FontAwesome" !important;
+}
+
+body.admin-modern .glyphicon {
+  font-family: "Glyphicons Halflings" !important;
+}
+
+body.admin-modern .ion {
+  font-family: "Ionicons" !important;
+}
+
 body.admin-modern a {
   color: #c2410c;
   transition: color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
@@ -2819,6 +2852,11 @@ body.admin-modern .sidebar-toggle {
   box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
 }
 
+body.admin-modern .sidebar-toggle i {
+  font-size: 18px;
+  line-height: 1;
+}
+
 body.admin-modern .sidebar-toggle:hover {
   background: var(--admin-accent-soft) !important;
   color: var(--admin-accent-strong) !important;
@@ -2884,6 +2922,26 @@ body.admin-modern .navbar-custom-menu>.navbar-nav>li>a {
   align-items: center;
   color: var(--admin-ink) !important;
   padding: 8px 10px;
+}
+
+body.admin-modern .admin-language-switch > a {
+  gap: 8px;
+  padding: 8px 12px !important;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.22);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+body.admin-modern .admin-language-switch > a i:first-child {
+  color: var(--admin-accent-strong);
+}
+
+body.admin-modern .admin-language-switch__caret {
+  font-size: 10px;
+  color: var(--admin-muted);
 }
 
 body.admin-modern .admin-user-chip {

@@ -136,7 +136,7 @@
 <body class="sidebar-mini skin-purple admin-theme admin-modern" style="height: auto; min-height: 100%;">
     <div class="wrapper admin-layout-shell" style="height: auto; min-height: 100%;">
         <header class="main-header cvvv">
-            <a href="/admin/" class="logo">
+            <a href="{{ route('admin.home', [], false) }}" class="logo">
                 <span class="logo-mini">
                     @if (isset($logoPath) && !empty($logoPath) && file_exists(public_path($logoPath)))
                         <img src="{{ $logoPath }}" alt="{{ $siteName ?? trans('global.site_title') }}" />
@@ -154,7 +154,8 @@
             </a>
 
             <nav class="navbar navbar-static-top">
-                <a href="#" class="sidebar-toggle" data-toggle="push-menu" role="button">
+                <a href="#" class="sidebar-toggle" data-toggle="push-menu" role="button" aria-label="{{ trans('global.toggleNavigation') }}">
+                    <i class="fas fa-bars" aria-hidden="true"></i>
                     <span class="sr-only">{{ trans('global.toggleNavigation') }}</span>
                 </a>
 
@@ -172,17 +173,20 @@
                     <ul class="nav navbar-nav">
                         @can('language_setting_access')
                             @if (count(config('global.available_languages', [])) > 1)
-                                <li class="dropdown notifications-menu">
+                                <li class="dropdown notifications-menu admin-language-switch">
                                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                        <i class="fa fa-globe"></i> {{ strtoupper(app()->getLocale()) }}
+                                        <i class="fas fa-language" aria-hidden="true"></i>
+                                        <span>{{ strtoupper(app()->getLocale()) }}</span>
+                                        <i class="fas fa-chevron-down admin-language-switch__caret" aria-hidden="true"></i>
                                     </a>
                                     <ul class="dropdown-menu">
                                         <li>
                                             <ul class="menu">
                                                 @foreach (config('global.available_languages') as $langLocale => $langName)
                                                     <li>
-                                                        <a href="{{ url()->current() }}?change_language={{ $langLocale }}">{{ strtoupper($langLocale) }}
-                                                            ({{ $langName }})</a>
+                                                        <a href="{{ url()->current() }}?change_language={{ $langLocale }}">
+                                                            {{ strtoupper($langLocale) }} ({{ $langName }})
+                                                        </a>
                                                     </li>
                                                 @endforeach
                                             </ul>
@@ -259,11 +263,12 @@
         </div>
         <footer class="main-footer text-center">
             <div class="admin-footer-copy">
-                <strong>QRIDES</strong> is a brand name under <strong>BAMIRA TRANSPORTATION PRIVATE LIMITED</strong>.
+                &copy; {{ now()->year }} <strong>QRIDES by BAMIRA TRANSPORTATION PRIVATE LIMITED</strong>.
                 {{ trans('global.allRightsReserved') }}
             </div>
             <div class="admin-footer-copy admin-footer-copy--muted">
-                Designed and developed by <strong>Rareus Private Limited</strong>.
+                Designed, developed and maintained by <strong>Rareus Private Limited</strong>.
+                <a href="https://rareus.in" target="_blank" rel="noopener noreferrer">rareus.in</a>
             </div>
         </footer>
 
