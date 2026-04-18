@@ -3857,7 +3857,7 @@ body.admin-modern .checktoggle {
   border: 1px solid rgba(148, 163, 184, 0.26);
   text-indent: -9999px;
   cursor: pointer;
-  overflow: visible;
+  overflow: hidden;
   transition: all 0.18s ease;
 }
 
@@ -3882,6 +3882,7 @@ body.admin-modern .check:checked+.checktoggle {
 }
 
 body.admin-modern .check:checked+.checktoggle::after {
+  left: 2px;
   transform: translateX(26px);
 }
 

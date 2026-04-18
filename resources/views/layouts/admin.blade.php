@@ -267,8 +267,8 @@
                 {{ trans('global.allRightsReserved') }}
             </div>
             <div class="admin-footer-copy admin-footer-copy--muted">
-                Designed, developed and maintained by <strong>Rareus Private Limited</strong>.
-                <a href="https://rareus.in" target="_blank" rel="noopener noreferrer">rareus.in</a>
+                Designed, developed and maintained by
+                <a href="https://rareus.in" target="_blank" rel="noopener noreferrer"><strong>Rareus Private Limited</strong></a>.
             </div>
         </footer>
 
