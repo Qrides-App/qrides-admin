@@ -16,7 +16,6 @@ use App\Models\AppUserMeta;
 use App\Models\GeneralSetting;
 use App\Models\Modern\ItemType;
 use App\Models\PayoutMethod;
-use App\Services\FirebaseAuthService;
 use Gate;
 use Hash;
 use Illuminate\Http\Request;
@@ -420,7 +419,7 @@ class AppUsersController extends Controller
         }
     }
 
-    public function updateIdentifyGrpc(Request $request, FirebaseAuthService $firebaseAuthService)
+    public function updateIdentifyGrpc(Request $request)
     {
         $verified = AppUser::where('id', $request->pid)->update(['document_verify' => $request->verified]);
         $user = AppUser::find($request->pid);
@@ -489,7 +488,7 @@ class AppUsersController extends Controller
         ];
     }
 
-    public function updateIdentify(Request $request, FirebaseAuthService $firebaseAuthService)
+    public function updateIdentify(Request $request)
     {
         $verified = AppUser::where('id', $request->pid)->update(['document_verify' => $request->verified]);
         $user = AppUser::find($request->pid);
@@ -500,12 +499,7 @@ class AppUsersController extends Controller
             ], 404);
         }
 
-        $documentKeys = [
-            'driving_licence_front_status',
-            'driving_licence_back_status',
-            'driver_id_front_status',
-            'driver_id_back_status',
-        ];
+        $documentKeys = $this->driverDocumentStatusKeys();
 
         if ($request->verified == 1) {
             foreach ($documentKeys as $key) {

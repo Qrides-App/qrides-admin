@@ -3304,31 +3304,31 @@ body.admin-modern .main-footer {
   margin-bottom: 18px;
   padding: 18px 24px;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.48);
-  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  background: #ffffff;
   box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
-  color: #4b5563;
+  color: #334155;
 }
 
 body.admin-modern .main-footer a {
   font-weight: 700;
-  color: var(--admin-accent-strong);
+  color: #1d4ed8;
 }
 
 body.admin-modern .admin-footer-copy {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   line-height: 1.7;
-  color: var(--admin-ink);
+  color: #1f2937;
 }
 
 body.admin-modern .admin-footer-copy strong {
-  color: var(--admin-accent-strong);
+  color: #1e3a8a;
 }
 
 body.admin-modern .admin-footer-copy--muted {
-  margin-top: 4px;
-  color: #475569;
+  margin-top: 6px;
+  color: #334155;
 }
 
 body.admin-modern .alert {
