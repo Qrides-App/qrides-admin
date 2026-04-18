@@ -157,14 +157,6 @@
                                     <span>{{ trans('menu.requested') }} {{ trans('menu.drivers') }}</span>
                                 </a>
                             </li>
-                            @can('app_user_create')
-                                <li class="{{ request()->routeIs('admin.drivers.create') ? 'active' : '' }}">
-                                    <a href="{{ route('admin.drivers.create') }}">
-                                        <i class="fas fa-plus-circle"></i>
-                                        <span>Add Driver</span>
-                                    </a>
-                                </li>
-                            @endcan
                         @endcan
                     </ul>
                 </li>
