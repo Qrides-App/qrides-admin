@@ -291,6 +291,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
     Route::get('driver.searchDrivers', 'Driver\AppDriverController@searchDrivers')->name('driver.search');
     Route::get('driver/vendor-wallet/{id}', 'PayoutController@getWalletBalance')->name('driver.getWalletBalance');
 
+    // Driver recharge plans/settings (admin UI)
+    Route::get('recharge-plans', 'RechargePlanController@index')->name('recharge-plans.index');
+    Route::post('recharge-plans', 'RechargePlanController@store')->name('recharge-plans.store');
+    Route::put('recharge-plans/{plan}', 'RechargePlanController@update')->name('recharge-plans.update');
+    Route::delete('recharge-plans/{plan}', 'RechargePlanController@destroy')->name('recharge-plans.destroy');
+    Route::post('recharge-plans/settings', 'RechargePlanController@updateSettings')->name('recharge-plans.settings');
+
     // Availability
     Route::resource('availabilities', 'AvailabilityController', ['except' => ['destroy']]);
 
