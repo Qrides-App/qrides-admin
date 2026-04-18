@@ -148,7 +148,7 @@
                     <div class="settings-card__header">
                         <div>
                             <h3>Broadcast to drivers</h3>
-                            <p>Notify active verified drivers about dispatch, operations, or policy changes.</p>
+                            <p>Notify active drivers about dispatch, operations, or policy changes.</p>
                         </div>
                     </div>
 

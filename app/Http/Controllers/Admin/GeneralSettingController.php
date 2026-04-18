@@ -746,7 +746,11 @@ class GeneralSettingController extends Controller
         $userids = AppUser::where('user_type', 'user')->where('status', 1)->get()->mapWithKeys(function ($user) {
             return [$user->id => $user->first_name . ' - ' . $user->phone . ' - ' . $user->email];
         })->prepend(trans('global.pleaseSelect'), '');
-        $drivers = AppUser::where('user_type', 'driver')->where('status', 1)->where('document_verify', 1)->get()->mapWithKeys(function ($user) {
+        $driverQuery = AppUser::where('user_type', 'driver')->where('status', 1);
+        if (DB::getSchemaBuilder()->hasColumn('app_users', 'document_verify')) {
+            $driverQuery->where('document_verify', 1);
+        }
+        $drivers = $driverQuery->get()->mapWithKeys(function ($user) {
             return [$user->id => $user->first_name . ' - ' . $user->phone . ' - ' . $user->email];
         })->prepend(trans('global.pleaseSelect'), '');
 

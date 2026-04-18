@@ -47,16 +47,20 @@
 
             <form method="get" class="dashboard-filter-bar">
                 <div class="dashboard-filter-bar__group">
+                    <span class="dashboard-filter-bar__label">Range</span>
                     <a href="{{ route('admin.home', ['range' => 'today']) }}" class="dashboard-filter-chip {{ $dashboardFilters['preset'] === 'today' ? 'is-active' : '' }}">Today</a>
                     <a href="{{ route('admin.home', ['range' => '7d']) }}" class="dashboard-filter-chip {{ $dashboardFilters['preset'] === '7d' ? 'is-active' : '' }}">7 days</a>
                     <a href="{{ route('admin.home', ['range' => '30d']) }}" class="dashboard-filter-chip {{ $dashboardFilters['preset'] === '30d' ? 'is-active' : '' }}">30 days</a>
                 </div>
-                <div class="dashboard-filter-bar__fields">
-                    <input type="date" class="form-control" name="from" value="{{ $dashboardFilters['from'] }}">
-                    <input type="date" class="form-control" name="to" value="{{ $dashboardFilters['to'] }}">
-                    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-                    <a href="{{ route('admin.home', ['range' => '7d']) }}" class="btn btn-default btn-sm">Reset</a>
-                </div>
+                <details class="dashboard-filter-disclosure" {{ in_array($dashboardFilters['preset'], ['today', '7d', '30d'], true) ? '' : 'open' }}>
+                    <summary>Custom range</summary>
+                    <div class="dashboard-filter-disclosure__body">
+                        <input type="date" class="form-control" name="from" value="{{ $dashboardFilters['from'] }}">
+                        <input type="date" class="form-control" name="to" value="{{ $dashboardFilters['to'] }}">
+                        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                        <a href="{{ route('admin.home', ['range' => '7d']) }}" class="btn btn-default btn-sm">Reset</a>
+                    </div>
+                </details>
             </form>
 
             <div class="dashboard-hero">

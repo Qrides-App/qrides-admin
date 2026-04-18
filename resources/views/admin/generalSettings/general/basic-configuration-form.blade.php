@@ -13,9 +13,9 @@
             <div class="col-md-9">
                 <div class="settings-page-header">
                     <div>
-                        <span class="settings-page-header__eyebrow">Brand & identity</span>
-                        <h1 class="settings-page-header__title">{{ trans('global.general_title_singular') }}</h1>
-                        <p class="settings-page-header__subtitle">Manage your admin brand identity, contact information, primary locale, and the assets shown across login, mail, and dashboard surfaces.</p>
+                        <span class="settings-page-header__eyebrow">General settings</span>
+                        <h1 class="settings-page-header__title">Branding and contact settings</h1>
+                        <p class="settings-page-header__subtitle">Update the QRIDES admin name, support contact details, default language, logo, and favicon used across the platform.</p>
                     </div>
                 </div>
 
@@ -27,8 +27,8 @@
 
                     <div class="settings-card__header">
                         <div>
-                            <h3>Core business profile</h3>
-                            <p>These details are used across admin, transactional mail, login branding, and default communication settings.</p>
+                            <h3>Business identity</h3>
+                            <p>These values appear in admin branding, login screens, support contact references, and shared platform metadata.</p>
                         </div>
                     </div>
 
@@ -39,19 +39,19 @@
 
                     <div class="settings-form-grid">
                         <div class="settings-field">
-                            <label for="general_name">{{ trans('global.name') }} <span class="text-danger">*</span></label>
+                            <label for="general_name">Brand name <span class="text-danger">*</span></label>
                             <input type="text" name="general_name" class="form-control" id="general_name"
-                                value="{{ old('general_name', $general_name->meta_value ?? '') }}" placeholder="Business name">
+                                value="{{ old('general_name', $general_name->meta_value ?? '') }}" placeholder="QRIDES">
                         </div>
 
                         <div class="settings-field">
-                            <label for="general_email">{{ trans('global.email') }} <span class="text-danger">*</span></label>
+                            <label for="general_email">Support email <span class="text-danger">*</span></label>
                             <input type="email" name="general_email" class="form-control" id="general_email"
                                 value="{{ old('general_email', $general_email->meta_value ?? '') }}" placeholder="Support email">
                         </div>
 
                         <div class="settings-field settings-field--full">
-                            <label for="general_description">{{ trans('global.site_desciption') }}</label>
+                            <label for="general_description">Site description</label>
                             <input type="text" name="general_description" class="form-control" id="general_description"
                                 value="{{ old('general_description', $general_description->meta_value ?? '') }}"
                                 placeholder="Short description used in admin and browser metadata">
@@ -96,23 +96,33 @@
                         </div>
 
                         <div class="settings-field">
-                            <label for="general_logo">{{ trans('global.logo') }}</label>
+                            <label for="general_logo">Brand logo</label>
                             <input type="file" name="general_logo" class="form-control" id="general_logo" accept="image/*">
-                            @if (!empty($general_logo->meta_value))
-                                <div class="settings-media-preview">
-                                    <img src="{{ asset('storage/' . $general_logo->meta_value) }}" alt="Current logo">
+                            <div class="settings-media-preview-wrap">
+                                <div class="settings-media-preview-copy">Current logo</div>
+                                <div class="settings-media-preview" id="general_logo_preview">
+                                    @if (!empty($general_logo->meta_value))
+                                        <img src="{{ asset('storage/' . $general_logo->meta_value) }}" alt="Current logo">
+                                    @else
+                                        <span>No logo uploaded</span>
+                                    @endif
                                 </div>
-                            @endif
+                            </div>
                         </div>
 
                         <div class="settings-field">
-                            <label for="general_favicon">{{ trans('global.favicon') }}</label>
+                            <label for="general_favicon">Site favicon</label>
                             <input type="file" name="general_favicon" class="form-control" id="general_favicon" accept="image/*">
-                            @if (!empty($general_favicon->meta_value))
-                                <div class="settings-media-preview settings-media-preview--favicon">
-                                    <img src="{{ asset('storage/' . $general_favicon->meta_value) }}" alt="Current favicon">
+                            <div class="settings-media-preview-wrap">
+                                <div class="settings-media-preview-copy">Current favicon</div>
+                                <div class="settings-media-preview settings-media-preview--favicon" id="general_favicon_preview">
+                                    @if (!empty($general_favicon->meta_value))
+                                        <img src="{{ asset('storage/' . $general_favicon->meta_value) }}" alt="Current favicon">
+                                    @else
+                                        <span>No favicon uploaded</span>
+                                    @endif
                                 </div>
-                            @endif
+                            </div>
                         </div>
                     </div>
 
@@ -139,6 +149,30 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             updateDefaultCountry();
+            setupImagePreview('general_logo', 'general_logo_preview', 'Selected logo preview');
+            setupImagePreview('general_favicon', 'general_favicon_preview', 'Selected favicon preview');
         });
+
+        function setupImagePreview(inputId, previewId, label) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+
+            if (!input || !preview) {
+                return;
+            }
+
+            input.addEventListener('change', function(event) {
+                const [file] = event.target.files || [];
+                if (!file) {
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" alt="${label}">`;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
     </script>
 @endsection

@@ -2382,6 +2382,9 @@ body.admin-theme {
   border: 1px dashed #cbd5e1;
   border-radius: 18px;
   background: #f8fafc;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .settings-media-preview img {
@@ -2393,6 +2396,19 @@ body.admin-theme {
 .settings-media-preview--favicon img {
   max-width: 48px;
   max-height: 48px;
+}
+
+.settings-media-preview-wrap {
+  margin-top: 12px;
+}
+
+.settings-media-preview-copy {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
 }
 
 .mail-config-pane {
