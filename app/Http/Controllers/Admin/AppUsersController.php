@@ -362,9 +362,29 @@ class AppUsersController extends Controller
                 'message' => "You don't have permission to perform this action.",
             ], 403);
         }
+
+        $user = AppUser::with('metadata')->find($request->pid);
+        if (! $user) {
+            return response()->json([
+                'status' => 404,
+                'message' => 'User not found.',
+            ], 404);
+        }
+
+        $requestedStatus = (string) $request->status;
+        if ($requestedStatus === '1') {
+            $documentValidation = $this->validateDriverApprovalDocuments($user);
+            if (! $documentValidation['ok']) {
+                return response()->json([
+                    'status' => 422,
+                    'message' => $documentValidation['message'],
+                    'missing_documents' => $documentValidation['missing_documents'],
+                ], 422);
+            }
+        }
+
         $statusData = AppUser::where('id', $request->pid)->update(['host_status' => $request->status]);
         if ($statusData) {
-            $user = AppUser::where('id', $request->pid)->first();
             $note = trim((string) $request->input('note', ''));
             // store latest decision note
             if ($note !== '') {
@@ -474,6 +494,71 @@ class AppUsersController extends Controller
                 'message' => 'Something went wrong. Please try again.',
             ]);
         }
+    }
+
+    private function requiredDriverDocuments(): array
+    {
+        return [
+            [
+                'collection' => 'driving_licence_front',
+                'status_key' => 'driving_licence_front_status',
+                'label' => 'Driving Licence Front',
+            ],
+            [
+                'collection' => 'driving_licence_back',
+                'status_key' => 'driving_licence_back_status',
+                'label' => 'Driving Licence Back',
+            ],
+            [
+                'collection' => 'aadhaar_front',
+                'status_key' => 'aadhaar_front_status',
+                'label' => 'Aadhaar Front',
+            ],
+            [
+                'collection' => 'aadhaar_back',
+                'status_key' => 'aadhaar_back_status',
+                'label' => 'Aadhaar Back',
+            ],
+            [
+                'collection' => 'pan_card',
+                'status_key' => 'pan_card_status',
+                'label' => 'PAN Card',
+            ],
+            [
+                'collection' => 'vehicle_insurance_doc',
+                'status_key' => 'vehicle_insurance_doc_status',
+                'label' => 'Vehicle Insurance',
+            ],
+        ];
+    }
+
+    private function validateDriverApprovalDocuments(AppUser $user): array
+    {
+        $metadata = $user->metadata->keyBy('meta_key');
+        $missingDocuments = [];
+
+        foreach ($this->requiredDriverDocuments() as $document) {
+            $hasUpload = $user->getMedia($document['collection'])->isNotEmpty();
+            $status = strtolower((string) optional($metadata->get($document['status_key']))->meta_value);
+
+            if (! $hasUpload || $status !== 'approved') {
+                $missingDocuments[] = $document['label'];
+            }
+        }
+
+        if ($missingDocuments !== []) {
+            return [
+                'ok' => false,
+                'missing_documents' => $missingDocuments,
+                'message' => 'Captain approval requires these approved documents: '.implode(', ', $missingDocuments).'.',
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'missing_documents' => [],
+            'message' => '',
+        ];
     }
 
     private function driverDocumentStatusKeys(): array

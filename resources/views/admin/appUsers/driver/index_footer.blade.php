@@ -251,7 +251,8 @@
                     showToast('Decision saved & notifications sent.');
                     $('.hoststatusdata[data-id=\"' + id + '\"]').closest('.status-toggle').find('.requested-label').remove();
                 } catch (error) {
-                    showToast('Something went wrong. Please try again.', 'error');
+                    const message = error?.responseJSON?.message || 'Something went wrong. Please try again.';
+                    showToast(message, 'error', { timeOut: 7000 });
                     checkbox.checked = !desiredStatus;
                 } finally {
                     $('#loader').hide();
