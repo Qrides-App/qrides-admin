@@ -100,7 +100,7 @@
 }
 
 .dashboard-grid .col-sm-6:nth-child(2) .dashboard-stat-card {
-    background: linear-gradient(145deg, #ffffff, #fff8f2);
+    background: linear-gradient(145deg, #ffffff, #eef5ff);
 }
 
 .dashboard-grid .col-sm-6:nth-child(3) .dashboard-stat-card {
@@ -108,7 +108,7 @@
 }
 
 .dashboard-grid .col-sm-6:nth-child(4) .dashboard-stat-card {
-    background: linear-gradient(145deg, #ffffff, #fff7ed);
+    background: linear-gradient(145deg, #ffffff, #edf4ff);
 }
 
 .dashboard-stat-card:hover {
@@ -351,8 +351,8 @@ body.admin-modern .dashboard-hero__copy {
     position: relative;
     overflow: hidden;
     background:
-        radial-gradient(circle at top right, rgba(251, 146, 60, 0.32), transparent 24%),
-        linear-gradient(135deg, #fff7ed, #ffffff 58%);
+        radial-gradient(circle at top right, rgba(66, 133, 244, 0.26), transparent 24%),
+        linear-gradient(135deg, #edf4ff, #ffffff 58%);
 }
 
 body.admin-modern .dashboard-hero__copy::after {
@@ -363,39 +363,39 @@ body.admin-modern .dashboard-hero__copy::after {
     width: 180px;
     height: 180px;
     border-radius: 50%;
-    background: rgba(249, 115, 22, 0.08);
+    background: rgba(45, 107, 238, 0.08);
 }
 
 body.admin-modern .dashboard-hero__eyebrow {
-    color: #c2410c;
+    color: var(--admin-accent-strong);
 }
 
 body.admin-modern .dashboard-stat-card__icon {
-    background: linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(251, 146, 60, 0.26));
-    color: #c2410c;
+    background: linear-gradient(135deg, rgba(45, 107, 238, 0.18), rgba(66, 133, 244, 0.24));
+    color: var(--admin-accent-strong);
 }
 
 body.admin-modern .dashboard-stat-card__link,
 body.admin-modern .dashboard-status-pill strong,
 body.admin-modern .dashboard-status-pill:hover {
-    color: #c2410c;
+    color: var(--admin-accent-strong);
 }
 
 body.admin-modern .dashboard-status-pill:hover {
-    background: #fff7ed;
+    background: #edf4ff;
 }
 
 body.admin-modern .dashboard-table thead th {
-    background: #fff7ed;
+    background: #edf4ff;
 }
 
 body.admin-modern .dashboard-table tbody tr:hover {
-    background: #fffaf5;
+    background: #f5f9ff;
 }
 
 body.admin-modern .dashboard-status-badge.status-active {
-    background: rgba(249, 115, 22, 0.12);
-    color: #c2410c;
+    background: rgba(45, 107, 238, 0.12);
+    color: var(--admin-accent-strong);
 }
 
 body.admin-modern .dashboard-status-badge.status-complete {

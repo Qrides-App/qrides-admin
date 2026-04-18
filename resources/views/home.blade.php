@@ -225,10 +225,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
     <script>
         const colors = {
-            teal: '#f97316',
-            tealSoft: 'rgba(249, 115, 22, 0.16)',
+            teal: '#2D6BEE',
+            tealSoft: 'rgba(45, 107, 238, 0.16)',
             slate: '#475569',
-            border: '#e7d8c7'
+            border: '#d7e3f6'
         };
 
         const latestUsersData = @json($latestUsersData);

@@ -2667,11 +2667,14 @@ body.admin-theme {
 /* Modern Admin Refresh */
 body.admin-modern {
   --admin-sidebar-width: 290px;
-  --admin-accent: #f97316;
-  --admin-accent-strong: #ea580c;
-  --admin-accent-soft: rgba(249, 115, 22, 0.14);
-  --admin-accent-softer: rgba(249, 115, 22, 0.08);
-  --admin-ink: #0f172a;
+  --admin-accent: #2D6BEE;
+  --admin-accent-strong: #1f57c9;
+  --admin-accent-soft: rgba(45, 107, 238, 0.14);
+  --admin-accent-softer: rgba(45, 107, 238, 0.08);
+  --admin-accent-secondary: #4285F4;
+  --admin-success: #4CAF50;
+  --admin-success-soft: rgba(76, 175, 80, 0.16);
+  --admin-ink: #333333;
   --admin-muted: #64748b;
   --admin-border: #e5e7eb;
   --admin-surface: rgba(255, 255, 255, 0.84);
@@ -2680,9 +2683,9 @@ body.admin-modern {
   --admin-sidebar-end: #0f172a;
   --admin-shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
   background:
-    radial-gradient(circle at top left, rgba(249, 115, 22, 0.18), transparent 28%),
-    radial-gradient(circle at top right, rgba(15, 23, 42, 0.08), transparent 24%),
-    linear-gradient(180deg, #fff9f5 0%, #f8fafc 44%, #eef2f7 100%);
+    radial-gradient(circle at top left, rgba(45, 107, 238, 0.16), transparent 28%),
+    radial-gradient(circle at top right, rgba(66, 133, 244, 0.1), transparent 24%),
+    linear-gradient(180deg, #f7fbff 0%, #f4f8fc 44%, #e8f0f7 100%);
   color: var(--admin-ink);
 }
 
@@ -2725,7 +2728,7 @@ body.admin-modern .ion {
 }
 
 body.admin-modern a {
-  color: #c2410c;
+  color: var(--admin-accent-strong);
   transition: color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
@@ -2758,7 +2761,7 @@ body.admin-modern .admin-layout-shell::before {
   right: 5%;
   width: 220px;
   height: 220px;
-  background: rgba(249, 115, 22, 0.08);
+  background: rgba(45, 107, 238, 0.1);
 }
 
 body.admin-modern .admin-layout-shell::after {
@@ -2806,7 +2809,7 @@ body.admin-modern .main-header .logo::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), transparent 60%);
+  background: linear-gradient(135deg, rgba(45, 107, 238, 0.24), transparent 60%);
   pointer-events: none;
 }
 
@@ -2906,7 +2909,7 @@ body.admin-modern .admin-topbar-pill {
 
 body.admin-modern .admin-topbar-pill--subtle {
   background: var(--admin-accent-soft);
-  border-color: rgba(249, 115, 22, 0.18);
+  border-color: rgba(45, 107, 238, 0.18);
   color: var(--admin-accent-strong);
 }
 
@@ -2961,7 +2964,7 @@ body.admin-modern .admin-user-chip__avatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--admin-accent), #fb923c);
+  background: linear-gradient(135deg, var(--admin-accent), var(--admin-accent-secondary));
   color: #fff;
   font-weight: 800;
 }
@@ -2990,7 +2993,7 @@ body.admin-modern .dropdown-menu>li>a {
 }
 
 body.admin-modern .dropdown-menu>li>a:hover {
-  background: #fff7ed;
+  background: #edf4ff;
   color: var(--admin-accent-strong);
 }
 
@@ -3041,7 +3044,7 @@ body.admin-modern .admin-sidebar-brand::before {
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: rgba(249, 115, 22, 0.16);
+  background: rgba(45, 107, 238, 0.18);
   filter: blur(8px);
 }
 
@@ -3053,8 +3056,8 @@ body.admin-modern .admin-sidebar-brand__badge {
   min-height: 28px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(249, 115, 22, 0.14);
-  color: #fed7aa;
+  background: rgba(45, 107, 238, 0.14);
+  color: #dbeafe;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -3124,7 +3127,7 @@ body.admin-modern .sidebar-menu>li>a::before {
   bottom: 11px;
   width: 4px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #fb923c, #f97316);
+  background: linear-gradient(180deg, var(--admin-accent-secondary), var(--admin-accent));
   opacity: 0;
   transition: opacity 0.18s ease;
 }
@@ -3132,7 +3135,7 @@ body.admin-modern .sidebar-menu>li>a::before {
 body.admin-modern .sidebar-menu>li>a>i {
   width: 18px;
   text-align: center;
-  color: rgba(251, 146, 60, 0.92);
+  color: rgba(96, 165, 250, 0.95);
 }
 
 body.admin-modern .sidebar-menu>li>a .pull-right-container {
@@ -3151,10 +3154,10 @@ body.admin-modern .sidebar-menu>li.menu-open>a {
 }
 
 body.admin-modern .sidebar-menu>li.active>a {
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.28), rgba(124, 45, 18, 0.24)) !important;
+  background: linear-gradient(135deg, rgba(45, 107, 238, 0.26), rgba(21, 43, 92, 0.26)) !important;
   color: #fff !important;
-  border-color: rgba(251, 146, 60, 0.34);
-  box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.22), 0 10px 30px rgba(15, 23, 42, 0.18);
+  border-color: rgba(96, 165, 250, 0.32);
+  box-shadow: inset 0 0 0 1px rgba(45, 107, 238, 0.2), 0 10px 30px rgba(15, 23, 42, 0.18);
 }
 
 body.admin-modern .sidebar-menu>li.active>a,
@@ -3199,13 +3202,13 @@ body.admin-modern .treeview-menu>li>a {
 }
 
 body.admin-modern .treeview-menu>li>a i {
-  color: rgba(251, 191, 36, 0.82);
+  color: rgba(147, 197, 253, 0.9);
 }
 
 body.admin-modern .treeview-menu>li.active>a,
 body.admin-modern .treeview-menu>li>a:hover {
-  background: linear-gradient(90deg, rgba(249, 115, 22, 0.22), rgba(249, 115, 22, 0.06));
-  border-left-color: #fb923c;
+  background: linear-gradient(90deg, rgba(45, 107, 238, 0.22), rgba(45, 107, 238, 0.06));
+  border-left-color: var(--admin-accent-secondary);
   color: #fff;
 }
 
@@ -3235,7 +3238,7 @@ body.admin-modern .admin-page-intro {
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.48);
   background:
-    radial-gradient(circle at top right, rgba(249, 115, 22, 0.14), transparent 22%),
+    radial-gradient(circle at top right, rgba(45, 107, 238, 0.14), transparent 22%),
     linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.74));
   box-shadow: var(--admin-shadow);
 }
@@ -3319,7 +3322,7 @@ body.admin-modern .admin-footer-copy {
 }
 
 body.admin-modern .admin-footer-copy strong {
-  color: #9a3412;
+  color: var(--admin-accent-strong);
 }
 
 body.admin-modern .admin-footer-copy--muted {
@@ -3448,8 +3451,8 @@ body.admin-modern .nav-stacked>li>a:hover,
 body.admin-modern .nav-tabs>li>a:focus,
 body.admin-modern .nav-pills>li>a:focus,
 body.admin-modern .nav-stacked>li>a:focus {
-  border-color: rgba(249, 115, 22, 0.24);
-  background: #fff7ed;
+  border-color: rgba(45, 107, 238, 0.24);
+  background: #edf4ff;
   color: var(--admin-accent-strong);
 }
 
@@ -3463,10 +3466,10 @@ body.admin-modern .nav-stacked>li.active>a,
 body.admin-modern .nav-stacked>li.active>a:hover,
 body.admin-modern .nav-stacked>li.active>a:focus,
 body.admin-modern .nav-stacked>li>a.active {
-  background: linear-gradient(135deg, var(--admin-accent), #fb923c);
+  background: linear-gradient(135deg, var(--admin-accent), var(--admin-accent-secondary));
   border-color: transparent;
   color: #fff !important;
-  box-shadow: 0 14px 30px rgba(249, 115, 22, 0.22);
+  box-shadow: 0 14px 30px rgba(45, 107, 238, 0.22);
 }
 
 body.admin-modern label,
@@ -3498,9 +3501,9 @@ body.admin-modern textarea.form-control {
 }
 
 body.admin-modern .form-control:focus {
-  border-color: rgba(249, 115, 22, 0.34);
+  border-color: rgba(45, 107, 238, 0.34);
   background: #fff;
-  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.12);
+  box-shadow: 0 0 0 4px rgba(45, 107, 238, 0.12);
 }
 
 body.admin-modern .input-group .form-control {
@@ -3546,8 +3549,8 @@ body.admin-modern .select2-container--default .select2-selection--multiple {
 
 body.admin-modern .select2-container--default.select2-container--focus .select2-selection--multiple,
 body.admin-modern .select2-container--default.select2-container--open .select2-selection--single {
-  border-color: rgba(249, 115, 22, 0.34) !important;
-  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.12);
+  border-color: rgba(45, 107, 238, 0.34) !important;
+  box-shadow: 0 0 0 4px rgba(45, 107, 238, 0.12);
   background: #fff !important;
 }
 
@@ -3584,16 +3587,16 @@ body.admin-modern .btn:focus {
 
 body.admin-modern .btn-primary,
 body.admin-modern .btn-success {
-  background: linear-gradient(135deg, var(--admin-accent), #fb923c) !important;
+  background: linear-gradient(135deg, var(--admin-accent), var(--admin-accent-secondary)) !important;
   color: #fff !important;
-  box-shadow: 0 14px 28px rgba(249, 115, 22, 0.2);
+  box-shadow: 0 14px 28px rgba(45, 107, 238, 0.18);
 }
 
 body.admin-modern .btn-primary:hover,
 body.admin-modern .btn-success:hover,
 body.admin-modern .btn-primary:focus,
 body.admin-modern .btn-success:focus {
-  background: linear-gradient(135deg, #ea580c, #f97316) !important;
+  background: linear-gradient(135deg, var(--admin-accent-strong), var(--admin-accent)) !important;
 }
 
 body.admin-modern .btn-info,
@@ -3608,8 +3611,8 @@ body.admin-modern .btn-inactive {
 body.admin-modern .btn-info:hover,
 body.admin-modern .btn-default:hover,
 body.admin-modern .btn-inactive:hover {
-  border-color: rgba(249, 115, 22, 0.22) !important;
-  background: #fff7ed !important;
+  border-color: rgba(45, 107, 238, 0.22) !important;
+  background: #edf4ff !important;
   color: var(--admin-accent-strong) !important;
 }
 
@@ -3673,7 +3676,7 @@ body.admin-modern .badge-info {
 
 body.admin-modern .badge-primary,
 body.admin-modern .live-badge.badge-primary {
-  background: rgba(249, 115, 22, 0.14) !important;
+  background: rgba(45, 107, 238, 0.14) !important;
   color: var(--admin-accent-strong) !important;
 }
 
@@ -3727,7 +3730,7 @@ body.admin-modern .table>tbody>tr>td {
 
 body.admin-modern .table-hover>tbody>tr:hover,
 body.admin-modern .table>tbody>tr:hover {
-  background: #fff8f2;
+  background: #f5f9ff;
 }
 
 body.admin-modern .img-circle {
@@ -3809,7 +3812,7 @@ body.admin-modern .pagination>.active>a:hover,
 body.admin-modern .pagination>.active>span,
 body.admin-modern .pagination>.active>span:focus,
 body.admin-modern .pagination>.active>span:hover {
-  background: linear-gradient(135deg, var(--admin-accent), #fb923c);
+  background: linear-gradient(135deg, var(--admin-accent), var(--admin-accent-secondary));
   border-color: transparent;
   color: #fff;
 }
@@ -3821,7 +3824,21 @@ body.admin-modern .pagination>.disabled>a {
 }
 
 body.admin-modern .status-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  width: auto;
   gap: 12px;
+}
+
+body.admin-modern .status-toggle.d-flex,
+body.admin-modern td .status-toggle,
+body.admin-modern .table .status-toggle {
+  display: inline-flex !important;
+  justify-content: flex-start !important;
+  width: auto !important;
+  min-width: 56px;
 }
 
 body.admin-modern .check {
@@ -3831,34 +3848,41 @@ body.admin-modern .check {
 body.admin-modern .checktoggle {
   position: relative;
   display: inline-flex;
-  width: 52px;
-  height: 32px;
+  align-items: center;
+  width: 56px;
+  height: 30px;
+  flex: 0 0 56px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: #d7e2f1;
+  border: 1px solid rgba(148, 163, 184, 0.26);
   text-indent: -9999px;
   cursor: pointer;
+  overflow: visible;
   transition: all 0.18s ease;
 }
 
 body.admin-modern .checktoggle::after {
   content: "";
   position: absolute;
-  top: 4px;
-  left: 4px;
+  top: 2px;
+  left: 2px;
   width: 24px;
   height: 24px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.16);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
   transition: all 0.18s ease;
 }
 
 body.admin-modern .check:checked+.checktoggle {
-  background: linear-gradient(135deg, var(--admin-accent), #fb923c);
+  background: linear-gradient(135deg, var(--admin-success), #6ccf71);
+  border-color: rgba(76, 175, 80, 0.22);
+  box-shadow: 0 10px 20px rgba(76, 175, 80, 0.2);
 }
 
 body.admin-modern .check:checked+.checktoggle::after {
-  transform: translateX(20px);
+  transform: translateX(26px);
 }
 
 body.admin-modern .daterangepicker {
@@ -3876,7 +3900,7 @@ body.admin-modern .daterangepicker .calendar-table {
 body.admin-modern .daterangepicker td.active,
 body.admin-modern .daterangepicker td.active:hover,
 body.admin-modern .daterangepicker .ranges li.active {
-  background: linear-gradient(135deg, var(--admin-accent), #fb923c);
+  background: linear-gradient(135deg, var(--admin-accent), var(--admin-accent-secondary));
 }
 
 body.admin-modern .swal2-popup {
@@ -4785,15 +4809,15 @@ body.admin-modern .admin-page-shell .content .btn.btn-default {
 }
 
 body.admin-modern .admin-page-shell .content .btn.btn-danger {
-  background: linear-gradient(135deg, #f97316, #ea580c);
+  background: linear-gradient(135deg, #ef4444, #dc2626);
   color: #fff;
-  box-shadow: 0 16px 30px rgba(249, 115, 22, 0.16);
+  box-shadow: 0 16px 30px rgba(239, 68, 68, 0.16);
 }
 
 body.admin-modern .admin-page-shell .content .btn.btn-primary {
-  background: linear-gradient(135deg, #0f172a, #1e293b);
+  background: linear-gradient(135deg, var(--admin-accent), var(--admin-accent-secondary));
   color: #fff;
-  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 16px 30px rgba(45, 107, 238, 0.16);
 }
 
 body.admin-modern .admin-page-shell .content .btn.btn-info {
