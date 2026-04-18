@@ -7,8 +7,8 @@
     display: flex;
     align-items: stretch;
     justify-content: space-between;
-    gap: 18px;
-    margin-bottom: 22px;
+    gap: 20px;
+    margin-bottom: 24px;
 }
 
 .dashboard-hero__copy,
@@ -21,7 +21,7 @@
 
 .dashboard-hero__copy {
     flex: 1;
-    padding: 28px 30px;
+    padding: 30px 32px;
 }
 
 .dashboard-hero__eyebrow {
@@ -36,9 +36,10 @@
 
 .dashboard-hero__copy h1 {
     margin: 0;
-    font-size: 32px;
-    font-weight: 700;
+    font-size: 34px;
+    font-weight: 800;
     color: #0f172a;
+    letter-spacing: -0.04em;
 }
 
 .dashboard-hero__copy p {
@@ -52,7 +53,7 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
-    width: 320px;
+    width: 340px;
 }
 
 .dashboard-hero__meta-card {
@@ -91,6 +92,23 @@
     color: inherit;
     text-decoration: none;
     transition: transform 0.16s ease, box-shadow 0.16s ease;
+    overflow: hidden;
+}
+
+.dashboard-grid .col-sm-6:nth-child(1) .dashboard-stat-card {
+    background: linear-gradient(145deg, #ffffff, #f7fbff);
+}
+
+.dashboard-grid .col-sm-6:nth-child(2) .dashboard-stat-card {
+    background: linear-gradient(145deg, #ffffff, #fff8f2);
+}
+
+.dashboard-grid .col-sm-6:nth-child(3) .dashboard-stat-card {
+    background: linear-gradient(145deg, #ffffff, #f7fcfa);
+}
+
+.dashboard-grid .col-sm-6:nth-child(4) .dashboard-stat-card {
+    background: linear-gradient(145deg, #ffffff, #fff7ed);
 }
 
 .dashboard-stat-card:hover {
@@ -150,11 +168,14 @@
     color: #334155;
     text-decoration: none;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
 .dashboard-status-pill:hover {
     color: #0f766e;
     text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
 }
 
 .dashboard-status-pill strong {
@@ -164,6 +185,10 @@
 
 .dashboard-panel {
     height: 100%;
+}
+
+.dashboard-panel--compact .settings-card__header {
+    padding-bottom: 12px;
 }
 
 .dashboard-panel .settings-card__header {

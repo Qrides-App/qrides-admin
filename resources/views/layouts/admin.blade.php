@@ -5,8 +5,95 @@
     @php
         $routeName = \Illuminate\Support\Facades\Route::currentRouteName();
         $routeSegments = array_values(array_filter(explode('.', str_replace('admin.', '', (string) $routeName))));
-        $currentArea = count($routeSegments) ? \Illuminate\Support\Str::headline(str_replace('-', ' ', $routeSegments[0])) : 'Dashboard';
-        $currentView = count($routeSegments) > 1 ? \Illuminate\Support\Str::headline(str_replace('-', ' ', end($routeSegments))) : 'Overview';
+        $routeKey = $routeSegments[0] ?? 'home';
+        $resourceLabels = [
+            'home' => 'Dashboard',
+            'permissions' => 'Permissions',
+            'roles' => 'Roles',
+            'users' => 'Users',
+            'vehicle-type' => 'Vehicle types',
+            'vehicle-location' => 'Vehicle locations',
+            'vehicle-makes' => 'Vehicle makes',
+            'payout-method' => 'Payout methods',
+            'cancellation' => 'Cancellation reasons',
+            'item-rule' => 'Item rules',
+            'drivers' => 'Drivers',
+            'driver' => 'Driver profile',
+            'app-users' => 'Riders',
+            'bookings' => 'Bookings',
+            'hire-bookings' => 'QR Hire rides',
+            'add-coupons' => 'Coupons',
+            'finance' => 'Finance',
+            'payouts' => 'Payouts',
+            'reviews' => 'Reviews',
+            'settings' => 'General settings',
+            'email-templates' => 'Email templates',
+            'sos' => 'SOS',
+            'recharge-plans' => 'Driver recharge plans',
+            'static-pages' => 'Static pages',
+            'sliders' => 'Sliders',
+            'ticket' => 'Support tickets',
+            'report-page' => 'Reports',
+        ];
+        $sectionLabels = [
+            'home' => 'Dashboard',
+            'permissions' => 'Admin management',
+            'roles' => 'Admin management',
+            'users' => 'Admin management',
+            'vehicle-type' => 'Platform setup',
+            'vehicle-location' => 'Platform setup',
+            'vehicle-makes' => 'Platform setup',
+            'payout-method' => 'Platform setup',
+            'cancellation' => 'Platform setup',
+            'item-rule' => 'Platform setup',
+            'drivers' => 'Driver management',
+            'driver' => 'Driver management',
+            'app-users' => 'Rider management',
+            'bookings' => 'Ride management',
+            'hire-bookings' => 'Ride management',
+            'add-coupons' => 'Coupons',
+            'finance' => 'Transaction reports',
+            'payouts' => 'Transaction reports',
+            'reviews' => 'Reviews',
+            'settings' => 'Settings',
+            'email-templates' => 'Settings',
+            'sos' => 'Settings',
+            'recharge-plans' => 'Settings',
+            'static-pages' => 'Settings',
+            'sliders' => 'Settings',
+            'ticket' => 'Support tickets',
+            'report-page' => 'Reports',
+        ];
+        $sectionDescriptions = [
+            'Dashboard' => 'Track riders, drivers, bookings, and revenue from one control room.',
+            'Admin management' => 'Control internal access, permissions, and operator roles.',
+            'Platform setup' => 'Configure vehicles, payout methods, and operating rules.',
+            'Driver management' => 'Review driver accounts, status, payouts, and compliance.',
+            'Rider management' => 'Manage rider accounts, onboarding, and account health.',
+            'Ride management' => 'Monitor booking flow, QR Hire activity, and ride states.',
+            'Coupons' => 'Manage promotional offers, pricing campaigns, and coupon access.',
+            'Transaction reports' => 'Track finance, payouts, approvals, and revenue movement.',
+            'Reviews' => 'Review customer feedback and moderation outcomes.',
+            'Settings' => 'Manage configuration, templates, static content, and emergency tools.',
+            'Support tickets' => 'Handle support queues, issue follow-up, and customer requests.',
+            'Reports' => 'Review exported summaries and operational reporting.',
+        ];
+        $resourceLabel = $resourceLabels[$routeKey] ?? \Illuminate\Support\Str::headline(str_replace('-', ' ', $routeKey));
+        $currentArea = $sectionLabels[$routeKey] ?? $resourceLabel;
+        $actionSegment = end($routeSegments) ?: 'home';
+        $actionLabels = [
+            'index' => $resourceLabel,
+            'create' => 'Create ' . $resourceLabel,
+            'edit' => 'Edit ' . $resourceLabel,
+            'show' => $resourceLabel . ' details',
+            'trash' => $resourceLabel . ' archive',
+        ];
+        $currentView = count($routeSegments) > 1
+            ? ($actionLabels[$actionSegment] ?? \Illuminate\Support\Str::headline(str_replace('-', ' ', $actionSegment)))
+            : $resourceLabel;
+        $topbarView = request()->routeIs('admin.home') ? 'Control center' : $currentView;
+        $topbarSubtitle = request()->routeIs('admin.home') ? 'Operations workspace' : $currentArea . ' workspace';
+        $pageDescription = $sectionDescriptions[$currentArea] ?? 'Manage live operations, configuration, and data from a cleaner control surface.';
         $todayLabel = now()->format('d M Y');
     @endphp
     <meta charset="UTF-8">
@@ -73,11 +160,11 @@
 
                 <div class="admin-topbar-copy hidden-xs">
                     <div class="admin-topbar-copy__title">{{ $siteName ?? trans('global.site_title') }}</div>
-                    <div class="admin-topbar-copy__subtitle">{{ $currentArea }} workspace</div>
+                    <div class="admin-topbar-copy__subtitle">{{ $topbarSubtitle }}</div>
                 </div>
 
                 <div class="admin-topbar-meta hidden-sm hidden-xs">
-                    <span class="admin-topbar-pill">{{ $currentView }}</span>
+                    <span class="admin-topbar-pill">{{ $topbarView }}</span>
                     <span class="admin-topbar-pill admin-topbar-pill--subtle">{{ $todayLabel }}</span>
                 </div>
 
@@ -138,10 +225,10 @@
                     <div>
                         <span class="admin-page-intro__eyebrow">{{ $currentArea }}</span>
                         <h1 class="admin-page-intro__title">{{ $currentView }}</h1>
-                        <p class="admin-page-intro__subtitle">Manage live operations, configuration, and data with a cleaner control surface.</p>
+                        <p class="admin-page-intro__subtitle">{{ $pageDescription }}</p>
                     </div>
                     <div class="admin-page-intro__meta">
-                        <span>{{ $siteName ?? trans('global.site_title') }}</span>
+                        <span>{{ $siteName ?? trans('global.site_title') }} admin</span>
                         <strong>{{ $todayLabel }}</strong>
                     </div>
                 </div>
@@ -171,8 +258,13 @@
             </div>
         </div>
         <footer class="main-footer text-center">
-            <strong>{{ $siteName }} &copy;</strong> {{ trans('global.allRightsReserved') }} Powered by <a
-                href='https://cravecabs.com/' target="_blank">CraveCabs</a>
+            <div class="admin-footer-copy">
+                <strong>QRIDES</strong> is a brand name under <strong>BAMIRA TRANSPORTATION PRIVATE LIMITED</strong>.
+                {{ trans('global.allRightsReserved') }}
+            </div>
+            <div class="admin-footer-copy admin-footer-copy--muted">
+                Designed and developed by <strong>Rareus Private Limited</strong>.
+            </div>
         </footer>
 
         <form id="logoutform" action="{{ route('logout') }}" method="POST" style="display: none;">

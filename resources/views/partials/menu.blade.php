@@ -1,5 +1,13 @@
 <aside class="main-sidebar">
     <section class="sidebar" style="height: auto;">
+        <div class="admin-sidebar-brand">
+            <span class="admin-sidebar-brand__badge">QRIDES admin</span>
+            <div class="admin-sidebar-brand__title">{{ $siteName ?? trans('global.site_title') }}</div>
+            <div class="admin-sidebar-brand__meta">Operations, users, rides, and platform controls.</div>
+        </div>
+
+        <div class="admin-sidebar-section-label">Navigation</div>
+
         <ul class="sidebar-menu tree" data-widget="tree">
             <li class="{{ request()->is('admin') ? 'active' : '' }}">
                 <a href="{{ route('admin.home') }}">
@@ -9,7 +17,7 @@
             </li>
 
             @can('user_management_access')
-                <li class="treeview">
+                <li class="treeview {{ request()->is('admin/permissions') || request()->is('admin/permissions/*') || request()->is('admin/roles') || request()->is('admin/roles/*') || request()->is('admin/users') || request()->is('admin/users/*') ? 'active menu-open' : '' }}">
                     <a href="#">
                         <i class="fa-fw fas fa-users"></i>
                         <span> {{ trans('menu.adminManagement') }}</span>
@@ -45,7 +53,7 @@
                 </li>
             @endcan
             @can('vehicle_setting_access')
-                <li class="treeview">
+                <li class="treeview {{ request()->is('admin/vehicle-type') || request()->is('admin/vehicle-type/*') || request()->is('admin/vehicle-location') || request()->is('admin/vehicle-location/*') || request()->is('admin/vehicle-makes') || request()->is('admin/vehicle-makes/*') || request()->is('admin/payout-method') || request()->is('admin/payout-method/*') || request()->is('admin/cancellation') || request()->is('admin/cancellation/*') || request()->is('admin/item-rule') || request()->is('admin/item-rule/*') ? 'active menu-open' : '' }}">
                     <a href="#">
                         <i class="fa-fw fas fa-car"></i>
                         <span>{{ trans('menu.platform_setup') }}</span>
@@ -96,7 +104,7 @@
 
                         @can('cancellation_access')
                             <li
-                                class="{{ request()->is('admin/cancellation') || request()->is('admin/cancellation /*') ? 'active' : '' }}">
+                                class="{{ request()->is('admin/cancellation') || request()->is('admin/cancellation/*') ? 'active' : '' }}">
                                 <a href="{{ route('admin.cancellation.index') }}">
                                     <i class='fas fa-dot-circle'></i>
                                     <span>{{ trans('menu.cancellationReason_title') }}</span>
@@ -199,7 +207,7 @@
             @endcan
 
             @can('booking_access')
-                <li class="treeview {{ request()->is('admin/bookings*') ? 'active' : '' }}">
+                <li class="treeview {{ request()->is('admin/bookings*') || request()->is('admin/hire-bookings*') ? 'active menu-open' : '' }}">
                     <a href="#">
                         <i class="far fa-calendar-alt"></i>
                         <span>{{ trans('menu.manage_rides') }}</span>
@@ -309,7 +317,7 @@
  -->
 
             @can('coupon_access')
-                <li class="treeview">
+                <li class="treeview {{ request()->is('admin/add-coupons') || request()->is('admin/add-coupons/*') ? 'active menu-open' : '' }}">
                     <a href="#">
                         <i class="fa-fw fas fa-ticket-alt"></i>
                         <span>{{ trans('menu.coupon_title') }}</span>
@@ -336,7 +344,7 @@
 
             @can('transactions_reports_access')
                 <li
-                    class="treeview {{ request()->is('admin/payouts*') || request()->is('admin/finance*') ? 'active' : '' }}">
+                    class="treeview {{ request()->is('admin/payouts*') || request()->is('admin/finance*') ? 'active menu-open' : '' }}">
                     <a href="#">
                         <i class="fa-fw fas fa-users"></i>
                         <span>{{ trans('menu.transactions_reports') }}</span>
@@ -395,7 +403,26 @@
             @endcan
 
             <!-- Settings -->
-            <li class="treeview">
+            @php
+                $settingsTreeActive =
+                    request()->is('admin/general-settings') ||
+                    request()->is('admin/general-settings/*') ||
+                    request()->is('admin/static-pages') ||
+                    request()->is('admin/static-pages/*') ||
+                    request()->is('admin/email-templates') ||
+                    request()->is('admin/email-templates/*') ||
+                    request()->is('user/email-templates') ||
+                    request()->is('user/email-templates/*') ||
+                    request()->is('vendor/email-templates') ||
+                    request()->is('vendor/email-templates/*') ||
+                    request()->is('admin/sos') ||
+                    request()->is('admin/sos/*') ||
+                    request()->is('admin/recharge-plans') ||
+                    request()->is('admin/recharge-plans/*') ||
+                    request()->is('admin/sliders') ||
+                    request()->is('admin/sliders/*');
+            @endphp
+            <li class="treeview {{ $settingsTreeActive ? 'active menu-open' : '' }}">
                 <a href="#">
                     <i class="fa fa-list-alt"></i>
                     <span>{{ trans('menu.settings') }}</span>
@@ -489,7 +516,7 @@
             </li>
 
             @can('support_ticket')
-                <li class="{{ request()->is('admin/ticket') || request()->is('admin/ticket /*') ? 'active' : '' }}">
+                <li class="{{ request()->is('admin/ticket') || request()->is('admin/ticket/*') ? 'active' : '' }}">
                     <a href="{{ route('admin.ticket.index', ['status' => 1]) }}">
                         <i class="fa fa-ticket" aria-hidden="true"></i>
                         <span>Support Tickets</span>

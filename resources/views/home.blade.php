@@ -3,6 +3,7 @@
 @section('content')
     @php
         $currentDate = date('Y-m-d');
+        $dashboardBrand = $siteName ?? 'QRIDES';
         $heroMetrics = [
             ['key' => 'total_drivers', 'label' => 'Drivers', 'icon' => 'fa-car', 'route' => route('admin.drivers.index')],
             ['key' => 'total_riders', 'label' => 'Riders', 'icon' => 'fa-users', 'route' => route('admin.app-users.index', ['user_type' => 'user'])],
@@ -46,9 +47,9 @@
 
             <div class="dashboard-hero">
                 <div class="dashboard-hero__copy">
-                    <span class="dashboard-hero__eyebrow">Dashboard</span>
-                    <h1>{{ $moduleName }} operations dashboard</h1>
-                    <p>Track ride demand, driver activity, and revenue from a single control room.</p>
+                    <span class="dashboard-hero__eyebrow">Operations</span>
+                    <h1>{{ $dashboardBrand }} control center</h1>
+                    <p>Monitor drivers, riders, live ride flow, and revenue from a single QRIDES operations workspace.</p>
                 </div>
                 <div class="dashboard-hero__meta">
                     <div class="dashboard-hero__meta-card">
@@ -56,8 +57,8 @@
                         <strong>{{ now()->format('d M Y') }}</strong>
                     </div>
                     <div class="dashboard-hero__meta-card">
-                        <span>Module</span>
-                        <strong>{{ $moduleId }}</strong>
+                        <span>Service</span>
+                        <strong>{{ $moduleName }}</strong>
                     </div>
                 </div>
             </div>
