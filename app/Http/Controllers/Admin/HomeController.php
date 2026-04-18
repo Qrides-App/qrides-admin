@@ -8,6 +8,7 @@ use App\Models\GeneralSetting;
 use App\Models\Module;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class HomeController
