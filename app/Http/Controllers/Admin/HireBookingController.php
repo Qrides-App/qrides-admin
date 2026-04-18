@@ -20,7 +20,6 @@ class HireBookingController extends Controller
         $query = HireBooking::with([
             'driver:id,first_name,last_name,phone',
             'rider:id,first_name,last_name,phone',
-            'item:id,registration_number,make,model',
         ]);
 
         if (! empty($filters['status'])) {
@@ -68,4 +67,3 @@ class HireBookingController extends Controller
         return view('admin.hireBookings.index', compact('bookings', 'summary', 'filters'));
     }
 }
-
