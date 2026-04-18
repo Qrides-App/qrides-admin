@@ -2202,6 +2202,18 @@ body.admin-theme {
   color: #64748b;
 }
 
+.push-provider-pane {
+  display: none;
+}
+
+.push-provider-pane.is-active {
+  display: block;
+}
+
+.push-provider-callout {
+  margin: 0;
+}
+
 .settings-toolbar {
   display: flex;
   justify-content: flex-end;
@@ -2802,6 +2814,12 @@ body.admin-modern .main-header {
   left: 18px;
   right: 18px;
   z-index: 1040;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+
+body.admin-modern .main-header.admin-header-hidden {
+  transform: translateY(calc(-100% - 24px));
+  opacity: 0;
 }
 
 body.admin-modern .main-header .logo {

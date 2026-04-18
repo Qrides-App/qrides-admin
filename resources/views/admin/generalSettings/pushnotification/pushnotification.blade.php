@@ -56,39 +56,87 @@
                     class="settings-card settings-form-card" enctype="multipart/form-data" novalidate="novalidate">
                     {{ csrf_field() }}
 
-                    <div class="settings-card__header">
-                        <div>
-                            <h3>OneSignal credentials</h3>
-                            <p>Keep separate credentials for the rider app and the driver app.</p>
+                    <div class="push-provider-pane {{ $pushnotification_status === 'firebase' ? '' : 'is-active' }}" data-provider-pane="onesignal">
+                        <div class="settings-card__header">
+                            <div>
+                                <h3>OneSignal credentials</h3>
+                                <p>Keep separate credentials for the rider app and the driver app.</p>
+                            </div>
+                        </div>
+
+                        <div class="settings-form-grid">
+                            <div class="settings-field">
+                                <label for="onesignal_app_id">App ID <span class="text-danger">*</span></label>
+                                <input class="form-control" type="password" name="onesignal_app_id" id="onesignal_app_id"
+                                    placeholder="Rider OneSignal app ID" value="{{ $onesignal_app_id ?? '' }}">
+                            </div>
+
+                            <div class="settings-field">
+                                <label for="onesignal_rest_api_key">REST API Key <span class="text-danger">*</span></label>
+                                <input class="form-control" type="password" name="onesignal_rest_api_key"
+                                    id="onesignal_rest_api_key" placeholder="Rider REST API key"
+                                    value="{{ $onesignal_rest_api_key ?? '' }}">
+                            </div>
+
+                            <div class="settings-field">
+                                <label for="onesignal_app_id_driver">Driver App ID <span class="text-danger">*</span></label>
+                                <input class="form-control" type="password" name="onesignal_app_id_driver"
+                                    id="onesignal_app_id_driver" placeholder="Driver OneSignal app ID"
+                                    value="{{ $onesignal_app_id_driver ?? '' }}">
+                            </div>
+
+                            <div class="settings-field">
+                                <label for="onesignal_rest_api_key_driver">Driver REST API Key <span class="text-danger">*</span></label>
+                                <input class="form-control" type="password" name="onesignal_rest_api_key_driver"
+                                    id="onesignal_rest_api_key_driver" placeholder="Driver REST API key"
+                                    value="{{ $onesignal_rest_api_key_driver ?? '' }}">
+                            </div>
                         </div>
                     </div>
 
-                    <div class="settings-form-grid">
-                        <div class="settings-field">
-                            <label for="onesignal_app_id">App ID <span class="text-danger">*</span></label>
-                            <input class="form-control" type="password" name="onesignal_app_id" id="onesignal_app_id"
-                                placeholder="Rider OneSignal app ID" value="{{ $onesignal_app_id ?? '' }}">
+                    <div class="push-provider-pane {{ $pushnotification_status === 'firebase' ? 'is-active' : '' }}" data-provider-pane="firebase">
+                        <div class="settings-card__header">
+                            <div>
+                                <h3>Firebase configuration</h3>
+                                <p>Use a service account file for HTTP v1, or save a legacy server key as a fallback.</p>
+                            </div>
                         </div>
 
-                        <div class="settings-field">
-                            <label for="onesignal_rest_api_key">REST API Key <span class="text-danger">*</span></label>
-                            <input class="form-control" type="password" name="onesignal_rest_api_key"
-                                id="onesignal_rest_api_key" placeholder="Rider REST API key"
-                                value="{{ $onesignal_rest_api_key ?? '' }}">
-                        </div>
+                        <div class="settings-form-grid">
+                            <div class="settings-field settings-field--full">
+                                <div class="settings-callout settings-callout--soft push-provider-callout">
+                                    <i class="fa fa-info-circle"></i>
+                                    <span>Preferred setup: upload your Firebase service account file on the server at <strong>{{ $firebaseCredentialsPath }}</strong>. If you do not have that yet, you can still use the legacy server key below.</span>
+                                </div>
+                            </div>
 
-                        <div class="settings-field">
-                            <label for="onesignal_app_id_driver">Driver App ID <span class="text-danger">*</span></label>
-                            <input class="form-control" type="password" name="onesignal_app_id_driver"
-                                id="onesignal_app_id_driver" placeholder="Driver OneSignal app ID"
-                                value="{{ $onesignal_app_id_driver ?? '' }}">
-                        </div>
+                            <div class="settings-field">
+                                <label>Credentials file</label>
+                                <div class="settings-status-pill {{ $firebaseCredentialsExists ? 'is-live' : 'is-muted' }}">
+                                    {{ $firebaseCredentialsExists ? 'Detected on server' : 'Missing on server' }}
+                                </div>
+                            </div>
 
-                        <div class="settings-field">
-                            <label for="onesignal_rest_api_key_driver">Driver REST API Key <span class="text-danger">*</span></label>
-                            <input class="form-control" type="password" name="onesignal_rest_api_key_driver"
-                                id="onesignal_rest_api_key_driver" placeholder="Driver REST API key"
-                                value="{{ $onesignal_rest_api_key_driver ?? '' }}">
+                            <div class="settings-field">
+                                <label>Firebase project</label>
+                                <div class="settings-status-pill {{ $firebaseProjectId ? 'is-live' : 'is-muted' }}">
+                                    {{ $firebaseProjectId ?: 'Project ID not detected' }}
+                                </div>
+                            </div>
+
+                            <div class="settings-field settings-field--full">
+                                <label for="firebase_server_key">Legacy Firebase server key</label>
+                                <input class="form-control" type="password" name="firebase_server_key" id="firebase_server_key"
+                                    placeholder="Optional if HTTP v1 credentials are configured"
+                                    value="{{ $firebase_server_key ?? '' }}">
+                                <p class="settings-help-copy">Leave this empty if HTTP v1 credentials are already available on the server.</p>
+                            </div>
+
+                            <div class="settings-field settings-field--full">
+                                <div class="settings-status-pill {{ $firebaseReady ? 'is-live' : 'is-muted' }}">
+                                    {{ $firebaseReady ? 'Firebase is ready to send notifications' : 'Firebase is not ready yet' }}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -265,11 +313,17 @@
                 });
             }
 
+            function toggleProviderPane(provider) {
+                $('[data-provider-pane]').removeClass('is-active');
+                $('[data-provider-pane="' + provider + '"]').addClass('is-active');
+            }
+
             $('#firebase_status').on('change', function() {
                 if ($(this).prop('checked')) {
                     $('#onesignal_status').prop('checked', false);
                     updateCheckboxStatus('firebase');
-                    $('.settings-status-pill').removeClass('is-live').addClass('is-muted').text('Firebase active');
+                    $('.settings-page-header__actions .settings-status-pill').removeClass('is-live').addClass('is-muted').text('Firebase active');
+                    toggleProviderPane('firebase');
                     return;
                 }
 
@@ -280,12 +334,15 @@
                 if ($(this).prop('checked')) {
                     $('#firebase_status').prop('checked', false);
                     updateCheckboxStatus('onesignal');
-                    $('.settings-status-pill').removeClass('is-muted').addClass('is-live').text('OneSignal active');
+                    $('.settings-page-header__actions .settings-status-pill').removeClass('is-muted').addClass('is-live').text('OneSignal active');
+                    toggleProviderPane('onesignal');
                     return;
                 }
 
                 $('#firebase_status').prop('checked', true);
             });
+
+            toggleProviderPane($('#firebase_status').prop('checked') ? 'firebase' : 'onesignal');
         });
     </script>
 @endsection

@@ -555,6 +555,32 @@
                 });
             @endif
     });
+
+        (function() {
+            const header = document.querySelector('body.admin-modern .main-header');
+            if (!header) {
+                return;
+            }
+
+            let lastScrollY = window.scrollY;
+
+            function syncHeaderVisibility() {
+                const currentScrollY = window.scrollY;
+
+                if (currentScrollY <= 24) {
+                    header.classList.remove('admin-header-hidden');
+                } else if (currentScrollY > lastScrollY) {
+                    header.classList.remove('admin-header-hidden');
+                } else {
+                    header.classList.add('admin-header-hidden');
+                }
+
+                lastScrollY = currentScrollY;
+            }
+
+            window.addEventListener('scroll', syncHeaderVisibility, { passive: true });
+            syncHeaderVisibility();
+        })();
     </script>
  @yield('scripts')
        <script src="{{ asset('js/resources/main.js') }}?{{ time() }}"></script>

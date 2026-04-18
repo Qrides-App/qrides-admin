@@ -737,12 +737,18 @@ class GeneralSettingController extends Controller
             'onesignal_rest_api_key',
             'onesignal_app_id_driver',
             'onesignal_rest_api_key_driver',
+            'firebase_server_key',
         ])->pluck('meta_value', 'meta_key');
         $pushnotification_status = $settings['push_notification_status'] ?? null;
         $onesignal_app_id = $settings['onesignal_app_id'] ?? null;
         $onesignal_rest_api_key = $settings['onesignal_rest_api_key'] ?? null;
         $onesignal_app_id_driver = $settings['onesignal_app_id_driver'] ?? null;
         $onesignal_rest_api_key_driver = $settings['onesignal_rest_api_key_driver'] ?? null;
+        $firebase_server_key = $settings['firebase_server_key'] ?? null;
+        $firebaseCredentialsPath = $this->getFirebaseCredentialsPath();
+        $firebaseCredentialsExists = is_readable($firebaseCredentialsPath);
+        $firebaseProjectId = $this->getFirebaseProjectId();
+        $firebaseReady = $this->shouldUseFcmHttpV1() || ! empty($firebase_server_key);
         $userids = AppUser::where('user_type', 'user')->where('status', 1)->get()->mapWithKeys(function ($user) {
             return [$user->id => $user->first_name . ' - ' . $user->phone . ' - ' . $user->email];
         })->prepend(trans('global.pleaseSelect'), '');
@@ -761,7 +767,12 @@ class GeneralSettingController extends Controller
             'onesignal_app_id',
             'onesignal_rest_api_key',
             'onesignal_app_id_driver',
-            'onesignal_rest_api_key_driver'
+            'onesignal_rest_api_key_driver',
+            'firebase_server_key',
+            'firebaseCredentialsPath',
+            'firebaseCredentialsExists',
+            'firebaseProjectId',
+            'firebaseReady'
         ));
     }
 
@@ -770,6 +781,29 @@ class GeneralSettingController extends Controller
         if (Gate::denies('general_setting_edit')) {
             return response()->json(['error' => 'Form submission is disabled in demo mode.'], 403);
         }
+        $provider = GeneralSetting::where('meta_key', 'push_notification_status')->value('meta_value') ?? 'onesignal';
+
+        if ($provider === 'firebase') {
+            $request->validate([
+                'firebase_server_key' => 'nullable|string',
+            ]);
+
+            if (! $this->shouldUseFcmHttpV1() && blank($request->firebase_server_key)) {
+                return response()->json([
+                    'error' => 'Firebase needs either a readable credentials file at storage/firebase/firebase_credentials.json or a legacy Firebase server key.',
+                ], 422);
+            }
+
+            if ($request->filled('firebase_server_key')) {
+                GeneralSetting::updateOrCreate(
+                    ['meta_key' => 'firebase_server_key'],
+                    ['meta_value' => trim((string) $request->firebase_server_key)]
+                );
+            }
+
+            return response()->json(['success' => 'Firebase settings updated successfully!']);
+        }
+
         $request->validate([
             'onesignal_app_id' => 'required|string',
             'onesignal_rest_api_key' => 'required|string',
