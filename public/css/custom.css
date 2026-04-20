@@ -1314,13 +1314,14 @@ select.input-sm {
 }
 
 .right-text img {
-
-  width: 40%;
-  margin-bottom: 40px;
-
-  border-radius: 50%;
-  padding: 25px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  width: auto;
+  max-width: 160px;
+  max-height: 88px;
+  margin-bottom: 0;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  object-fit: contain;
 }
 
 .right-text h5 {
@@ -1540,7 +1541,93 @@ select.input-sm {
 
 
 .login-page .right {
-  background: #e6b30f !important
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.16), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.12), transparent 24%),
+    linear-gradient(145deg, #f4b400 0%, #facc15 52%, #d97706 100%) !important;
+}
+
+.page-login__brand-panel {
+  position: relative;
+  overflow: hidden;
+  padding: 56px 52px;
+}
+
+.page-login__brand-panel::before {
+  content: "";
+  position: absolute;
+  inset: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 34px;
+  pointer-events: none;
+}
+
+.page-login__brand-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.page-login__brand-mark {
+  width: 196px;
+  min-height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 22px;
+  border-radius: 36px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 42px rgba(120, 53, 15, 0.16);
+}
+
+.page-login__brand-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.page-login__brand-copy h5 {
+  margin: 0;
+  font-size: 4.2rem;
+  line-height: 1.1;
+}
+
+.page-login__brand-description {
+  margin: 0;
+  max-width: 360px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.65rem;
+  line-height: 1.65;
+}
+
+.page-login__brand-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.page-login__brand-highlights span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.16);
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 600;
 }
 
 .login-box br {

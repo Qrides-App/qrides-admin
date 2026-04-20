@@ -150,19 +150,28 @@
                 </div>
             </div>
         </div>
-        <div class="right">
-            <div class="right-text">
-                @if ($logoUrl)
-                    <img src="{{ $logoUrl }}" alt="{{ $siteName ?? trans('global.site_title') }}" />
+        <div class="right page-login__brand-panel">
+            <div class="right-text page-login__brand-copy">
+                <div class="page-login__brand-mark">
+                    @if ($logoUrl)
+                        <img src="{{ $logoUrl }}" alt="{{ $siteName ?? trans('global.site_title') }}" />
+                    @else
+                        <b>{{ trans('global.site_title') }}</b>
+                    @endif
+                </div>
 
-                @else
-                    <b>{{ trans('global.site_title') }}</b>
-                @endif
-                <!-- <img src="{{ $logoUrl }}" /> -->
-
-                <h5>{{$tagLine}}</h5>
+                <span class="page-login__brand-label">QRIDES Admin Console</span>
+                <h5>{{ $siteName ?: trans('global.site_title') }}</h5>
+                <p class="page-login__brand-description">
+                    Manage drivers, riders, rides, recharge plans, payments, and daily platform operations from one secure workspace.
+                </p>
+                <div class="page-login__brand-highlights">
+                    <span>Driver ops</span>
+                    <span>Ride tracking</span>
+                    <span>Payments</span>
+                    <span>Settings</span>
+                </div>
             </div>
-
         </div>
         </div>
     </section>
