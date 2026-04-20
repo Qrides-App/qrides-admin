@@ -1656,6 +1656,7 @@ class AppUsersApiController extends Controller
 
         $amountPerDay = (float) (GeneralSetting::getMetaValue('driver_recharge_amount_per_day') ?: 30);
         $currencyCode = strtoupper(GeneralSetting::getMetaValue('driver_recharge_currency') ?: 'INR');
+        $gstPercentage = round((float) (GeneralSetting::getMetaValue('driver_recharge_gst_percentage') ?: 0), 2);
 
         $defaultPlans = [
             ['name' => 'Daily Plan', 'duration_days' => 1, 'amount' => $amountPerDay, 'sort_order' => 1],
@@ -1682,10 +1683,27 @@ class AppUsersApiController extends Controller
         $plans = DriverRechargePlan::active()
             ->orderBy('sort_order')
             ->orderBy('duration_days')
-            ->get(['id', 'name', 'duration_days', 'amount', 'currency_code']);
+            ->get(['id', 'name', 'duration_days', 'amount', 'currency_code'])
+            ->map(function ($plan) use ($gstPercentage) {
+                $baseAmount = round((float) $plan->amount, 2);
+                $gstAmount = round(($baseAmount * $gstPercentage) / 100, 2);
+                $totalAmount = round($baseAmount + $gstAmount, 2);
+
+                return [
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'duration_days' => (int) $plan->duration_days,
+                    'base_amount' => $baseAmount,
+                    'gst_percentage' => $gstPercentage,
+                    'gst_amount' => $gstAmount,
+                    'amount' => $totalAmount,
+                    'currency_code' => $plan->currency_code,
+                ];
+            })->values();
 
         return $this->addSuccessResponse(200, trans('global.Result_found'), [
             'amount_per_day' => $amountPerDay,
+            'gst_percentage' => $gstPercentage,
             'currency_code' => $currencyCode,
             'plans' => $plans,
         ]);
@@ -1713,12 +1731,14 @@ class AppUsersApiController extends Controller
 
         $amountPerDay = (float) (GeneralSetting::getMetaValue('driver_recharge_amount_per_day') ?: 30);
         $currencyCode = strtoupper(GeneralSetting::getMetaValue('driver_recharge_currency') ?: 'INR');
+        $gstPercentage = round((float) (GeneralSetting::getMetaValue('driver_recharge_gst_percentage') ?: 0), 2);
 
         return $this->addSuccessResponse(200, trans('global.Result_found'), [
             'recharge_valid_until' => $driver->recharge_valid_until ? Carbon::parse($driver->recharge_valid_until)->toDateTimeString() : null,
             'recharge_active' => (bool) $driver->recharge_active,
             'can_ride' => $this->canDriverRide($driver),
             'amount_per_day' => $amountPerDay,
+            'gst_percentage' => $gstPercentage,
             'currency_code' => $currencyCode,
         ]);
     }
@@ -1748,8 +1768,9 @@ class AppUsersApiController extends Controller
 
         $amountPerDay = (float) (GeneralSetting::getMetaValue('driver_recharge_amount_per_day') ?: 30);
         $currencyCode = strtoupper(GeneralSetting::getMetaValue('driver_recharge_currency') ?: 'INR');
+        $gstPercentage = round((float) (GeneralSetting::getMetaValue('driver_recharge_gst_percentage') ?: 0), 2);
         $durationDays = (int) $request->input('duration_days', 0);
-        $amount = 0.0;
+        $baseAmount = 0.0;
 
         if ($request->filled('plan_id')) {
             $plan = DriverRechargePlan::active()->find($request->plan_id);
@@ -1757,21 +1778,24 @@ class AppUsersApiController extends Controller
                 return $this->addErrorResponse(404, 'Recharge plan not found', '');
             }
             $durationDays = (int) $plan->duration_days;
-            $amount = (float) $plan->amount;
+            $baseAmount = (float) $plan->amount;
             $currencyCode = strtoupper($plan->currency_code ?: $currencyCode);
         } else {
             if ($durationDays <= 0) {
                 return $this->addErrorResponse(400, 'Duration is required when no plan is selected', '');
             }
-            $amount = round($durationDays * $amountPerDay, 2);
+            $baseAmount = round($durationDays * $amountPerDay, 2);
         }
 
-        if ($durationDays <= 0 || $amount <= 0) {
+        $gstAmount = round(($baseAmount * $gstPercentage) / 100, 2);
+        $amount = round($baseAmount + $gstAmount, 2);
+
+        if ($durationDays <= 0 || $baseAmount <= 0 || $amount <= 0) {
             return $this->addErrorResponse(400, 'Invalid recharge request', '');
         }
 
         try {
-            $payload = DB::transaction(function () use ($driverId, $amount, $durationDays, $currencyCode) {
+            $payload = DB::transaction(function () use ($driverId, $amount, $durationDays, $currencyCode, $baseAmount, $gstAmount, $gstPercentage) {
                 $driverLocked = AppUser::where('id', $driverId)
                     ->where('user_type', 'driver')
                     ->lockForUpdate()
@@ -1797,7 +1821,7 @@ class AppUsersApiController extends Controller
                     $amount,
                     null,
                     null,
-                    "Driver recharge for {$durationDays} day(s)"
+                    "Driver recharge for {$durationDays} day(s) (incl GST)"
                 );
 
                 $base = $driverLocked->recharge_valid_until && Carbon::parse($driverLocked->recharge_valid_until)->gt(Carbon::now())
@@ -1812,6 +1836,9 @@ class AppUsersApiController extends Controller
                     'recharge_active' => (bool) $driverLocked->recharge_active,
                     'can_ride' => true,
                     'duration_days' => $durationDays,
+                    'base_amount' => round($baseAmount, 2),
+                    'gst_percentage' => $gstPercentage,
+                    'gst_amount' => round($gstAmount, 2),
                     'amount' => round($amount, 2),
                     'currency_code' => $currencyCode,
                 ];
@@ -1853,8 +1880,9 @@ class AppUsersApiController extends Controller
         // Re-use pricing logic from rechargeWallet
         $amountPerDay = (float) (GeneralSetting::getMetaValue('driver_recharge_amount_per_day') ?: 30);
         $currencyCode = strtoupper($request->input('currency', GeneralSetting::getMetaValue('driver_recharge_currency') ?: 'INR'));
+        $gstPercentage = round((float) (GeneralSetting::getMetaValue('driver_recharge_gst_percentage') ?: 0), 2);
         $durationDays = (int) $request->input('duration_days', 0);
-        $amount = (float) $request->input('amount', 0);
+        $baseAmount = (float) $request->input('amount', 0);
 
         if ($request->filled('plan_id')) {
             $plan = DriverRechargePlan::active()->find($request->plan_id);
@@ -1862,18 +1890,21 @@ class AppUsersApiController extends Controller
                 return $this->addErrorResponse(404, 'Recharge plan not found', '');
             }
             $durationDays = (int) $plan->duration_days;
-            $amount = (float) $plan->amount;
+            $baseAmount = (float) $plan->amount;
             $currencyCode = strtoupper($plan->currency_code ?: $currencyCode);
         } else {
-            if ($durationDays <= 0 && $amount > 0) {
-                $durationDays = (int) ceil($amount / max($amountPerDay, 1));
+            if ($durationDays <= 0 && $baseAmount > 0) {
+                $durationDays = (int) ceil($baseAmount / max($amountPerDay, 1));
             }
-            if ($amount <= 0 && $durationDays > 0) {
-                $amount = round($durationDays * $amountPerDay, 2);
+            if ($baseAmount <= 0 && $durationDays > 0) {
+                $baseAmount = round($durationDays * $amountPerDay, 2);
             }
         }
 
-        if ($durationDays <= 0 || $amount <= 0) {
+        $gstAmount = round(($baseAmount * $gstPercentage) / 100, 2);
+        $amount = round($baseAmount + $gstAmount, 2);
+
+        if ($durationDays <= 0 || $baseAmount <= 0 || $amount <= 0) {
             return $this->addErrorResponse(400, 'Invalid recharge request', '');
         }
 
@@ -1901,6 +1932,9 @@ class AppUsersApiController extends Controller
 
         $data = [
             'order' => $orderPayload['data'],
+            'base_amount' => round($baseAmount, 2),
+            'gst_percentage' => $gstPercentage,
+            'gst_amount' => round($gstAmount, 2),
             'amount' => $amount,
             'currency' => $currencyCode,
             'driver_id' => $driverId,
@@ -1954,8 +1988,9 @@ class AppUsersApiController extends Controller
 
         $currencyCode = strtoupper(GeneralSetting::getMetaValue('driver_recharge_currency') ?: 'INR');
         $amountPerDay = (float) (GeneralSetting::getMetaValue('driver_recharge_amount_per_day') ?: 30);
+        $gstPercentage = round((float) (GeneralSetting::getMetaValue('driver_recharge_gst_percentage') ?: 0), 2);
         $durationDays = (int) $request->input('duration_days', 0);
-        $amount = 0.0;
+        $baseAmount = 0.0;
 
         if ($request->filled('plan_id')) {
             $plan = DriverRechargePlan::active()->find($request->plan_id);
@@ -1963,20 +1998,23 @@ class AppUsersApiController extends Controller
                 return $this->addErrorResponse(404, 'Recharge plan not found', '');
             }
             $durationDays = (int) $plan->duration_days;
-            $amount = (float) $plan->amount;
+            $baseAmount = (float) $plan->amount;
             $currencyCode = strtoupper($plan->currency_code ?: $currencyCode);
         } else {
             if ($durationDays <= 0) {
                 return $this->addErrorResponse(400, 'Duration is required when no plan is selected', '');
             }
-            $amount = round($durationDays * $amountPerDay, 2);
+            $baseAmount = round($durationDays * $amountPerDay, 2);
         }
 
-        if ($durationDays <= 0 || $amount <= 0) {
+        $gstAmount = round(($baseAmount * $gstPercentage) / 100, 2);
+        $amount = round($baseAmount + $gstAmount, 2);
+
+        if ($durationDays <= 0 || $baseAmount <= 0 || $amount <= 0) {
             return $this->addErrorResponse(400, 'Invalid recharge request', '');
         }
 
-        $payload = DB::transaction(function () use ($driverId, $durationDays, $amount, $currencyCode, $request) {
+        $payload = DB::transaction(function () use ($driverId, $durationDays, $amount, $currencyCode, $request, $baseAmount, $gstAmount, $gstPercentage) {
             $driverLocked = AppUser::where('id', $driverId)
                 ->where('user_type', 'driver')
                 ->lockForUpdate()
@@ -2008,6 +2046,9 @@ class AppUsersApiController extends Controller
                 'recharge_active' => (bool) $driverLocked->recharge_active,
                 'can_ride' => true,
                 'duration_days' => $durationDays,
+                'base_amount' => round($baseAmount, 2),
+                'gst_percentage' => $gstPercentage,
+                'gst_amount' => round($gstAmount, 2),
                 'amount' => round($amount, 2),
                 'currency_code' => $currencyCode,
             ];

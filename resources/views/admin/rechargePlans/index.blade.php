@@ -23,6 +23,13 @@
                                     name="driver_recharge_currency"
                                     value="{{ old('driver_recharge_currency', $currencyCode) }}" maxlength="10" required>
                             </div>
+                            <div class="form-group">
+                                <label for="driver_recharge_gst_percentage">GST (%)</label>
+                                <input type="number" step="0.01" min="0" max="100" class="form-control"
+                                    id="driver_recharge_gst_percentage" name="driver_recharge_gst_percentage"
+                                    value="{{ old('driver_recharge_gst_percentage', $gstPercentage) }}">
+                                <small class="text-muted">Applied on top of recharge plan base amount. Saving settings now also syncs the visible Daily Plan row below.</small>
+                            </div>
                         </div>
                         <div class="box-footer">
                             <button type="submit" class="btn btn-primary">Save Settings</button>
@@ -51,6 +58,7 @@
                             <div class="form-group">
                                 <label>Amount</label>
                                 <input type="number" step="0.01" min="1" class="form-control" name="amount" required>
+                                <small class="text-muted">Base amount before GST.</small>
                             </div>
                             <div class="form-group">
                                 <label>Currency</label>
@@ -89,6 +97,8 @@
                                     <th>Name</th>
                                     <th>Days</th>
                                     <th>Amount</th>
+                                    <th>GST</th>
+                                    <th>Total</th>
                                     <th>Currency</th>
                                     <th>Active</th>
                                     <th>Sort</th>
@@ -97,11 +107,17 @@
                             </thead>
                             <tbody>
                                 @forelse($plans as $plan)
+                                    @php
+                                        $gstAmount = round(((float) $plan->amount * (float) $gstPercentage) / 100, 2);
+                                        $totalAmount = round((float) $plan->amount + $gstAmount, 2);
+                                    @endphp
                                     <tr>
                                         <td>{{ $plan->id }}</td>
                                         <td>{{ $plan->name }}</td>
                                         <td>{{ $plan->duration_days }}</td>
                                         <td>{{ number_format((float) $plan->amount, 2) }}</td>
+                                        <td>{{ number_format((float) $gstPercentage, 2) }}%</td>
+                                        <td>{{ number_format($totalAmount, 2) }}</td>
                                         <td>{{ $plan->currency_code }}</td>
                                         <td>{{ $plan->is_active ? 'Yes' : 'No' }}</td>
                                         <td>{{ $plan->sort_order }}</td>
@@ -141,7 +157,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center">No recharge plans found.</td>
+                                        <td colspan="10" class="text-center">No recharge plans found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -152,4 +168,3 @@
         </div>
     </div>
 @endsection
-

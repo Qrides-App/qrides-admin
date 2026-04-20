@@ -12,8 +12,13 @@ class RechargePlanController extends Controller
 {
     public function index()
     {
+        $amountPerDay = (float) (GeneralSetting::getMetaValue('driver_recharge_amount_per_day') ?: 30);
+        $currencyCode = strtoupper(GeneralSetting::getMetaValue('driver_recharge_currency') ?: 'INR');
+        $gstPercentage = $this->driverRechargeGstPercentage();
+
         $plans = collect();
         if (Schema::hasTable('driver_recharge_plans')) {
+            $this->syncDailyRechargePlan($amountPerDay, $currencyCode);
             $plans = DriverRechargePlan::orderBy('sort_order')
                 ->orderBy('duration_days')
                 ->get();
@@ -23,8 +28,9 @@ class RechargePlanController extends Controller
 
         return view('admin.rechargePlans.index', [
             'plans' => $plans,
-            'amountPerDay' => GeneralSetting::getMetaValue('driver_recharge_amount_per_day') ?: 30,
-            'currencyCode' => strtoupper(GeneralSetting::getMetaValue('driver_recharge_currency') ?: 'INR'),
+            'amountPerDay' => $amountPerDay,
+            'currencyCode' => $currencyCode,
+            'gstPercentage' => $gstPercentage,
         ]);
     }
 
@@ -94,6 +100,7 @@ class RechargePlanController extends Controller
         $data = $request->validate([
             'driver_recharge_amount_per_day' => 'required|numeric|min:1',
             'driver_recharge_currency' => 'required|string|max:10',
+            'driver_recharge_gst_percentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
         GeneralSetting::updateOrCreate(
@@ -104,7 +111,39 @@ class RechargePlanController extends Controller
             ['meta_key' => 'driver_recharge_currency'],
             ['meta_value' => strtoupper($data['driver_recharge_currency'])]
         );
+        GeneralSetting::updateOrCreate(
+            ['meta_key' => 'driver_recharge_gst_percentage'],
+            ['meta_value' => $data['driver_recharge_gst_percentage'] ?? 0]
+        );
+
+        $this->syncDailyRechargePlan(
+            (float) $data['driver_recharge_amount_per_day'],
+            strtoupper($data['driver_recharge_currency'])
+        );
 
         return redirect()->route('admin.recharge-plans.index')->with('success', 'Recharge settings updated successfully.');
+    }
+
+    private function syncDailyRechargePlan(float $amountPerDay, string $currencyCode): void
+    {
+        if (! Schema::hasTable('driver_recharge_plans')) {
+            return;
+        }
+
+        DriverRechargePlan::updateOrCreate(
+            ['duration_days' => 1],
+            [
+                'name' => 'Daily Plan',
+                'amount' => round($amountPerDay, 2),
+                'currency_code' => strtoupper($currencyCode),
+                'is_active' => 1,
+                'sort_order' => 1,
+            ]
+        );
+    }
+
+    private function driverRechargeGstPercentage(): float
+    {
+        return round((float) (GeneralSetting::getMetaValue('driver_recharge_gst_percentage') ?: 0), 2);
     }
 }
