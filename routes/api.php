@@ -17,7 +17,7 @@ Route::post('/generateToken', [TokenController::class, 'issueSanctumToken'])
     ->name('token.generate');
 // 'auth:sanctum'
 
-Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', 'middleware' => ['auth:sanctum']], function () {
+Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', 'middleware' => ['auth:sanctum', 'driver.recharge.active']], function () {
     // Slider
     Route::post('/ride-requests', [RideRequestController::class, 'createRide']);
     Route::get('/ride-requests', [RideRequestController::class, 'getRides']);
@@ -55,6 +55,14 @@ Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', '
     Route::post('/getVendorWalletTransactions', 'AppUsersApiController@getVendorWalletTransactions');
     Route::post('/insertPayout', 'AppUsersApiController@insertPayout');
     Route::post('/getPayoutTransactions', 'AppUsersApiController@getPayoutTransactions');
+    Route::post('/getRechargePlans', 'AppUsersApiController@getRechargePlans');
+    Route::post('/getDriverRechargeStatus', 'AppUsersApiController@getDriverRechargeStatus');
+    Route::post('/rechargeWallet', 'AppUsersApiController@rechargeWallet');
+    Route::post('/startRechargePayment', 'AppUsersApiController@startRechargePayment');
+    Route::post('/confirmRechargePayment', 'AppUsersApiController@confirmRechargePayment');
+    Route::post('/getSupportTickets', 'AppUsersApiController@getSupportTickets');
+    Route::post('/createSupportTicket', 'AppUsersApiController@createSupportTicket');
+    Route::post('/replySupportTicket', 'AppUsersApiController@replySupportTicket');
 
     // payoutMethod
     Route::post('/update-payout-method', 'PayoutMethodApiController@updatePayoutMethod');

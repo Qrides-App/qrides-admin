@@ -27,6 +27,7 @@ class Kernel extends ConsoleKernel
         $schedule->job(new DistributeVendorCommissionJob)->cron('* * * * *');
         $schedule->command('log:clean')->daily();
         $schedule->command('tokens:cleanup')->everyFiveMinutes();
+        $schedule->command('drivers:send-recharge-reminders')->hourly();
     }
 
     /**

@@ -29,6 +29,7 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'checkHostStatus' => \App\Http\Middleware\CheckHostStatus::class,
+        'driver.recharge.active' => \App\Http\Middleware\EnsureDriverRechargeIsActive::class,
 
     ];
 
