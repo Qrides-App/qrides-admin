@@ -103,7 +103,7 @@ class AppDriverController extends Controller
                 ->withErrors(['vehicle_setup' => 'Add at least one active vehicle type before creating a driver.']);
         }
 
-        if (! $this->availableVehicleMakes()->exists()) {
+        if ($this->availableVehicleMakes()->isEmpty()) {
             return redirect()
                 ->route('admin.drivers.index')
                 ->withErrors(['vehicle_setup' => 'Add at least one active vehicle make before creating a driver.']);
