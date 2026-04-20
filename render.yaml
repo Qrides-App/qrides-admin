@@ -5,6 +5,10 @@ services:
     plan: starter
     dockerfilePath: ./Dockerfile
     autoDeploy: true
+    disk:
+      name: branding-storage
+      mountPath: /var/www/html/storage/firebase
+      sizeGB: 1
     envVars:
       - key: APP_ENV
         value: production
