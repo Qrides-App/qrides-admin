@@ -8,6 +8,7 @@ use App\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -161,7 +162,11 @@ class LoginController extends Controller
 
     private function brandingUrl(?string $path, ?string $fallback = null): ?string
     {
-        if (empty($path) || ! Storage::disk('public')->exists($path)) {
+        if (empty($path)) {
+            return $fallback;
+        }
+
+        if (! Storage::disk('public')->exists($path) && ! File::exists(public_path($path))) {
             return $fallback;
         }
 

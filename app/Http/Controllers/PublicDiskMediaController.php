@@ -2,25 +2,35 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PublicDiskMediaController extends Controller
 {
-    public function show(string $path): StreamedResponse
+    public function show(string $path): StreamedResponse|BinaryFileResponse
     {
-        $path = $this->normalizePath($path);
+        $normalizedPath = $this->normalizePath($path);
 
-        if (! Storage::disk('public')->exists($path)) {
-            abort(404);
+        if (Storage::disk('public')->exists($normalizedPath)) {
+            $mimeType = Storage::disk('public')->mimeType($normalizedPath) ?: 'application/octet-stream';
+
+            return Storage::disk('public')->response($normalizedPath, null, [
+                'Content-Type' => $mimeType,
+                'Cache-Control' => 'public, max-age=86400',
+            ]);
         }
 
-        $mimeType = Storage::disk('public')->mimeType($path) ?: 'application/octet-stream';
+        $publicFile = public_path($normalizedPath);
 
-        return Storage::disk('public')->response($path, null, [
-            'Content-Type' => $mimeType,
-            'Cache-Control' => 'public, max-age=86400',
-        ]);
+        if (File::exists($publicFile)) {
+            return response()->file($publicFile, [
+                'Cache-Control' => 'public, max-age=86400',
+            ]);
+        }
+
+        abort(404);
     }
 
     private function normalizePath(string $path): string

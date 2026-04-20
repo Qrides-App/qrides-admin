@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\GeneralSetting;
 use App\Models\Module;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -73,7 +74,11 @@ class ViewComposerServiceProvider extends ServiceProvider
     {
         $path = $this->settings[$key]->meta_value ?? null;
 
-        if (empty($path) || ! Storage::disk('public')->exists($path)) {
+        if (empty($path)) {
+            return $fallback;
+        }
+
+        if (! Storage::disk('public')->exists($path) && ! File::exists(public_path($path))) {
             return $fallback;
         }
 

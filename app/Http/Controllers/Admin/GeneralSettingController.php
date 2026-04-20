@@ -136,14 +136,14 @@ class GeneralSettingController extends Controller
             $this->deleteExistingPublicBrandingFile('general_logo');
             $file = $request->file('general_logo');
             $fileName = rand(10, 1000000) . '.' . $file->getClientOriginalName();
-            $path = $file->storeAs('logo', $fileName, 'public');
+            $path = $this->storePublicBrandingUpload($file, $fileName);
             $formData['general_logo'] = $path;
         }
         if ($request->hasFile('general_favicon')) {
             $this->deleteExistingPublicBrandingFile('general_favicon');
             $file = $request->file('general_favicon');
             $fileName = rand(10, 1000000) . '.' . $file->getClientOriginalName();
-            $path = $file->storeAs('logo', $fileName, 'public');
+            $path = $this->storePublicBrandingUpload($file, $fileName);
             $formData['general_favicon'] = $path;
         }
         foreach ($formData as $metaKey => $metaValue) {
@@ -164,18 +164,44 @@ class GeneralSettingController extends Controller
     {
         $existingPath = GeneralSetting::where('meta_key', $metaKey)->value('meta_value');
 
-        if (! empty($existingPath) && Storage::disk('public')->exists($existingPath)) {
+        if (empty($existingPath)) {
+            return;
+        }
+
+        if (Storage::disk('public')->exists($existingPath)) {
             Storage::disk('public')->delete($existingPath);
+        }
+
+        $publicFile = public_path($existingPath);
+        if (File::exists($publicFile)) {
+            File::delete($publicFile);
         }
     }
 
     private function publicBrandingUrl(?string $path): ?string
     {
-        if (empty($path) || ! Storage::disk('public')->exists($path)) {
+        if (empty($path)) {
+            return null;
+        }
+
+        if (! Storage::disk('public')->exists($path) && ! File::exists(public_path($path))) {
             return null;
         }
 
         return url('/media/public/' . ltrim($path, '/'));
+    }
+
+    private function storePublicBrandingUpload($file, string $fileName): string
+    {
+        $directory = public_path('branding/logo');
+
+        if (! File::isDirectory($directory)) {
+            File::makeDirectory($directory, 0755, true);
+        }
+
+        $file->move($directory, $fileName);
+
+        return 'branding/logo/' . $fileName;
     }
 
     private function clearSharedSettingCaches(): void
