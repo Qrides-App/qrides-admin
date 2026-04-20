@@ -128,6 +128,7 @@
                                 <th>{{ trans('user.id') }}</th>
                                 <th>{{ trans('user.driver') }}</th>
                                 <th>{{ trans('user.vehicle') }}</th>
+                                <th>Readiness</th>
                                 <th>{{ trans('user.ride_information') }}</th>
                                 <th>{{ trans('user.banned') }}</th>
                                 <th>{{ trans('user.approve_status') }}</th>
@@ -232,25 +233,6 @@
                                     '')
                                                                                                                                                                     }}
                                                                 </small>
-                                                                <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
-                                                                    @if($docsReady)
-                                                                        <span class="badge badge-pill label-success">Docs complete</span>
-                                                                    @elseif($uploadedDocumentCount > 0)
-                                                                        <span class="badge badge-pill label-warning">Docs {{ $approvedDocumentCount }}/{{ count($documentKeys) }} approved</span>
-                                                                    @else
-                                                                        <span class="badge badge-pill label-danger">Docs missing</span>
-                                                                    @endif
-
-                                                                    @if($vehicleReady)
-                                                                        <span class="badge badge-pill badge-info">Vehicle ready</span>
-                                                                    @elseif($appUser->item)
-                                                                        <span class="badge badge-pill label-warning">Vehicle pending</span>
-                                                                    @else
-                                                                        <span class="badge badge-pill label-danger">Vehicle missing</span>
-                                                                    @endif
-
-                                                                    <span class="{{ $approvalBadgeClass }}">{{ $approvalBadgeLabel }}</span>
-                                                                </div>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -279,6 +261,27 @@
                                                         @else
                                                             <span class="text-danger">N/A</span>
                                                         @endif
+                                                    </td>
+                                                    <td>
+                                                        <div style="display: flex; flex-direction: column; gap: 6px; min-width: 170px;">
+                                                            @if($docsReady)
+                                                                <span class="badge badge-pill label-success">Docs complete</span>
+                                                            @elseif($uploadedDocumentCount > 0)
+                                                                <span class="badge badge-pill label-warning">Docs {{ $approvedDocumentCount }}/{{ count($documentKeys) }} approved</span>
+                                                            @else
+                                                                <span class="badge badge-pill label-danger">Docs missing</span>
+                                                            @endif
+
+                                                            @if($vehicleReady)
+                                                                <span class="badge badge-pill badge-info">Vehicle ready</span>
+                                                            @elseif($appUser->item)
+                                                                <span class="badge badge-pill label-warning">Vehicle pending</span>
+                                                            @else
+                                                                <span class="badge badge-pill label-danger">Vehicle missing</span>
+                                                            @endif
+
+                                                            <span class="{{ $approvalBadgeClass }}">{{ $approvalBadgeLabel }}</span>
+                                                        </div>
                                                     </td>
                                                     <td>
                                                         @if($appUser->item)

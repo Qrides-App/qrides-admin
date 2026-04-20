@@ -77,6 +77,53 @@
             margin-top: 8px;
         }
 
+        .driver-onboarding-progress {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .driver-onboarding-progress__card {
+            background: #fff;
+            border: 1px solid #e5ebf5;
+            border-radius: 20px;
+            padding: 18px 20px;
+            box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
+        }
+
+        .driver-onboarding-progress__label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: #71829f;
+        }
+
+        .driver-onboarding-progress__value {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #16213e;
+            font-size: 26px;
+            font-weight: 800;
+        }
+
+        .driver-onboarding-progress__value small {
+            font-size: 14px;
+            font-weight: 700;
+            color: #60708f;
+        }
+
+        .driver-onboarding-progress__hint {
+            margin-top: 8px;
+            color: #60708f;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
         .driver-onboarding-section {
             margin-bottom: 22px;
             overflow: hidden;
@@ -122,6 +169,12 @@
             grid-template-columns: repeat(12, minmax(0, 1fr));
         }
 
+        .driver-onboarding-upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+        }
+
         .driver-onboarding-col-12 { grid-column: span 12; }
         .driver-onboarding-col-8 { grid-column: span 8; }
         .driver-onboarding-col-6 { grid-column: span 6; }
@@ -161,6 +214,41 @@
             height: 100%;
         }
 
+        .driver-onboarding-doc-card__header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .driver-onboarding-doc-card__title {
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1.45;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            color: #16213e;
+        }
+
+        .driver-onboarding-doc-card__status {
+            flex-shrink: 0;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            color: #7a889f;
+            background: #edf1f7;
+        }
+
+        .driver-onboarding-doc-card__status.is-ready {
+            color: #0f766e;
+            background: #dbf5ee;
+        }
+
         .driver-onboarding-doc-card small {
             display: block;
             margin-top: 10px;
@@ -183,16 +271,33 @@
             line-height: 1.65;
         }
 
+        .driver-onboarding-approval-help {
+            margin-top: 10px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #60708f;
+        }
+
+        .driver-onboarding-approval-help.is-blocked {
+            color: #b45309;
+        }
+
         .driver-onboarding-footer {
             position: sticky;
             bottom: 18px;
             z-index: 5;
-            display: flex;
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.9fr) auto;
             align-items: center;
-            justify-content: space-between;
             gap: 18px;
             padding: 18px 22px;
             margin-top: 6px;
+        }
+
+        .driver-onboarding-footer__readiness {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
         }
 
         .driver-onboarding-footer__meta {
@@ -207,6 +312,26 @@
             margin-bottom: 4px;
         }
 
+        .driver-onboarding-footer__chip {
+            border-radius: 16px;
+            background: #f8fbff;
+            border: 1px solid #e5ebf5;
+            padding: 12px 14px;
+        }
+
+        .driver-onboarding-footer__chip strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #16213e;
+            font-size: 13px;
+        }
+
+        .driver-onboarding-footer__chip span {
+            color: #60708f;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
         .driver-onboarding-footer .btn {
             min-width: 180px;
             border-radius: 16px;
@@ -217,9 +342,17 @@
                 grid-template-columns: 1fr;
             }
 
+            .driver-onboarding-progress {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .driver-onboarding-col-4,
             .driver-onboarding-col-3 {
                 grid-column: span 6;
+            }
+
+            .driver-onboarding-footer {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -236,6 +369,10 @@
                 font-size: 28px;
             }
 
+            .driver-onboarding-progress {
+                grid-template-columns: 1fr;
+            }
+
             .driver-onboarding-col-8,
             .driver-onboarding-col-6,
             .driver-onboarding-col-4,
@@ -249,8 +386,11 @@
 
             .driver-onboarding-footer {
                 position: static;
-                flex-direction: column;
-                align-items: stretch;
+                grid-template-columns: 1fr;
+            }
+
+            .driver-onboarding-footer__readiness {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -287,6 +427,40 @@
                             <input type="hidden" name="{{ $uploadedField }}" value="{{ old($uploadedField) }}">
                         @endif
                     @endforeach
+
+                    <div class="driver-onboarding-progress">
+                        <div class="driver-onboarding-progress__card">
+                            <span class="driver-onboarding-progress__label">Account Setup</span>
+                            <div class="driver-onboarding-progress__value">
+                                <span id="accountReadinessValue">0/5</span>
+                                <small>required</small>
+                            </div>
+                            <div class="driver-onboarding-progress__hint" id="accountReadinessHint">Fill the driver profile, phone, and approval controls.</div>
+                        </div>
+                        <div class="driver-onboarding-progress__card">
+                            <span class="driver-onboarding-progress__label">Captain Docs</span>
+                            <div class="driver-onboarding-progress__value">
+                                <span id="docReadinessValue">0/6</span>
+                                <small>uploaded</small>
+                            </div>
+                            <div class="driver-onboarding-progress__hint" id="docReadinessHint">All 6 captain documents are needed before approval can be granted.</div>
+                        </div>
+                        <div class="driver-onboarding-progress__card">
+                            <span class="driver-onboarding-progress__label">Vehicle Setup</span>
+                            <div class="driver-onboarding-progress__value">
+                                <span id="vehicleReadinessValue">0/7</span>
+                                <small>complete</small>
+                            </div>
+                            <div class="driver-onboarding-progress__hint" id="vehicleReadinessHint">Vehicle identity, year, number, and media must be attached.</div>
+                        </div>
+                        <div class="driver-onboarding-progress__card">
+                            <span class="driver-onboarding-progress__label">Approval Gate</span>
+                            <div class="driver-onboarding-progress__value">
+                                <span id="approvalReadinessValue">Blocked</span>
+                            </div>
+                            <div class="driver-onboarding-progress__hint" id="approvalReadinessHint">Keep this driver as Requested until docs are uploaded, reviewed, and vehicle setup is complete.</div>
+                        </div>
+                    </div>
 
                     <section class="driver-onboarding-section">
                         <div class="driver-onboarding-section__header">
@@ -372,6 +546,9 @@
                                 <option value="1" {{ old('host_status') === '1' ? 'selected' : '' }}>Approved</option>
                                 <option value="0" {{ old('host_status') === '0' ? 'selected' : '' }}>Rejected</option>
                             </select>
+                            <div class="driver-onboarding-approval-help" id="approvalHelp">
+                                Approval unlocks automatically when required docs are uploaded, document status is approved, and vehicle setup is complete.
+                            </div>
                             @error('host_status')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
@@ -392,51 +569,69 @@
                             <p class="driver-onboarding-section__desc">This section mirrors the app-side captain verification flow. These 6 documents are the ones the app sends for approval review.</p>
                         </div>
                         <div class="driver-onboarding-section__body">
-                            <div class="driver-onboarding-grid docs">
+                            <div class="driver-onboarding-upload-grid">
 
-                        <div class="driver-onboarding-col-4 form-group">
+                        <div class="form-group">
                             <div class="driver-onboarding-doc-card">
-                            <label class="required">Driving Licence Front</label>
+                            <div class="driver-onboarding-doc-card__header">
+                                <div class="driver-onboarding-doc-card__title">Driving Licence Front</div>
+                                <span class="driver-onboarding-doc-card__status" data-doc-status="driving_licence_front">Missing</span>
+                            </div>
                             <div class="needsclick dropzone @error('driving_licence_front') is-invalid @enderror" id="driving_licence_front-dropzone"></div>
                             @error('driving_licence_front')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                         </div>
 
-                        <div class="driver-onboarding-col-4 form-group">
+                        <div class="form-group">
                             <div class="driver-onboarding-doc-card">
-                            <label class="required">Driving Licence Back</label>
+                            <div class="driver-onboarding-doc-card__header">
+                                <div class="driver-onboarding-doc-card__title">Driving Licence Back</div>
+                                <span class="driver-onboarding-doc-card__status" data-doc-status="driving_licence_back">Missing</span>
+                            </div>
                             <div class="needsclick dropzone @error('driving_licence_back') is-invalid @enderror" id="driving_licence_back-dropzone"></div>
                             @error('driving_licence_back')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                         </div>
 
-                        <div class="driver-onboarding-col-4 form-group">
+                        <div class="form-group">
                             <div class="driver-onboarding-doc-card">
-                            <label class="required">Aadhaar Front</label>
+                            <div class="driver-onboarding-doc-card__header">
+                                <div class="driver-onboarding-doc-card__title">Aadhaar Front</div>
+                                <span class="driver-onboarding-doc-card__status" data-doc-status="aadhaar_front">Missing</span>
+                            </div>
                             <div class="needsclick dropzone @error('aadhaar_front') is-invalid @enderror" id="aadhaar_front-dropzone"></div>
                             @error('aadhaar_front')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                         </div>
 
-                        <div class="driver-onboarding-col-4 form-group">
+                        <div class="form-group">
                             <div class="driver-onboarding-doc-card">
-                            <label class="required">Aadhaar Back</label>
+                            <div class="driver-onboarding-doc-card__header">
+                                <div class="driver-onboarding-doc-card__title">Aadhaar Back</div>
+                                <span class="driver-onboarding-doc-card__status" data-doc-status="aadhaar_back">Missing</span>
+                            </div>
                             <div class="needsclick dropzone @error('aadhaar_back') is-invalid @enderror" id="aadhaar_back-dropzone"></div>
                             @error('aadhaar_back')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                         </div>
 
-                        <div class="driver-onboarding-col-4 form-group">
+                        <div class="form-group">
                             <div class="driver-onboarding-doc-card">
-                            <label class="required">PAN Card</label>
+                            <div class="driver-onboarding-doc-card__header">
+                                <div class="driver-onboarding-doc-card__title">PAN Card</div>
+                                <span class="driver-onboarding-doc-card__status" data-doc-status="pan_card">Missing</span>
+                            </div>
                             <div class="needsclick dropzone @error('pan_card') is-invalid @enderror" id="pan_card-dropzone"></div>
                             @error('pan_card')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                         </div>
 
-                        <div class="driver-onboarding-col-4 form-group">
+                        <div class="form-group">
                             <div class="driver-onboarding-doc-card">
-                            <label class="required">Vehicle Insurance</label>
+                            <div class="driver-onboarding-doc-card__header">
+                                <div class="driver-onboarding-doc-card__title">Vehicle Insurance</div>
+                                <span class="driver-onboarding-doc-card__status" data-doc-status="vehicle_insurance_doc">Missing</span>
+                            </div>
                             <div class="needsclick dropzone @error('vehicle_insurance_doc') is-invalid @enderror" id="vehicle_insurance_doc-dropzone"></div>
                             <small class="text-muted">The app also uploads this in the captain verification document step.</small>
                             @error('vehicle_insurance_doc')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -505,7 +700,10 @@
 
                         <div class="driver-onboarding-col-4 form-group">
                             <div class="driver-onboarding-doc-card">
-                            <label class="required">Vehicle Image</label>
+                            <div class="driver-onboarding-doc-card__header">
+                                <div class="driver-onboarding-doc-card__title">Vehicle Image</div>
+                                <span class="driver-onboarding-doc-card__status" data-doc-status="vehicle_image">Missing</span>
+                            </div>
                             <div class="needsclick dropzone @error('vehicle_image') is-invalid @enderror" id="vehicle_image-dropzone"></div>
                             @error('vehicle_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
@@ -513,7 +711,10 @@
 
                         <div class="driver-onboarding-col-4 form-group">
                             <div class="driver-onboarding-doc-card">
-                            <label class="required">Vehicle Registration Document</label>
+                            <div class="driver-onboarding-doc-card__header">
+                                <div class="driver-onboarding-doc-card__title">Vehicle Registration Document</div>
+                                <span class="driver-onboarding-doc-card__status" data-doc-status="vehicle_registration_doc">Missing</span>
+                            </div>
                             <div class="needsclick dropzone @error('vehicle_registration_doc') is-invalid @enderror" id="vehicle_registration_doc-dropzone"></div>
                             @error('vehicle_registration_doc')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
@@ -532,6 +733,16 @@
                             <strong>Ready to create the driver?</strong>
                             This will create the driver account, attach the captain documents, create the primary vehicle, and place the driver into the approval state you selected above.
                         </div>
+                        <div class="driver-onboarding-footer__readiness">
+                            <div class="driver-onboarding-footer__chip">
+                                <strong>Captain docs</strong>
+                                <span id="footerDocsReadiness">0 of 6 uploaded</span>
+                            </div>
+                            <div class="driver-onboarding-footer__chip">
+                                <strong>Vehicle setup</strong>
+                                <span id="footerVehicleReadiness">0 of 7 complete</span>
+                            </div>
+                        </div>
                         <button class="btn btn-primary btn-lg" type="submit">Create Driver</button>
                     </div>
                 </form>
@@ -544,12 +755,110 @@
     @parent
     <script>
         Dropzone.autoDiscover = false;
+        const requiredDocFields = [
+            'driving_licence_front',
+            'driving_licence_back',
+            'aadhaar_front',
+            'aadhaar_back',
+            'pan_card',
+            'vehicle_insurance_doc'
+        ];
+        const requiredVehicleFields = [
+            'car_type',
+            'make',
+            'model',
+            'year',
+            'registration_number',
+            'vehicle_image',
+            'vehicle_registration_doc'
+        ];
 
         function updateDefaultCountry() {
             const dialCode = document.getElementById('phone_country').value;
             const country = @json(config('countries')).find(item => item.dial_code === dialCode);
             if (country) {
                 document.getElementById('default_country').value = country.code;
+            }
+        }
+
+        function hasHiddenUpload(fieldName) {
+            return Boolean(document.querySelector(`#createDriverForm input[name="${fieldName}"]`));
+        }
+
+        function setUploadStatus(fieldName, ready) {
+            const badge = document.querySelector(`[data-doc-status="${fieldName}"]`);
+            if (!badge) {
+                return;
+            }
+
+            badge.textContent = ready ? 'Ready' : 'Missing';
+            badge.classList.toggle('is-ready', ready);
+        }
+
+        function countCompletedFields(fieldNames) {
+            return fieldNames.filter(function (field) {
+                const input = document.getElementById(field) || document.getElementsByName(field)[0];
+                if (!input) {
+                    return hasHiddenUpload(field);
+                }
+
+                return String(input.value || '').trim() !== '';
+            }).length;
+        }
+
+        function syncDriverReadiness() {
+            requiredDocFields.concat(['vehicle_image', 'vehicle_registration_doc']).forEach(function (field) {
+                setUploadStatus(field, hasHiddenUpload(field));
+            });
+
+            const accountFields = ['first_name', 'email', 'password', 'phone', 'phone_country'];
+            const accountComplete = countCompletedFields(accountFields);
+            const docComplete = requiredDocFields.filter(hasHiddenUpload).length;
+            const vehicleComplete = countCompletedFields(requiredVehicleFields);
+            const docsApproved = document.getElementById('document_verify').value === '1';
+            const vehicleReady = vehicleComplete === requiredVehicleFields.length;
+            const approvalReady = docComplete === requiredDocFields.length && docsApproved && vehicleReady;
+
+            document.getElementById('accountReadinessValue').textContent = `${accountComplete}/${accountFields.length}`;
+            document.getElementById('accountReadinessHint').textContent = accountComplete === accountFields.length
+                ? 'Account identity and contact details are complete.'
+                : 'Complete first name, email, temporary password, phone country, and phone number.';
+
+            document.getElementById('docReadinessValue').textContent = `${docComplete}/${requiredDocFields.length}`;
+            document.getElementById('docReadinessHint').textContent = docsApproved
+                ? 'Document review is marked approved.'
+                : 'Upload all 6 captain documents and switch Document Status to Approved after review.';
+
+            document.getElementById('vehicleReadinessValue').textContent = `${vehicleComplete}/${requiredVehicleFields.length}`;
+            document.getElementById('vehicleReadinessHint').textContent = vehicleReady
+                ? 'Vehicle identity and media are complete.'
+                : 'Vehicle type, make, model, year, number, image, and registration document are required.';
+
+            document.getElementById('footerDocsReadiness').textContent = `${docComplete} of ${requiredDocFields.length} uploaded`;
+            document.getElementById('footerVehicleReadiness').textContent = `${vehicleComplete} of ${requiredVehicleFields.length} complete`;
+
+            const hostStatus = document.getElementById('host_status');
+            const approvedOption = hostStatus.querySelector('option[value="1"]');
+            const approvalReadinessValue = document.getElementById('approvalReadinessValue');
+            const approvalReadinessHint = document.getElementById('approvalReadinessHint');
+            const approvalHelp = document.getElementById('approvalHelp');
+
+            approvedOption.disabled = !approvalReady;
+
+            if (!approvalReady && hostStatus.value === '1') {
+                hostStatus.value = '2';
+            }
+
+            if (approvalReady) {
+                approvalReadinessValue.textContent = 'Ready';
+                approvalReadinessHint.textContent = 'All required docs are uploaded, marked approved, and vehicle setup is complete.';
+                approvalHelp.textContent = 'Captain Approval can now be set to Approved.';
+                approvalHelp.classList.remove('is-blocked');
+            } else {
+                approvalReadinessValue.textContent = 'Blocked';
+                approvalReadinessHint.textContent = 'Approval stays blocked until 6 captain docs are uploaded, Document Status is Approved, and vehicle setup is complete.';
+                approvalHelp.textContent = 'Approved is locked until document uploads, document approval, and vehicle setup are all complete.';
+                approvalHelp.classList.add('is-blocked');
             }
         }
 
@@ -565,12 +874,14 @@
                     const form = document.getElementById('createDriverForm');
                     form.querySelector(`input[name="${inputName}"]`)?.remove();
                     form.insertAdjacentHTML('beforeend', `<input type="hidden" name="${inputName}" value="${response.name}">`);
+                    syncDriverReadiness();
                 },
                 removedfile(file) {
                     file.previewElement.remove();
                     if (file.status !== 'error') {
                         document.getElementById('createDriverForm').querySelector(`input[name="${inputName}"]`)?.remove();
                         this.options.maxFiles++;
+                        syncDriverReadiness();
                     }
                 },
                 error(file, response) {
@@ -609,6 +920,7 @@
                         }
                         makeSelect.appendChild(option);
                     });
+                    syncDriverReadiness();
                 }
             });
         }
@@ -617,6 +929,10 @@
             updateDefaultCountry();
             document.getElementById('phone_country').addEventListener('change', updateDefaultCountry);
             document.getElementById('car_type').addEventListener('change', loadVehicleMake);
+            document.querySelectorAll('#createDriverForm input, #createDriverForm select').forEach(function (element) {
+                element.addEventListener('change', syncDriverReadiness);
+                element.addEventListener('input', syncDriverReadiness);
+            });
 
             initDropzone('#profile_image-dropzone', 'profile_image', {
                 acceptedFiles: 'image/jpeg,image/png,image/gif',
@@ -644,6 +960,7 @@
             });
 
             loadVehicleMake();
+            syncDriverReadiness();
         });
     </script>
 @endsection
