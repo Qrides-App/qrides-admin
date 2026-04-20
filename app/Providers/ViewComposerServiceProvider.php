@@ -49,7 +49,9 @@ class ViewComposerServiceProvider extends ServiceProvider
             }
 
             View::share([
-                'faviconPath' => $this->brandingUrl('general_favicon', asset('default/favicon.png')),
+                'faviconPath' => $this->brandingUrl('general_favicon')
+                    ?? $this->brandingUrl('general_logo')
+                    ?? asset('default/favicon.png'),
                 'logoPath' => $this->brandingUrl('general_logo'),
                 'siteName' => isset($this->settings['general_name']) ? $this->settings['general_name']->meta_value : null,
                 'tagLine' => isset($this->settings['general_description']) ? $this->settings['general_description']->meta_value : null,
@@ -84,6 +86,6 @@ class ViewComposerServiceProvider extends ServiceProvider
             return $fallback;
         }
 
-        return url('/media/public/' . ltrim($path, '/'));
+        return url('/media/public/' . ltrim($path, '/')).'?v='.md5($path);
     }
 }

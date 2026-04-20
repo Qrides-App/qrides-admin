@@ -33,7 +33,9 @@ class VendorLoginController extends Controller
             'logoUrl' => $this->brandingUrl(optional($logoUrl)->meta_value),
             'siteName' => $general_name->meta_value,
             'tagLine' => $general_description->meta_value,
-            'faviconUrl' => $this->brandingUrl(optional($faviconUrl)->meta_value, asset('default/favicon.png')),
+            'faviconUrl' => $this->brandingUrl(optional($faviconUrl)->meta_value)
+                ?? $this->brandingUrl(optional($logoUrl)->meta_value)
+                ?? asset('default/favicon.png'),
             'loginBackgroud' => $this->brandingUrl(optional($general_loginBackgroud)->meta_value),
             'general_captcha' => $general_captcha->meta_value,
             'site_key' => $site_key->meta_value,
@@ -60,7 +62,9 @@ class VendorLoginController extends Controller
             'logoUrl' => $this->brandingUrl(optional($logoUrl)->meta_value),
             'siteName' => $general_name->meta_value,
             'tagLine' => $general_description->meta_value,
-            'faviconUrl' => $this->brandingUrl(optional($faviconUrl)->meta_value, asset('default/favicon.png')),
+            'faviconUrl' => $this->brandingUrl(optional($faviconUrl)->meta_value)
+                ?? $this->brandingUrl(optional($logoUrl)->meta_value)
+                ?? asset('default/favicon.png'),
             'loginBackgroud' => $this->brandingUrl(optional($general_loginBackgroud)->meta_value),
             'general_captcha' => $general_captcha->meta_value,
             'site_key' => $site_key->meta_value,
@@ -241,7 +245,9 @@ class VendorLoginController extends Controller
             'logoUrl' => $this->brandingUrl(optional($logoUrl)->meta_value),
             'siteName' => $general_name->meta_value,
             'tagLine' => $general_description->meta_value,
-            'faviconUrl' => $this->brandingUrl(optional($faviconUrl)->meta_value, asset('default/favicon.png')),
+            'faviconUrl' => $this->brandingUrl(optional($faviconUrl)->meta_value)
+                ?? $this->brandingUrl(optional($logoUrl)->meta_value)
+                ?? asset('default/favicon.png'),
             'loginBackgroud' => $this->brandingUrl(optional($general_loginBackgroud)->meta_value),
             'general_captcha' => $general_captcha->meta_value,
             'site_key' => $site_key->meta_value,
@@ -263,7 +269,7 @@ class VendorLoginController extends Controller
             return $fallback;
         }
 
-        return url('/media/public/' . ltrim($path, '/'));
+        return url('/media/public/' . ltrim($path, '/')).'?v='.md5($path);
     }
 
     public function putHostRequest(Request $request)

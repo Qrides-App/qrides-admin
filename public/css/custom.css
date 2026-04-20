@@ -2868,6 +2868,23 @@ body.admin-modern .main-header .logo img {
   object-fit: contain;
 }
 
+body.admin-modern .main-header .logo .admin-logo-image {
+  display: block;
+  width: auto;
+  object-fit: contain;
+  object-position: center;
+}
+
+body.admin-modern .main-header .logo .admin-logo-image--mini {
+  max-width: 42px;
+  max-height: 42px;
+}
+
+body.admin-modern .main-header .logo .admin-logo-image--full {
+  max-width: min(100%, 180px);
+  max-height: 52px;
+}
+
 body.admin-modern .main-header .navbar {
   height: 74px;
   margin-left: calc(var(--admin-sidebar-width) + 26px);

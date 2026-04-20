@@ -143,7 +143,9 @@ class LoginController extends Controller
             'logoUrl' => $this->brandingUrl($settings['general_logo'] ?? null),
             'siteName' => $settings['general_name'] ?? '',
             'tagLine' => $settings['general_description'] ?? '',
-            'faviconUrl' => $this->brandingUrl($settings['general_favicon'] ?? null, asset('default/favicon.png')),
+            'faviconUrl' => $this->brandingUrl($settings['general_favicon'] ?? null)
+                ?? $this->brandingUrl($settings['general_logo'] ?? null)
+                ?? asset('default/favicon.png'),
             'loginBackgroud' => $this->brandingUrl($settings['general_loginBackgroud'] ?? null),
             'general_captcha' => $settings['general_captcha'] ?? '',
             'site_key' => $settings['site_key'] ?? '',
@@ -172,6 +174,6 @@ class LoginController extends Controller
             return $fallback;
         }
 
-        return url('/media/public/' . ltrim($path, '/'));
+        return url('/media/public/' . ltrim($path, '/')).'?v='.md5($path);
     }
 }
