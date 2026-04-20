@@ -31,6 +31,8 @@ class EnsureAuthSchema extends Command
         $this->ensureAppUserMetaTable();
         $this->normalizeAppUserMetaForeignKeyColumns();
         $this->ensurePayoutsTable();
+        $this->ensureVendorWalletsTable();
+        $this->ensureVendorWalletsTokenColumn();
         $this->ensureDriverRechargePlansTable();
         $this->ensureSosNumbersTable();
         $this->normalizePayoutForeignKeyColumns();
@@ -491,6 +493,38 @@ class EnsureAuthSchema extends Command
             $table->timestamps();
             $table->softDeletes();
         });
+    }
+
+    private function ensureVendorWalletsTable(): void
+    {
+        if (Schema::hasTable('vendor_wallets')) {
+            return;
+        }
+
+        Schema::create('vendor_wallets', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('vendor_id')->nullable()->index('fk_vendor_wallets_vendor_id');
+            $table->unsignedBigInteger('booking_id')->nullable()->default(0);
+            $table->unsignedBigInteger('payout_id')->nullable()->default(0);
+            $table->decimal('amount', 15, 2)->default(0);
+            $table->enum('type', ['credit', 'debit', 'refund']);
+            $table->string('token', 32)->nullable();
+            $table->text('description')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    private function ensureVendorWalletsTokenColumn(): void
+    {
+        if (! Schema::hasTable('vendor_wallets')) {
+            return;
+        }
+
+        if (! Schema::hasColumn('vendor_wallets', 'token')) {
+            Schema::table('vendor_wallets', function (Blueprint $table) {
+                $table->string('token', 32)->nullable()->after('type');
+            });
+        }
     }
 
     private function ensureDriverRechargePlansTable(): void
