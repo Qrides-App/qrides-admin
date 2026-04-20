@@ -2,19 +2,280 @@
 
 @section('styles')
     <link rel="stylesheet" href="{{ asset('css/driver-profile.css') }}">
+    <style>
+        .driver-onboarding-page {
+            max-width: 1240px;
+            margin: 0 auto;
+        }
+
+        .driver-onboarding-intro {
+            display: grid;
+            grid-template-columns: minmax(0, 1.8fr) minmax(280px, 0.9fr);
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .driver-onboarding-hero,
+        .driver-onboarding-summary,
+        .driver-onboarding-section,
+        .driver-onboarding-footer {
+            background: #fff;
+            border: 1px solid #e5ebf5;
+            border-radius: 24px;
+            box-shadow: 0 18px 44px rgba(15, 23, 42, 0.06);
+        }
+
+        .driver-onboarding-hero,
+        .driver-onboarding-summary {
+            padding: 24px 28px;
+        }
+
+        .driver-onboarding-hero h2 {
+            margin: 10px 0 8px;
+            font-size: 34px;
+            font-weight: 800;
+            color: #16213e;
+        }
+
+        .driver-onboarding-hero p,
+        .driver-onboarding-summary p,
+        .driver-onboarding-section__desc {
+            color: #60708f;
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .driver-onboarding-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: #eef4ff;
+            color: #2453d4;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        .driver-onboarding-summary h4 {
+            margin: 0 0 14px;
+            font-size: 18px;
+            font-weight: 800;
+            color: #16213e;
+        }
+
+        .driver-onboarding-summary ul {
+            margin: 0;
+            padding-left: 18px;
+            color: #334155;
+        }
+
+        .driver-onboarding-summary li + li {
+            margin-top: 8px;
+        }
+
+        .driver-onboarding-section {
+            margin-bottom: 22px;
+            overflow: hidden;
+        }
+
+        .driver-onboarding-section__header {
+            padding: 22px 26px 16px;
+            border-bottom: 1px solid #eef2f7;
+            background: linear-gradient(180deg, rgba(241, 246, 255, 0.7), rgba(255, 255, 255, 0));
+        }
+
+        .driver-onboarding-section__step {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: #2453d4;
+            margin-bottom: 8px;
+        }
+
+        .driver-onboarding-section__title {
+            margin: 0 0 8px;
+            font-size: 26px;
+            font-weight: 800;
+            color: #16213e;
+        }
+
+        .driver-onboarding-section__body {
+            padding: 24px 26px 28px;
+        }
+
+        .driver-onboarding-grid {
+            display: grid;
+            gap: 18px;
+        }
+
+        .driver-onboarding-grid.account {
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+        }
+
+        .driver-onboarding-grid.docs,
+        .driver-onboarding-grid.vehicle {
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+        }
+
+        .driver-onboarding-col-12 { grid-column: span 12; }
+        .driver-onboarding-col-8 { grid-column: span 8; }
+        .driver-onboarding-col-6 { grid-column: span 6; }
+        .driver-onboarding-col-4 { grid-column: span 4; }
+        .driver-onboarding-col-3 { grid-column: span 3; }
+
+        .driver-onboarding-field {
+            min-width: 0;
+        }
+
+        .driver-onboarding-field label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: #4e5d78;
+        }
+
+        .driver-onboarding-field .form-control {
+            min-height: 50px;
+            border-radius: 16px;
+        }
+
+        .driver-onboarding-inline {
+            display: grid;
+            grid-template-columns: minmax(140px, 0.9fr) minmax(0, 1.5fr);
+            gap: 12px;
+        }
+
+        .driver-onboarding-doc-card {
+            border: 1px solid #e6edf8;
+            border-radius: 18px;
+            padding: 16px;
+            background: #fbfdff;
+            height: 100%;
+        }
+
+        .driver-onboarding-doc-card small {
+            display: block;
+            margin-top: 10px;
+            color: #6b7a96;
+            line-height: 1.5;
+        }
+
+        .driver-onboarding-doc-card .dropzone {
+            min-height: 150px;
+            border-radius: 18px;
+            margin-bottom: 0;
+        }
+
+        .driver-onboarding-note {
+            border: 1px solid #cfe0ff;
+            background: #f3f8ff;
+            color: #33507d;
+            border-radius: 18px;
+            padding: 16px 18px;
+            line-height: 1.65;
+        }
+
+        .driver-onboarding-footer {
+            position: sticky;
+            bottom: 18px;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 18px 22px;
+            margin-top: 6px;
+        }
+
+        .driver-onboarding-footer__meta {
+            color: #5f6f8f;
+            line-height: 1.6;
+        }
+
+        .driver-onboarding-footer__meta strong {
+            display: block;
+            color: #16213e;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .driver-onboarding-footer .btn {
+            min-width: 180px;
+            border-radius: 16px;
+        }
+
+        @media (max-width: 1199px) {
+            .driver-onboarding-intro {
+                grid-template-columns: 1fr;
+            }
+
+            .driver-onboarding-col-4,
+            .driver-onboarding-col-3 {
+                grid-column: span 6;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .driver-onboarding-hero,
+            .driver-onboarding-summary,
+            .driver-onboarding-section__header,
+            .driver-onboarding-section__body,
+            .driver-onboarding-footer {
+                padding: 18px;
+            }
+
+            .driver-onboarding-hero h2 {
+                font-size: 28px;
+            }
+
+            .driver-onboarding-col-8,
+            .driver-onboarding-col-6,
+            .driver-onboarding-col-4,
+            .driver-onboarding-col-3 {
+                grid-column: span 12;
+            }
+
+            .driver-onboarding-inline {
+                grid-template-columns: 1fr;
+            }
+
+            .driver-onboarding-footer {
+                position: static;
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
 @endsection
 
 @section('content')
-    <div class="content container-fluid">
+    <div class="content container-fluid driver-onboarding-page">
         <div class="driver-profile-page">
             <div class="profile-container">
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="driver-header">
-                            <div class="title">Add Driver</div>
-                            <div class="actions">
-                                <a href="{{ route('admin.drivers.index') }}" class="btn btn-gray">Back To Drivers</a>
-                            </div>
+                <div class="driver-onboarding-intro">
+                    <div class="driver-onboarding-hero">
+                        <span class="driver-onboarding-eyebrow">Driver Management</span>
+                        <h2>Add Driver</h2>
+                        <p>Create a fully usable captain profile in one pass. This flow collects account details, the 6 app-side captain verification documents, and the separate vehicle setup media so admin can review or approve immediately.</p>
+                    </div>
+                    <div class="driver-onboarding-summary">
+                        <h4>What this creates</h4>
+                        <ul>
+                            <li>Driver login account with captain approval status</li>
+                            <li>App-side captain verification documents with review status</li>
+                            <li>Primary vehicle record with year and registration number</li>
+                            <li>Vehicle media for admin, driver profile, and future booking use</li>
+                        </ul>
+                        <div style="margin-top: 18px;">
+                            <a href="{{ route('admin.drivers.index') }}" class="btn btn-gray">Back To Drivers</a>
                         </div>
                     </div>
                 </div>
@@ -27,43 +288,45 @@
                         @endif
                     @endforeach
 
-                    <div class="row g-3">
-                        <div class="col-md-12">
-                            <h3 class="section-title mb-0">Step 1. Driver account details</h3>
-                            <p class="text-muted">Create the captain profile, login credentials, and account status used in the admin panel.</p>
+                    <section class="driver-onboarding-section">
+                        <div class="driver-onboarding-section__header">
+                            <div class="driver-onboarding-section__step">Step 1</div>
+                            <h3 class="driver-onboarding-section__title">Driver account details</h3>
+                            <p class="driver-onboarding-section__desc">Create the captain profile, temporary login credentials, and approval state that admin will see in the driver list.</p>
                         </div>
-
-                        <div class="col-md-6 form-group">
+                        <div class="driver-onboarding-section__body">
+                            <div class="driver-onboarding-grid account">
+                        <div class="driver-onboarding-field driver-onboarding-col-6 form-group">
                             <label class="required" for="first_name">First Name</label>
                             <input type="text" class="form-control @error('first_name') is-invalid @enderror" name="first_name"
                                 id="first_name" value="{{ old('first_name') }}" required>
                             @error('first_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="col-md-6 form-group">
+                        <div class="driver-onboarding-field driver-onboarding-col-6 form-group">
                             <label for="last_name">Last Name</label>
                             <input type="text" class="form-control @error('last_name') is-invalid @enderror" name="last_name"
                                 id="last_name" value="{{ old('last_name') }}">
                             @error('last_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="col-md-6 form-group">
+                        <div class="driver-onboarding-field driver-onboarding-col-6 form-group">
                             <label class="required" for="email">Email</label>
                             <input type="email" class="form-control @error('email') is-invalid @enderror" name="email"
                                 id="email" value="{{ old('email') }}" required>
                             @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="col-md-6 form-group">
+                        <div class="driver-onboarding-field driver-onboarding-col-6 form-group">
                             <label class="required" for="password">Temporary Password</label>
                             <input type="text" class="form-control @error('password') is-invalid @enderror" name="password"
                                 id="password" value="{{ old('password') }}" required>
                             @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="col-md-6 form-group">
-                            <div class="row g-2">
-                                <div class="col-md-4">
+                        <div class="driver-onboarding-field driver-onboarding-col-6 form-group">
+                            <div class="driver-onboarding-inline">
+                                <div>
                                     <label class="required" for="phone_country">Phone Country</label>
                                     <select name="phone_country" id="phone_country" class="form-control @error('phone_country') is-invalid @enderror" onchange="updateDefaultCountry()">
                                         @foreach (config('countries') as $country)
@@ -74,7 +337,7 @@
                                     </select>
                                     @error('phone_country')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
-                                <div class="col-md-8">
+                                <div>
                                     <label class="required" for="phone">Phone Number</label>
                                     <input type="text" class="form-control @error('phone') is-invalid @enderror" name="phone"
                                         id="phone" value="{{ old('phone') }}" required>
@@ -84,7 +347,7 @@
                             <input type="hidden" name="default_country" id="default_country" value="{{ old('default_country') }}">
                         </div>
 
-                        <div class="col-md-2 form-group">
+                        <div class="driver-onboarding-field driver-onboarding-col-3 form-group">
                             <label class="required" for="status">Account Status</label>
                             <select name="status" id="status" class="form-control @error('status') is-invalid @enderror">
                                 <option value="1" {{ old('status', '1') === '1' ? 'selected' : '' }}>Active</option>
@@ -93,7 +356,7 @@
                             @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="col-md-2 form-group">
+                        <div class="driver-onboarding-field driver-onboarding-col-3 form-group">
                             <label class="required" for="document_verify">Document Status</label>
                             <select name="document_verify" id="document_verify" class="form-control @error('document_verify') is-invalid @enderror">
                                 <option value="0" {{ old('document_verify', '0') === '0' ? 'selected' : '' }}>Pending Review</option>
@@ -102,7 +365,7 @@
                             @error('document_verify')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="col-md-2 form-group">
+                        <div class="driver-onboarding-field driver-onboarding-col-3 form-group">
                             <label class="required" for="host_status">Captain Approval</label>
                             <select name="host_status" id="host_status" class="form-control @error('host_status') is-invalid @enderror">
                                 <option value="2" {{ old('host_status', '2') === '2' ? 'selected' : '' }}>Requested</option>
@@ -112,65 +375,87 @@
                             @error('host_status')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="col-md-12 form-group">
+                        <div class="driver-onboarding-field driver-onboarding-col-12 form-group">
                             <label for="profile_image">Profile Image</label>
                             <div class="needsclick dropzone @error('profile_image') is-invalid @enderror" id="profile_image-dropzone"></div>
                             <small class="text-muted">Optional. Used on the driver list and account page.</small>
                             @error('profile_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-                    </div>
-
-                    <div class="row g-3 mt-4">
-                        <div class="col-md-12">
-                            <h3 class="section-title mb-0">Step 2. Captain verification documents</h3>
-                            <p class="text-muted">This matches the app-side captain verification upload step. These 6 documents are what the app sends for captain approval review.</p>
+                            </div>
                         </div>
+                    </section>
 
-                        <div class="col-md-6 form-group">
+                    <section class="driver-onboarding-section">
+                        <div class="driver-onboarding-section__header">
+                            <div class="driver-onboarding-section__step">Step 2</div>
+                            <h3 class="driver-onboarding-section__title">Captain verification documents</h3>
+                            <p class="driver-onboarding-section__desc">This section mirrors the app-side captain verification flow. These 6 documents are the ones the app sends for approval review.</p>
+                        </div>
+                        <div class="driver-onboarding-section__body">
+                            <div class="driver-onboarding-grid docs">
+
+                        <div class="driver-onboarding-col-4 form-group">
+                            <div class="driver-onboarding-doc-card">
                             <label class="required">Driving Licence Front</label>
                             <div class="needsclick dropzone @error('driving_licence_front') is-invalid @enderror" id="driving_licence_front-dropzone"></div>
                             @error('driving_licence_front')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
                         </div>
 
-                        <div class="col-md-6 form-group">
+                        <div class="driver-onboarding-col-4 form-group">
+                            <div class="driver-onboarding-doc-card">
                             <label class="required">Driving Licence Back</label>
                             <div class="needsclick dropzone @error('driving_licence_back') is-invalid @enderror" id="driving_licence_back-dropzone"></div>
                             @error('driving_licence_back')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
                         </div>
 
-                        <div class="col-md-6 form-group">
+                        <div class="driver-onboarding-col-4 form-group">
+                            <div class="driver-onboarding-doc-card">
                             <label class="required">Aadhaar Front</label>
                             <div class="needsclick dropzone @error('aadhaar_front') is-invalid @enderror" id="aadhaar_front-dropzone"></div>
                             @error('aadhaar_front')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
                         </div>
 
-                        <div class="col-md-6 form-group">
+                        <div class="driver-onboarding-col-4 form-group">
+                            <div class="driver-onboarding-doc-card">
                             <label class="required">Aadhaar Back</label>
                             <div class="needsclick dropzone @error('aadhaar_back') is-invalid @enderror" id="aadhaar_back-dropzone"></div>
                             @error('aadhaar_back')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
                         </div>
 
-                        <div class="col-md-6 form-group">
+                        <div class="driver-onboarding-col-4 form-group">
+                            <div class="driver-onboarding-doc-card">
                             <label class="required">PAN Card</label>
                             <div class="needsclick dropzone @error('pan_card') is-invalid @enderror" id="pan_card-dropzone"></div>
                             @error('pan_card')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
                         </div>
 
-                        <div class="col-md-6 form-group">
+                        <div class="driver-onboarding-col-4 form-group">
+                            <div class="driver-onboarding-doc-card">
                             <label class="required">Vehicle Insurance</label>
                             <div class="needsclick dropzone @error('vehicle_insurance_doc') is-invalid @enderror" id="vehicle_insurance_doc-dropzone"></div>
                             <small class="text-muted">The app also uploads this in the captain verification document step.</small>
                             @error('vehicle_insurance_doc')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="row g-3 mt-4">
-                        <div class="col-md-12">
-                            <h3 class="section-title mb-0">Step 3. Vehicle setup and media</h3>
-                            <p class="text-muted">This matches the app-side vehicle setup flow. Vehicle image and registration document are uploaded separately from the captain verification docs.</p>
+                            </div>
                         </div>
+                    </section>
 
-                        <div class="col-md-4 form-group">
+                    <section class="driver-onboarding-section">
+                        <div class="driver-onboarding-section__header">
+                            <div class="driver-onboarding-section__step">Step 3</div>
+                            <h3 class="driver-onboarding-section__title">Vehicle setup and media</h3>
+                            <p class="driver-onboarding-section__desc">This matches the app-side vehicle setup flow. Vehicle image and registration document are uploaded separately from the captain verification documents.</p>
+                        </div>
+                        <div class="driver-onboarding-section__body">
+                            <div class="driver-onboarding-grid vehicle">
+
+                        <div class="driver-onboarding-field driver-onboarding-col-3 form-group">
                             <label class="required" for="car_type">Vehicle Type</label>
                             <select name="car_type" id="car_type" class="form-control @error('car_type') is-invalid @enderror">
                                 <option value="">Please select</option>
@@ -183,7 +468,7 @@
                             @error('car_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="col-md-4 form-group">
+                        <div class="driver-onboarding-field driver-onboarding-col-3 form-group">
                             <label class="required" for="make">Vehicle Make</label>
                             <select name="make" id="vehicleMakeSelect" class="form-control @error('make') is-invalid @enderror">
                                 <option value="">Please select</option>
@@ -191,14 +476,14 @@
                             @error('make')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="col-md-4 form-group">
+                        <div class="driver-onboarding-field driver-onboarding-col-3 form-group">
                             <label class="required" for="model">Vehicle Model</label>
                             <input type="text" name="model" id="model" class="form-control @error('model') is-invalid @enderror"
                                 value="{{ old('model') }}">
                             @error('model')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="col-md-6 form-group">
+                        <div class="driver-onboarding-field driver-onboarding-col-3 form-group">
                             <label class="required" for="year">Vehicle Year</label>
                             <select name="year" id="year" class="form-control @error('year') is-invalid @enderror">
                                 <option value="">Please select</option>
@@ -210,7 +495,7 @@
                             @error('year')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="col-md-6 form-group">
+                        <div class="driver-onboarding-field driver-onboarding-col-4 form-group">
                             <label class="required" for="registration_number">Vehicle Number</label>
                             <input type="text" name="registration_number" id="registration_number"
                                 class="form-control @error('registration_number') is-invalid @enderror"
@@ -218,27 +503,36 @@
                             @error('registration_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="col-md-6 form-group">
+                        <div class="driver-onboarding-col-4 form-group">
+                            <div class="driver-onboarding-doc-card">
                             <label class="required">Vehicle Image</label>
                             <div class="needsclick dropzone @error('vehicle_image') is-invalid @enderror" id="vehicle_image-dropzone"></div>
                             @error('vehicle_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-
-                        <div class="col-md-6 form-group">
-                            <label class="required">Vehicle Registration Document</label>
-                            <div class="needsclick dropzone @error('vehicle_registration_doc') is-invalid @enderror" id="vehicle_registration_doc-dropzone"></div>
-                            @error('vehicle_registration_doc')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-
-                        <div class="col-md-12">
-                            <div class="alert alert-info">
-                                <strong>App parity:</strong> the mobile app currently uploads 6 captain verification documents here, and uploads vehicle image plus vehicle registration document during vehicle setup. If you select <em>Captain Approval = Approved</em>, documents must also be marked approved. Otherwise keep the driver in <em>Requested</em> and finish review later from Captain Requests.
                             </div>
                         </div>
 
-                        <div class="col-md-12 form-group">
-                            <button class="btn btn-primary btn-lg w-100 py-3" type="submit">Create Driver</button>
+                        <div class="driver-onboarding-col-4 form-group">
+                            <div class="driver-onboarding-doc-card">
+                            <label class="required">Vehicle Registration Document</label>
+                            <div class="needsclick dropzone @error('vehicle_registration_doc') is-invalid @enderror" id="vehicle_registration_doc-dropzone"></div>
+                            @error('vehicle_registration_doc')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
                         </div>
+
+                        <div class="driver-onboarding-col-12">
+                            <div class="driver-onboarding-note">
+                                <strong>App parity:</strong> the mobile app currently uploads 6 captain verification documents here, and uploads vehicle image plus vehicle registration document during vehicle setup. If you select <em>Captain Approval = Approved</em>, documents must also be marked approved. Otherwise keep the driver in <em>Requested</em> and finish review later from Captain Requests.
+                            </div>
+                        </div>
+                        </div>
+                    </section>
+
+                    <div class="driver-onboarding-footer">
+                        <div class="driver-onboarding-footer__meta">
+                            <strong>Ready to create the driver?</strong>
+                            This will create the driver account, attach the captain documents, create the primary vehicle, and place the driver into the approval state you selected above.
+                        </div>
+                        <button class="btn btn-primary btn-lg" type="submit">Create Driver</button>
                     </div>
                 </form>
             </div>
