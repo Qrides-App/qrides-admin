@@ -356,6 +356,18 @@ class EnsureAuthSchema extends Command
                 $table->integer('reset_token')->nullable()->default(0)->after('token');
             });
         }
+
+        if (! Schema::hasColumn('app_users', 'recharge_active')) {
+            Schema::table('app_users', function (Blueprint $table) {
+                $table->boolean('recharge_active')->default(false)->after('host_status');
+            });
+        }
+
+        if (! Schema::hasColumn('app_users', 'recharge_valid_until')) {
+            Schema::table('app_users', function (Blueprint $table) {
+                $table->timestamp('recharge_valid_until')->nullable()->after('recharge_active');
+            });
+        }
     }
 
     private function ensureAppUsersPackageColumn(): void
