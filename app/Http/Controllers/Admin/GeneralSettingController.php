@@ -28,6 +28,7 @@ use App\Models\VehicleOdometer;
 use Gate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -154,6 +155,8 @@ class GeneralSettingController extends Controller
             }
         }
 
+        $this->clearSharedSettingCaches();
+
         return redirect()->route('admin.settings')->with('success', 'Updated successfully.');
     }
 
@@ -173,6 +176,12 @@ class GeneralSettingController extends Controller
         }
 
         return url('/media/public/' . ltrim($path, '/'));
+    }
+
+    private function clearSharedSettingCaches(): void
+    {
+        Cache::forget('cached_general_settings');
+        Cache::forget('general_default_currency');
     }
 
     public function preferences()
