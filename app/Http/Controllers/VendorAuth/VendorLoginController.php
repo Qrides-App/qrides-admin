@@ -28,11 +28,11 @@ class VendorLoginController extends Controller
         $private_key = GeneralSetting::where('meta_key', 'private_key')->first();
 
         return view('vendor.login', [
-            'logoUrl' => '/storage/'.$logoUrl->meta_value,
+            'logoUrl' => url('/media/public/' . ltrim($logoUrl->meta_value, '/')),
             'siteName' => $general_name->meta_value,
             'tagLine' => $general_description->meta_value,
-            'faviconUrl' => '/storage/'.$faviconUrl->meta_value,
-            'loginBackgroud' => '/storage/'.$general_loginBackgroud->meta_value,
+            'faviconUrl' => url('/media/public/' . ltrim($faviconUrl->meta_value, '/')),
+            'loginBackgroud' => url('/media/public/' . ltrim($general_loginBackgroud->meta_value, '/')),
             'general_captcha' => $general_captcha->meta_value,
             'site_key' => $site_key->meta_value,
             'private_key' => $private_key->meta_value,
@@ -55,11 +55,11 @@ class VendorLoginController extends Controller
         $private_key = GeneralSetting::where('meta_key', 'private_key')->first();
 
         return view('vendor.register', [
-            'logoUrl' => '/storage/'.$logoUrl->meta_value,
+            'logoUrl' => url('/media/public/' . ltrim($logoUrl->meta_value, '/')),
             'siteName' => $general_name->meta_value,
             'tagLine' => $general_description->meta_value,
-            'faviconUrl' => '/storage/'.$faviconUrl->meta_value,
-            'loginBackgroud' => '/storage/'.$general_loginBackgroud->meta_value,
+            'faviconUrl' => url('/media/public/' . ltrim($faviconUrl->meta_value, '/')),
+            'loginBackgroud' => url('/media/public/' . ltrim($general_loginBackgroud->meta_value, '/')),
             'general_captcha' => $general_captcha->meta_value,
             'site_key' => $site_key->meta_value,
             'private_key' => $private_key->meta_value,
@@ -236,11 +236,11 @@ class VendorLoginController extends Controller
         $private_key = GeneralSetting::where('meta_key', 'private_key')->first();
 
         return view('vendor.hostRequest', [
-            'logoUrl' => '/storage/'.$logoUrl->meta_value,
+            'logoUrl' => url('/media/public/' . ltrim($logoUrl->meta_value, '/')),
             'siteName' => $general_name->meta_value,
             'tagLine' => $general_description->meta_value,
-            'faviconUrl' => '/storage/'.$faviconUrl->meta_value,
-            'loginBackgroud' => '/storage/'.$general_loginBackgroud->meta_value,
+            'faviconUrl' => url('/media/public/' . ltrim($faviconUrl->meta_value, '/')),
+            'loginBackgroud' => url('/media/public/' . ltrim($general_loginBackgroud->meta_value, '/')),
             'general_captcha' => $general_captcha->meta_value,
             'site_key' => $site_key->meta_value,
             'private_key' => $private_key->meta_value,

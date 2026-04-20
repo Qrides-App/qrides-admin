@@ -47,8 +47,8 @@ class ViewComposerServiceProvider extends ServiceProvider
             }
 
             View::share([
-                'faviconPath' => isset($this->settings['general_favicon']) ? '/storage/'.$this->settings['general_favicon']->meta_value : null,
-                'logoPath' => isset($this->settings['general_logo']) ? '/storage/'.$this->settings['general_logo']->meta_value : null,
+                'faviconPath' => isset($this->settings['general_favicon']) ? url('/media/public/' . ltrim($this->settings['general_favicon']->meta_value, '/')) : null,
+                'logoPath' => isset($this->settings['general_logo']) ? url('/media/public/' . ltrim($this->settings['general_logo']->meta_value, '/')) : null,
                 'siteName' => isset($this->settings['general_name']) ? $this->settings['general_name']->meta_value : null,
                 'tagLine' => isset($this->settings['general_description']) ? $this->settings['general_description']->meta_value : null,
                 'general_default_currency' => $this->settings['general_default_currency'] ?? null,

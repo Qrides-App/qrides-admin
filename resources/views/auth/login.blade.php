@@ -152,7 +152,7 @@
         </div>
         <div class="right">
             <div class="right-text">
-                @if ($logoUrl && file_exists(public_path($logoUrl)))
+                @if ($logoUrl)
                     <img src="{{ $logoUrl }}" alt="{{ $siteName ?? trans('global.site_title') }}" />
 
                 @else

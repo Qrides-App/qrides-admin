@@ -138,11 +138,11 @@ class LoginController extends Controller
         }
 
         return view('auth.login', [
-            'logoUrl' => '/storage/'.($settings['general_logo'] ?? 'default_logo.png'),
+            'logoUrl' => !empty($settings['general_logo']) ? url('/media/public/' . ltrim($settings['general_logo'], '/')) : null,
             'siteName' => $settings['general_name'] ?? '',
             'tagLine' => $settings['general_description'] ?? '',
-            'faviconUrl' => '/storage/'.($settings['general_favicon'] ?? 'default_favicon.png'),
-            'loginBackgroud' => '/storage/'.($settings['general_loginBackgroud'] ?? 'default_bg.png'),
+            'faviconUrl' => !empty($settings['general_favicon']) ? url('/media/public/' . ltrim($settings['general_favicon'], '/')) : asset('default/favicon.png'),
+            'loginBackgroud' => !empty($settings['general_loginBackgroud']) ? url('/media/public/' . ltrim($settings['general_loginBackgroud'], '/')) : null,
             'general_captcha' => $settings['general_captcha'] ?? '',
             'site_key' => $settings['site_key'] ?? '',
             'private_key' => $settings['private_key'] ?? '',

@@ -138,14 +138,14 @@
         <header class="main-header cvvv">
             <a href="{{ route('admin.home', [], false) }}" class="logo">
                 <span class="logo-mini">
-                    @if (isset($logoPath) && !empty($logoPath) && file_exists(public_path($logoPath)))
+                    @if (isset($logoPath) && !empty($logoPath))
                         <img src="{{ $logoPath }}" alt="{{ $siteName ?? trans('global.site_title') }}" />
                     @else
                         <b>{{ $siteName ?? trans('global.site_title') }}</b>
                     @endif
                 </span>
                 <span class="logo-lg">
-                    @if (isset($logoPath) && !empty($logoPath) && file_exists(public_path($logoPath)))
+                    @if (isset($logoPath) && !empty($logoPath))
                         <img src="{{ $logoPath }}" alt="{{ $siteName ?? trans('global.site_title') }}" />
                     @else
                         {{ $siteName ?? trans('global.site_title') }}

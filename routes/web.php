@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CurrencyController;
 use App\Http\Controllers\Admin\GeneralSettingController;
+use App\Http\Controllers\PublicDiskMediaController;
 use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\Auth\ConfirmPasswordController;
 use App\Http\Controllers\Auth\LoginController;
@@ -30,6 +31,12 @@ Route::get('/payment_fail', 'App\Http\Controllers\Front\PaymentFrontController@p
 Route::get('/testing', 'App\Http\Controllers\Front\PaymentFrontController@testing')->name('testing');
 Route::get('/ride-tracking/{token}', [App\Http\Controllers\Front\RideTrackingController::class, 'show'])->name('ride-tracking.show');
 Route::get('/ride-tracking/{token}/snapshot', [App\Http\Controllers\Front\RideTrackingController::class, 'snapshot'])->name('ride-tracking.snapshot');
+Route::get('/media/public/{path}', [PublicDiskMediaController::class, 'show'])
+    ->where('path', '.*')
+    ->name('media.public');
+Route::get('/storage/{path}', [PublicDiskMediaController::class, 'show'])
+    ->where('path', '.*')
+    ->name('media.public.legacy');
 
 // email route
 Route::middleware('auth')->group(function () {
