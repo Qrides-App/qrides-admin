@@ -30,6 +30,14 @@ class PublicDiskMediaController extends Controller
             ]);
         }
 
+        $storageFile = storage_path($normalizedPath);
+
+        if (File::exists($storageFile)) {
+            return response()->file($storageFile, [
+                'Cache-Control' => 'public, max-age=86400',
+            ]);
+        }
+
         abort(404);
     }
 

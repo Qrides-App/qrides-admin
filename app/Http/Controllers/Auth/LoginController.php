@@ -166,7 +166,9 @@ class LoginController extends Controller
             return $fallback;
         }
 
-        if (! Storage::disk('public')->exists($path) && ! File::exists(public_path($path))) {
+        if (! Storage::disk('public')->exists($path)
+            && ! File::exists(public_path($path))
+            && ! File::exists(storage_path($path))) {
             return $fallback;
         }
 

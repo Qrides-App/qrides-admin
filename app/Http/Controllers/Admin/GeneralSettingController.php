@@ -176,6 +176,11 @@ class GeneralSettingController extends Controller
         if (File::exists($publicFile)) {
             File::delete($publicFile);
         }
+
+        $storageFile = storage_path($existingPath);
+        if (File::exists($storageFile)) {
+            File::delete($storageFile);
+        }
     }
 
     private function publicBrandingUrl(?string $path): ?string
@@ -184,7 +189,9 @@ class GeneralSettingController extends Controller
             return null;
         }
 
-        if (! Storage::disk('public')->exists($path) && ! File::exists(public_path($path))) {
+        if (! Storage::disk('public')->exists($path)
+            && ! File::exists(public_path($path))
+            && ! File::exists(storage_path($path))) {
             return null;
         }
 
@@ -193,7 +200,7 @@ class GeneralSettingController extends Controller
 
     private function storePublicBrandingUpload($file, string $fileName): string
     {
-        $directory = public_path('branding/logo');
+        $directory = storage_path('firebase/branding/logo');
 
         if (! File::isDirectory($directory)) {
             File::makeDirectory($directory, 0755, true);
@@ -201,7 +208,7 @@ class GeneralSettingController extends Controller
 
         $file->move($directory, $fileName);
 
-        return 'branding/logo/' . $fileName;
+        return 'firebase/branding/logo/' . $fileName;
     }
 
     private function clearSharedSettingCaches(): void
