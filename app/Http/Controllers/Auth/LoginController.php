@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class LoginController extends Controller
 {
@@ -138,11 +139,11 @@ class LoginController extends Controller
         }
 
         return view('auth.login', [
-            'logoUrl' => !empty($settings['general_logo']) ? url('/media/public/' . ltrim($settings['general_logo'], '/')) : null,
+            'logoUrl' => $this->brandingUrl($settings['general_logo'] ?? null),
             'siteName' => $settings['general_name'] ?? '',
             'tagLine' => $settings['general_description'] ?? '',
-            'faviconUrl' => !empty($settings['general_favicon']) ? url('/media/public/' . ltrim($settings['general_favicon'], '/')) : asset('default/favicon.png'),
-            'loginBackgroud' => !empty($settings['general_loginBackgroud']) ? url('/media/public/' . ltrim($settings['general_loginBackgroud'], '/')) : null,
+            'faviconUrl' => $this->brandingUrl($settings['general_favicon'] ?? null, asset('default/favicon.png')),
+            'loginBackgroud' => $this->brandingUrl($settings['general_loginBackgroud'] ?? null),
             'general_captcha' => $settings['general_captcha'] ?? '',
             'site_key' => $settings['site_key'] ?? '',
             'private_key' => $settings['private_key'] ?? '',
@@ -156,5 +157,14 @@ class LoginController extends Controller
         }
 
         return GeneralSetting::where('meta_key', $key)->value('meta_value');
+    }
+
+    private function brandingUrl(?string $path, ?string $fallback = null): ?string
+    {
+        if (empty($path) || ! Storage::disk('public')->exists($path)) {
+            return $fallback;
+        }
+
+        return url('/media/public/' . ltrim($path, '/'));
     }
 }

@@ -101,8 +101,8 @@
                             <div class="settings-media-preview-wrap">
                                 <div class="settings-media-preview-copy">Current logo</div>
                                 <div class="settings-media-preview" id="general_logo_preview">
-                                    @if (!empty($general_logo->meta_value))
-                                        <img src="{{ url('/media/public/' . ltrim($general_logo->meta_value, '/')) }}" alt="Current logo">
+                                    @if (!empty($generalLogoPreviewUrl))
+                                        <img src="{{ $generalLogoPreviewUrl }}" alt="Current logo">
                                     @else
                                         <span>No logo uploaded</span>
                                     @endif
@@ -116,8 +116,8 @@
                             <div class="settings-media-preview-wrap">
                                 <div class="settings-media-preview-copy">Current favicon</div>
                                 <div class="settings-media-preview settings-media-preview--favicon" id="general_favicon_preview">
-                                    @if (!empty($general_favicon->meta_value))
-                                        <img src="{{ url('/media/public/' . ltrim($general_favicon->meta_value, '/')) }}" alt="Current favicon">
+                                    @if (!empty($generalFaviconPreviewUrl))
+                                        <img src="{{ $generalFaviconPreviewUrl }}" alt="Current favicon">
                                     @else
                                         <span>No favicon uploaded</span>
                                     @endif

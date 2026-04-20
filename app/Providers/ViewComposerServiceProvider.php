@@ -7,6 +7,7 @@ use App\Models\Module;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use PDOException;
@@ -47,8 +48,8 @@ class ViewComposerServiceProvider extends ServiceProvider
             }
 
             View::share([
-                'faviconPath' => isset($this->settings['general_favicon']) ? url('/media/public/' . ltrim($this->settings['general_favicon']->meta_value, '/')) : null,
-                'logoPath' => isset($this->settings['general_logo']) ? url('/media/public/' . ltrim($this->settings['general_logo']->meta_value, '/')) : null,
+                'faviconPath' => $this->brandingUrl('general_favicon', asset('default/favicon.png')),
+                'logoPath' => $this->brandingUrl('general_logo'),
                 'siteName' => isset($this->settings['general_name']) ? $this->settings['general_name']->meta_value : null,
                 'tagLine' => isset($this->settings['general_description']) ? $this->settings['general_description']->meta_value : null,
                 'general_default_currency' => $this->settings['general_default_currency'] ?? null,
@@ -66,5 +67,16 @@ class ViewComposerServiceProvider extends ServiceProvider
     public function register()
     {
         //
+    }
+
+    private function brandingUrl(string $key, ?string $fallback = null): ?string
+    {
+        $path = $this->settings[$key]->meta_value ?? null;
+
+        if (empty($path) || ! Storage::disk('public')->exists($path)) {
+            return $fallback;
+        }
+
+        return url('/media/public/' . ltrim($path, '/'));
     }
 }

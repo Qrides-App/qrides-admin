@@ -7,6 +7,7 @@ use App\Models\GeneralSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Validator;
 
@@ -28,11 +29,11 @@ class VendorLoginController extends Controller
         $private_key = GeneralSetting::where('meta_key', 'private_key')->first();
 
         return view('vendor.login', [
-            'logoUrl' => url('/media/public/' . ltrim($logoUrl->meta_value, '/')),
+            'logoUrl' => $this->brandingUrl(optional($logoUrl)->meta_value),
             'siteName' => $general_name->meta_value,
             'tagLine' => $general_description->meta_value,
-            'faviconUrl' => url('/media/public/' . ltrim($faviconUrl->meta_value, '/')),
-            'loginBackgroud' => url('/media/public/' . ltrim($general_loginBackgroud->meta_value, '/')),
+            'faviconUrl' => $this->brandingUrl(optional($faviconUrl)->meta_value, asset('default/favicon.png')),
+            'loginBackgroud' => $this->brandingUrl(optional($general_loginBackgroud)->meta_value),
             'general_captcha' => $general_captcha->meta_value,
             'site_key' => $site_key->meta_value,
             'private_key' => $private_key->meta_value,
@@ -55,11 +56,11 @@ class VendorLoginController extends Controller
         $private_key = GeneralSetting::where('meta_key', 'private_key')->first();
 
         return view('vendor.register', [
-            'logoUrl' => url('/media/public/' . ltrim($logoUrl->meta_value, '/')),
+            'logoUrl' => $this->brandingUrl(optional($logoUrl)->meta_value),
             'siteName' => $general_name->meta_value,
             'tagLine' => $general_description->meta_value,
-            'faviconUrl' => url('/media/public/' . ltrim($faviconUrl->meta_value, '/')),
-            'loginBackgroud' => url('/media/public/' . ltrim($general_loginBackgroud->meta_value, '/')),
+            'faviconUrl' => $this->brandingUrl(optional($faviconUrl)->meta_value, asset('default/favicon.png')),
+            'loginBackgroud' => $this->brandingUrl(optional($general_loginBackgroud)->meta_value),
             'general_captcha' => $general_captcha->meta_value,
             'site_key' => $site_key->meta_value,
             'private_key' => $private_key->meta_value,
@@ -236,17 +237,26 @@ class VendorLoginController extends Controller
         $private_key = GeneralSetting::where('meta_key', 'private_key')->first();
 
         return view('vendor.hostRequest', [
-            'logoUrl' => url('/media/public/' . ltrim($logoUrl->meta_value, '/')),
+            'logoUrl' => $this->brandingUrl(optional($logoUrl)->meta_value),
             'siteName' => $general_name->meta_value,
             'tagLine' => $general_description->meta_value,
-            'faviconUrl' => url('/media/public/' . ltrim($faviconUrl->meta_value, '/')),
-            'loginBackgroud' => url('/media/public/' . ltrim($general_loginBackgroud->meta_value, '/')),
+            'faviconUrl' => $this->brandingUrl(optional($faviconUrl)->meta_value, asset('default/favicon.png')),
+            'loginBackgroud' => $this->brandingUrl(optional($general_loginBackgroud)->meta_value),
             'general_captcha' => $general_captcha->meta_value,
             'site_key' => $site_key->meta_value,
             'private_key' => $private_key->meta_value,
             'user' => $user,
             'api_google_map_key' => $api_google_map_key,
         ]);
+    }
+
+    private function brandingUrl(?string $path, ?string $fallback = null): ?string
+    {
+        if (empty($path) || ! Storage::disk('public')->exists($path)) {
+            return $fallback;
+        }
+
+        return url('/media/public/' . ltrim($path, '/'));
     }
 
     public function putHostRequest(Request $request)

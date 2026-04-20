@@ -30,6 +30,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -116,10 +117,12 @@ class GeneralSettingController extends Controller
         $general_default_language = $settings['general_default_language'] ?? null;
         $general_favicon = $settings['general_favicon'] ?? null;
         $general_logo = $settings['general_logo'] ?? null;
+        $generalLogoPreviewUrl = $this->publicBrandingUrl(optional($general_logo)->meta_value);
+        $generalFaviconPreviewUrl = $this->publicBrandingUrl(optional($general_favicon)->meta_value);
         $languagedata = Language::all();
         $allcurrency = Currency::where('status', 1)->get();
 
-        return view('admin.generalSettings.general.basic-configuration-form', compact('general_name', 'general_email', 'general_phone', 'general_default_phone_country', 'general_default_currency', 'general_default_language', 'general_favicon', 'general_logo', 'allcurrency', 'languagedata', 'general_description'));
+        return view('admin.generalSettings.general.basic-configuration-form', compact('general_name', 'general_email', 'general_phone', 'general_default_phone_country', 'general_default_currency', 'general_default_language', 'general_favicon', 'general_logo', 'generalLogoPreviewUrl', 'generalFaviconPreviewUrl', 'allcurrency', 'languagedata', 'general_description'));
     }
 
     public function addConfigurationWizard(Request $request)
@@ -129,15 +132,16 @@ class GeneralSettingController extends Controller
         }
         $formData = $request->except('_token', 'general_logo', 'general_favicon');
         if ($request->hasFile('general_logo')) {
+            $this->deleteExistingPublicBrandingFile('general_logo');
             $file = $request->file('general_logo');
             $fileName = rand(10, 1000000) . '.' . $file->getClientOriginalName();
             $path = $file->storeAs('logo', $fileName, 'public');
             $formData['general_logo'] = $path;
         }
         if ($request->hasFile('general_favicon')) {
+            $this->deleteExistingPublicBrandingFile('general_favicon');
             $file = $request->file('general_favicon');
             $fileName = rand(10, 1000000) . '.' . $file->getClientOriginalName();
-            $destinationPath = 'public/uploads/logo';
             $path = $file->storeAs('logo', $fileName, 'public');
             $formData['general_favicon'] = $path;
         }
@@ -151,6 +155,24 @@ class GeneralSettingController extends Controller
         }
 
         return redirect()->route('admin.settings')->with('success', 'Updated successfully.');
+    }
+
+    private function deleteExistingPublicBrandingFile(string $metaKey): void
+    {
+        $existingPath = GeneralSetting::where('meta_key', $metaKey)->value('meta_value');
+
+        if (! empty($existingPath) && Storage::disk('public')->exists($existingPath)) {
+            Storage::disk('public')->delete($existingPath);
+        }
+    }
+
+    private function publicBrandingUrl(?string $path): ?string
+    {
+        if (empty($path) || ! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        return url('/media/public/' . ltrim($path, '/'));
     }
 
     public function preferences()
