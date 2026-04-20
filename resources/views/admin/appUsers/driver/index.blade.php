@@ -112,7 +112,12 @@
 
         <div class="panel panel-default">
             <div class="panel-heading">
-                {{ $label }} {{ trans('user.list') }}
+                <div class="clearfix">
+                    <span>{{ $label }} {{ trans('user.list') }}</span>
+                    @can('app_user_create')
+                        <a href="{{ route('admin.drivers.create') }}" class="btn btn-primary btn-sm pull-right">Add Driver</a>
+                    @endcan
+                </div>
             </div>
             <div class="panel-body">
                 <div class="table-responsive">
@@ -145,6 +150,35 @@
                             @foreach($appUsers as $key => $appUser)
                                                 @php
                                                     $statuses = $appUser->metadata->whereIn('meta_key', $documentKeys)->pluck('meta_value');
+                                                    $documentCollections = [
+                                                        'driving_licence_front',
+                                                        'driving_licence_back',
+                                                        'aadhaar_front',
+                                                        'aadhaar_back',
+                                                        'pan_card',
+                                                        'vehicle_insurance_doc',
+                                                    ];
+                                                    $uploadedDocumentCount = collect($documentCollections)->filter(fn($collection) => $appUser->getMedia($collection)->isNotEmpty())->count();
+                                                    $approvedDocumentCount = collect($documentKeys)->filter(fn($key) => strtolower((string) optional($appUser->metadata->firstWhere('meta_key', $key))->meta_value) === 'approved')->count();
+                                                    $docsReady = $uploadedDocumentCount === count($documentCollections) && $approvedDocumentCount === count($documentKeys);
+                                                    $vehicleReady = $appUser->item
+                                                        && !empty($appUser->item->registration_number)
+                                                        && !empty(optional($appUser->item->itemVehicle)->year)
+                                                        && $appUser->item->getMedia('front_image')->isNotEmpty()
+                                                        && $appUser->item->getMedia('vehicle_registration_doc')->isNotEmpty()
+                                                        && $appUser->item->getMedia('vehicle_insurance_doc')->isNotEmpty();
+                                                    $approvalBadgeClass = match ((string) $appUser->host_status) {
+                                                        '1' => 'badge badge-pill label-success',
+                                                        '2' => 'badge badge-pill label-warning',
+                                                        '0' => 'badge badge-pill label-danger',
+                                                        default => 'badge badge-pill label-default',
+                                                    };
+                                                    $approvalBadgeLabel = match ((string) $appUser->host_status) {
+                                                        '1' => 'Captain approved',
+                                                        '2' => 'Captain request pending',
+                                                        '0' => 'Captain rejected',
+                                                        default => 'Captain not started',
+                                                    };
                                                     $iconColor = 'text-muted';
                                                     if ($statuses->contains('pending'))
                                                         $iconColor = 'text-warning';
@@ -198,6 +232,25 @@
                                     '')
                                                                                                                                                                     }}
                                                                 </small>
+                                                                <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
+                                                                    @if($docsReady)
+                                                                        <span class="badge badge-pill label-success">Docs complete</span>
+                                                                    @elseif($uploadedDocumentCount > 0)
+                                                                        <span class="badge badge-pill label-warning">Docs {{ $approvedDocumentCount }}/{{ count($documentKeys) }} approved</span>
+                                                                    @else
+                                                                        <span class="badge badge-pill label-danger">Docs missing</span>
+                                                                    @endif
+
+                                                                    @if($vehicleReady)
+                                                                        <span class="badge badge-pill badge-info">Vehicle ready</span>
+                                                                    @elseif($appUser->item)
+                                                                        <span class="badge badge-pill label-warning">Vehicle pending</span>
+                                                                    @else
+                                                                        <span class="badge badge-pill label-danger">Vehicle missing</span>
+                                                                    @endif
+
+                                                                    <span class="{{ $approvalBadgeClass }}">{{ $approvalBadgeLabel }}</span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </td>

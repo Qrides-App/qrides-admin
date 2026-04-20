@@ -14,13 +14,18 @@ use App\Models\AppUser;
 use App\Models\AppUserMeta;
 use App\Models\GeneralSetting;
 use App\Models\Modern\Item;
+use App\Models\Modern\ItemVehicle;
 use App\Models\Modern\ItemType;
 use App\Models\Payout;
 use App\Models\VendorWallet;
+use App\Models\VehicleMake;
 use App\Services\FirebaseAuthService;
 use Gate;
 use Hash;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -84,6 +89,144 @@ class AppDriverController extends Controller
         ];
 
         return view('admin.appUsers.driver.index', compact('appUsers', 'statusCounts', 'searchfield', 'searchfieldId'));
+    }
+
+    public function create()
+    {
+        abort_if(Gate::denies('app_user_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+        $vehicleTypes = $this->availableVehicleTypes();
+
+        if ($vehicleTypes->isEmpty()) {
+            return redirect()
+                ->route('admin.drivers.index')
+                ->withErrors(['vehicle_setup' => 'Add at least one active vehicle type before creating a driver.']);
+        }
+
+        if (! $this->availableVehicleMakes()->exists()) {
+            return redirect()
+                ->route('admin.drivers.index')
+                ->withErrors(['vehicle_setup' => 'Add at least one active vehicle make before creating a driver.']);
+        }
+
+        return view('admin.appUsers.driver.create', compact('vehicleTypes'));
+    }
+
+    public function store(Request $request)
+    {
+        abort_if(Gate::denies('app_user_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['nullable', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:app_users,email'],
+            'password' => ['required', 'string', 'min:6'],
+            'phone_country' => ['required', 'string', 'max:20'],
+            'phone' => [
+                'required',
+                'string',
+                'max:25',
+                Rule::unique('app_users', 'phone')->where(fn ($query) => $query->where('phone_country', $request->input('phone_country'))),
+            ],
+            'default_country' => ['nullable', 'string', 'max:10'],
+            'status' => ['required', Rule::in(['0', '1'])],
+            'host_status' => ['required', Rule::in(['0', '1', '2'])],
+            'document_verify' => ['required', Rule::in(['0', '1'])],
+            'profile_image' => ['nullable', 'string'],
+            'car_type' => ['required', 'exists:item_types,id'],
+            'make' => ['required', 'exists:vehicle_makes,id'],
+            'model' => ['required', 'string', 'max:255'],
+            'year' => ['required', 'digits:4'],
+            'registration_number' => ['required', 'string', 'max:255'],
+            'vehicle_image' => ['required', 'string'],
+            'vehicle_registration_doc' => ['required', 'string'],
+            'driving_licence_front' => ['required', 'string'],
+            'driving_licence_back' => ['required', 'string'],
+            'aadhaar_front' => ['required', 'string'],
+            'aadhaar_back' => ['required', 'string'],
+            'pan_card' => ['required', 'string'],
+            'vehicle_insurance_doc' => ['required', 'string'],
+        ]);
+
+        if ($validated['host_status'] === '1' && $validated['document_verify'] !== '1') {
+            return back()
+                ->withErrors(['host_status' => 'Approve documents before marking this driver as approved.'])
+                ->withInput();
+        }
+
+        $vehicleType = $this->availableVehicleTypes()->firstWhere('id', $validated['car_type']);
+        if (! $vehicleType) {
+            return back()
+                ->withErrors(['car_type' => 'Selected vehicle type is not active or not available for driver onboarding.'])
+                ->withInput();
+        }
+
+        $vehicleMake = $this->availableVehicleMakes()->firstWhere('id', $validated['make']);
+        if (! $vehicleMake) {
+            return back()
+                ->withErrors(['make' => 'Selected vehicle make is not active or not available for driver onboarding.'])
+                ->withInput();
+        }
+
+        $driver = null;
+
+        DB::transaction(function () use ($validated, &$driver) {
+            $driver = AppUser::create([
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'] ?? null,
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'phone_country' => $validated['phone_country'],
+                'phone' => $validated['phone'],
+                'default_country' => $validated['default_country'] ?? null,
+                'status' => $validated['status'],
+                'user_type' => 'driver',
+                'host_status' => $validated['host_status'],
+                'document_verify' => $validated['document_verify'],
+                'email_notification' => '1',
+                'sms_notification' => '1',
+                'push_notification' => '1',
+                'verified' => '1',
+            ]);
+
+            $this->attachUploadedMedia($driver, 'profile_image', $validated['profile_image'] ?? null);
+
+            foreach ($this->requiredDriverDocuments() as $document) {
+                $fileName = $validated[$document['collection']] ?? null;
+                $this->attachUploadedMedia($driver, $document['collection'], $fileName);
+                $driver->metadata()->updateOrCreate(
+                    ['meta_key' => $document['status_key']],
+                    ['meta_value' => $validated['document_verify'] === '1' ? 'approved' : 'pending']
+                );
+            }
+
+            $vehicle = Item::create([
+                'token' => strtoupper(Str::random(10)),
+                'title' => trim($driver->first_name.' '.($driver->last_name ?? '').' Vehicle'),
+                'userid_id' => $driver->id,
+                'item_type_id' => $validated['car_type'],
+                'module' => 2,
+                'status' => $validated['status'],
+                'is_verified' => $validated['document_verify'],
+                'make' => $validated['make'],
+                'model' => $validated['model'],
+                'registration_number' => $validated['registration_number'],
+            ]);
+
+            ItemVehicle::create([
+                'item_id' => $vehicle->id,
+                'year' => $validated['year'],
+                'vehicle_registration_number' => $validated['registration_number'],
+            ]);
+
+            $this->attachUploadedMedia($vehicle, 'front_image', $validated['vehicle_image']);
+            $this->attachUploadedMedia($vehicle, 'vehicle_registration_doc', $validated['vehicle_registration_doc']);
+            $this->attachUploadedMedia($vehicle, 'vehicle_insurance_doc', $validated['vehicle_insurance_doc']);
+        });
+
+        return redirect()
+            ->route('admin.driver.account', $driver->id)
+            ->with('success', 'Driver created successfully. Account, documents, and vehicle details are ready for review.');
     }
 
     public function driverAccountView(Request $request, $userId)
@@ -304,6 +447,38 @@ class AppDriverController extends Controller
                 'value' => $value,
             ],
         ]);
+    }
+
+    private function attachUploadedMedia($model, string $collection, ?string $fileName): void
+    {
+        if (blank($fileName)) {
+            return;
+        }
+
+        $path = storage_path('tmp/uploads/'.basename($fileName));
+        if (! file_exists($path)) {
+            return;
+        }
+
+        $model->addMedia($path)->toMediaCollection($collection);
+    }
+
+    private function availableVehicleTypes()
+    {
+        return ItemType::query()
+            ->where('module', 2)
+            ->where('status', '1')
+            ->orderBy('name')
+            ->get();
+    }
+
+    private function availableVehicleMakes()
+    {
+        return VehicleMake::query()
+            ->where('module', 2)
+            ->where('status', '1')
+            ->orderBy('name')
+            ->get();
     }
 
     public function getVerificationDocuments(Request $request)

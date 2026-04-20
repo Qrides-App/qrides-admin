@@ -259,7 +259,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
         ->name('rider.account.update');
 
     /*** Driver Profile */
-    Route::resource('drivers', 'Driver\AppDriverController')->only(['index']);
+    Route::resource('drivers', 'Driver\AppDriverController')->only(['index', 'create', 'store']);
     Route::get('driver/profile/{driver_id}', 'Driver\AppDriverController@driverProfileView')
         ->name('driver.profile');
     Route::get('driver/financial/{driver_id}', 'Driver\AppDriverController@driverFinanceView')

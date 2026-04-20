@@ -135,12 +135,21 @@
                     <ul class="treeview-menu">
                         @can('app_user_access')
                             <li
-                                class="{{ (request()->is('admin/drivers') || request()->is('admin/driver/*') || request()->is('admin/drivers/*')) && !request()->has('status') && !request()->has('host_status') ? 'active' : '' }}">
+                                class="{{ (request()->is('admin/drivers') || request()->is('admin/driver/*')) && !request()->has('status') && !request()->has('host_status') ? 'active' : '' }}">
                                 <a href="{{ route('admin.drivers.index') }}">
                                     <i class="fas fa-dot-circle"></i>
                                     <span>{{ trans('menu.driver') }} {{ trans('menu.list') }}</span>
                                 </a>
                             </li>
+
+                            @can('app_user_create')
+                                <li class="{{ request()->is('admin/drivers/create') ? 'active' : '' }}">
+                                    <a href="{{ route('admin.drivers.create') }}">
+                                        <i class="fas fa-dot-circle"></i>
+                                        <span>Add Driver</span>
+                                    </a>
+                                </li>
+                            @endcan
 
                             <li
                                 class="{{ (request()->is('admin/drivers') || request()->is('admin/drivers/*')) && request()->input('status') === '1' ? 'active' : '' }}">
