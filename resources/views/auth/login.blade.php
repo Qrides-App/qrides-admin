@@ -52,127 +52,152 @@
 @section('content')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <section class="login page-login">
-        <div class="login_box">
-            <div class="left">
-                <!-- <label class="badge badge-soft-success __login-badge">
-                    Software version : 1.0
-                </label> -->
-                <div class="contact">
-                    <div class="login-box">
-                        @if($error = session()->pull('error'))
-                            <div class="alert alert-danger" role="alert">
-                                {{ $error }}
+        <div class="page-login__shell">
+            <div class="page-login__card">
+                <div class="page-login__form-column">
+                    <div class="contact page-login__form-wrap">
+                        <div class="login-box page-login__form-card">
+                            <div class="page-login__eyebrow">Secure admin access</div>
+                            <div class="login-logo page-login__heading">
+                                <h2>Admin Sign In</h2>
+                                <p>Access the QRIDES control center from one focused workspace.</p>
                             </div>
-                        @endif
-                        <div class="login-logo">
 
-                            <h2>Admin Signin</h2>
-
-                            <p style="font-size: medium;">Welcome back login to your panel.</p>
-                        </div>
-                        <div class="login-box-body">
-                            @if (session('message'))
-                                <p class="alert alert-info">
-                                    {{ session('message') }}
-                                </p>
-                            @endif
-
-                            <div id="loader" style="display: none;">
-                                <div class="spinner"></div>
+                            <div class="page-login__meta-row">
+                                <span>Operations dashboard</span>
+                                <span>{{ now()->format('d M Y') }}</span>
                             </div>
-                            <form method="POST" name="loginform" id="loginform" action="/login">
-                                @csrf
-                                <div class="form-group{{ $errors->has('email') ? ' has-error' : '' }} has-feedback">
-                                    <input id="email" type="email" name="email" class="email form-control" required
-                                        autocomplete="email" autofocus placeholder="{{ trans('global.login_email') }}"
-                                        value="{{ old('email', null) }}">
-                                    <span class="glyphicon glyphicon-envelope form-control-feedback"></span>
-                                    <span class="credentail"></span>
-                                    <span class="email"></span>
-                                    @if($errors->has('email'))
-                                        <p class="help-block">
-                                            {{ $errors->first('email') }}
-                                        </p>
-                                    @endif
-                                </div>
-                                <div class="form-group{{ $errors->has('password') ? ' has-error' : '' }} has-feedback">
-                                 <div class="fas fa-lock form-control-feedback"></div>
-                                    <input id="password" type="password" name="password" class="password form-control"
-                                        required placeholder="{{ trans('global.login_password') }}">
-                                    <span class="input-group-text toggle-password" onclick="togglePassword()">
-                                        <i id="eye-icon" class="fas fa-eye-slash"></i>
-                                    </span>
-                                    @if ($errors->has('password'))
-                                        <p class="help-block">
-                                            {{ $errors->first('password') }}
-                                        </p>
-                                    @endif
-                                </div>
-                                <div class="form-actions">
-                                    <div class="remember-me">
-                                        <div class="checkbox ">
-                                            <label><input type="checkbox" name="remember">
-                                                {{ trans('global.remember_me') }}</label>
-                                        </div>
-                                    </div>
-                                    <div class="forgot-password-link">
-                                        <a href="{{ route('password.request') }}" class="btn btn-link">
-                                            {{ trans('global.forgot_password') }}
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="form-group{{ $errors->has('g-recaptcha-response') ? ' has-error' : '' }} has-feedback">
-                                    @if($general_captcha == 'yes')
-                                        <div class="g-recaptcha" data-sitekey="{{$site_key}}">
-                                        </div>
-                                        <p class="captchamsg"></p>
 
-                                        @if($errors->has('g-recaptcha-response'))
+                            <div class="login-box-body">
+                                @if (session('message'))
+                                    <p class="alert alert-info">
+                                        {{ session('message') }}
+                                    </p>
+                                @endif
+
+                                @if($error = session()->pull('error'))
+                                    <div class="alert alert-danger" role="alert">
+                                        {{ $error }}
+                                    </div>
+                                @endif
+
+                                <div id="loader" style="display: none;">
+                                    <div class="spinner"></div>
+                                </div>
+
+                                <form method="POST" name="loginform" id="loginform" action="/login">
+                                    @csrf
+                                    <div class="form-group{{ $errors->has('email') ? ' has-error' : '' }} has-feedback">
+                                        <input id="email" type="email" name="email" class="email form-control" required
+                                            autocomplete="email" autofocus placeholder="{{ trans('global.login_email') }}"
+                                            value="{{ old('email', null) }}">
+                                        <span class="glyphicon glyphicon-envelope form-control-feedback"></span>
+                                        <span class="credentail"></span>
+                                        <span class="email"></span>
+                                        @if($errors->has('email'))
                                             <p class="help-block">
-                                                {{ $errors->first('g-recaptcha-response') }}
+                                                {{ $errors->first('email') }}
                                             </p>
                                         @endif
-
-                                    @endif
-                                    <button type="submit" class="btn btn-primary btn-block btn-flat">
-                                        {{ trans('global.login') }}
-                                    </button>
-                                    <br>
-                                    <br>
-                                    <div class="row">
-                                        @include('admin.demo.demo-user')
                                     </div>
+                                    <div class="form-group{{ $errors->has('password') ? ' has-error' : '' }} has-feedback">
+                                        <div class="fas fa-lock form-control-feedback"></div>
+                                        <input id="password" type="password" name="password" class="password form-control"
+                                            required placeholder="{{ trans('global.login_password') }}">
+                                        <span class="input-group-text toggle-password" onclick="togglePassword()">
+                                            <i id="eye-icon" class="fas fa-eye-slash"></i>
+                                        </span>
+                                        @if ($errors->has('password'))
+                                            <p class="help-block">
+                                                {{ $errors->first('password') }}
+                                            </p>
+                                        @endif
+                                    </div>
+                                    <div class="form-actions">
+                                        <div class="remember-me">
+                                            <div class="checkbox ">
+                                                <label><input type="checkbox" name="remember">
+                                                    {{ trans('global.remember_me') }}</label>
+                                            </div>
+                                        </div>
+                                        <div class="forgot-password-link">
+                                            <a href="{{ route('password.request') }}" class="btn btn-link">
+                                                {{ trans('global.forgot_password') }}
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="form-group{{ $errors->has('g-recaptcha-response') ? ' has-error' : '' }} has-feedback">
+                                        @if($general_captcha == 'yes')
+                                            <div class="g-recaptcha" data-sitekey="{{$site_key}}">
+                                            </div>
+                                            <p class="captchamsg"></p>
 
+                                            @if($errors->has('g-recaptcha-response'))
+                                                <p class="help-block">
+                                                    {{ $errors->first('g-recaptcha-response') }}
+                                                </p>
+                                            @endif
 
-                            </form>
+                                        @endif
+                                        <button type="submit" class="btn btn-primary btn-block btn-flat">
+                                            {{ trans('global.login') }}
+                                        </button>
+                                        <br>
+                                        <br>
+                                        <div class="row">
+                                            @include('admin.demo.demo-user')
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="page-login__visual-column">
+                    <div class="page-login__visual-surface">
+                        <div class="page-login__brand-panel">
+                            <div class="right-text page-login__brand-copy">
+                                <div class="page-login__brand-mark">
+                                    @if ($logoUrl)
+                                        <img src="{{ $logoUrl }}" alt="{{ $siteName ?? trans('global.site_title') }}" />
+                                    @else
+                                        <b>{{ trans('global.site_title') }}</b>
+                                    @endif
+                                </div>
+
+                                <span class="page-login__brand-label">QRIDES Admin Console</span>
+                                <h5>{{ $siteName ?: trans('global.site_title') }}</h5>
+                                <p class="page-login__brand-description">
+                                    Monitor operations, manage drivers and riders, control recharge plans, and keep the platform running from one modern command center.
+                                </p>
+                                <div class="page-login__brand-highlights">
+                                    <span>Drivers</span>
+                                    <span>Trips</span>
+                                    <span>Payments</span>
+                                    <span>Settings</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="page-login__stats">
+                            <div class="page-login__stat-card">
+                                <strong>Centralized ops</strong>
+                                <span>Manage ride, payout, and verification workflows in one place.</span>
+                            </div>
+                            <div class="page-login__stat-card">
+                                <strong>Secure access</strong>
+                                <span>Protected sign-in with session validation and optional captcha.</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="right page-login__brand-panel">
-            <div class="right-text page-login__brand-copy">
-                <div class="page-login__brand-mark">
-                    @if ($logoUrl)
-                        <img src="{{ $logoUrl }}" alt="{{ $siteName ?? trans('global.site_title') }}" />
-                    @else
-                        <b>{{ trans('global.site_title') }}</b>
-                    @endif
-                </div>
 
-                <span class="page-login__brand-label">QRIDES Admin Console</span>
-                <h5>{{ $siteName ?: trans('global.site_title') }}</h5>
-                <p class="page-login__brand-description">
-                    Manage drivers, riders, rides, recharge plans, payments, and daily platform operations from one secure workspace.
-                </p>
-                <div class="page-login__brand-highlights">
-                    <span>Driver ops</span>
-                    <span>Ride tracking</span>
-                    <span>Payments</span>
-                    <span>Settings</span>
-                </div>
+            <div class="page-login__footer">
+                <span>QRIDES by BAMIRA TRANSPORTATION PRIVATE LIMITED</span>
+                <span>Designed, developed and maintained by Rareus Private Limited</span>
             </div>
-        </div>
         </div>
     </section>
 @endsection
