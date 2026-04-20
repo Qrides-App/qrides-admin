@@ -160,10 +160,12 @@
                             <div class="right-text page-login__brand-copy">
                                 <div class="page-login__brand-mark">
                                     @if ($logoUrl)
-                                        <img src="{{ $logoUrl }}" alt="{{ $siteName ?? trans('global.site_title') }}" />
-                                    @else
-                                        <b>{{ trans('global.site_title') }}</b>
+                                        <img src="{{ $logoUrl }}" alt="{{ $siteName ?? trans('global.site_title') }}"
+                                            onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';" />
                                     @endif
+                                    <span class="page-login__brand-fallback" @if ($logoUrl) style="display:none" @endif>
+                                        {{ $siteName ?: trans('global.site_title') }}
+                                    </span>
                                 </div>
 
                                 <span class="page-login__brand-label">QRIDES Admin Console</span>

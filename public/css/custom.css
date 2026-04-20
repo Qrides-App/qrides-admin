@@ -1661,9 +1661,9 @@ select.input-sm {
 
 .page-login__card {
   display: grid;
-  grid-template-columns: minmax(0, 460px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
   align-items: stretch;
-  min-height: 680px;
+  min-height: 640px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 32px;
@@ -1787,7 +1787,7 @@ select.input-sm {
 }
 
 .page-login__visual-column {
-  padding: 28px;
+  padding: 24px;
   background:
     radial-gradient(circle at top left, rgba(14, 165, 233, 0.22), transparent 25%),
     linear-gradient(160deg, #0f172a 0%, #172554 58%, #0f766e 100%);
@@ -1798,8 +1798,8 @@ select.input-sm {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 24px;
-  padding: 28px;
+  gap: 20px;
+  padding: 24px;
   border-radius: 28px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1827,20 +1827,40 @@ select.input-sm {
 }
 
 .page-login__brand-mark {
-  width: 220px;
-  min-height: 124px;
-  border-radius: 28px;
+  width: 180px;
+  min-height: 108px;
+  padding: 16px 18px;
+  border-radius: 24px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 24px 54px rgba(15, 23, 42, 0.26);
 }
 
+.page-login__brand-mark img {
+  width: 100%;
+  max-width: 132px;
+  max-height: 72px;
+  object-fit: contain;
+}
+
+.page-login__brand-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+  color: #0f172a;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
 .page-login__brand-copy h5 {
-  font-size: 4.8rem;
+  font-size: 4.2rem;
 }
 
 .page-login__brand-description {
   max-width: 480px;
-  font-size: 1.75rem;
+  font-size: 1.6rem;
 }
 
 .page-login__brand-highlights {
@@ -1862,7 +1882,7 @@ select.input-sm {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 18px;
+  padding: 16px 18px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.12);
