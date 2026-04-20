@@ -46,19 +46,31 @@
                     <form method="POST" action="{{ route('admin.recharge-plans.store') }}">
                         @csrf
                         <div class="box-body">
+                            <div class="alert alert-info" style="margin-bottom: 20px;">
+                                <strong>Current GST:</strong> {{ number_format((float) $gstPercentage, 2) }}%
+                                <br>
+                                <span class="text-muted">GST is managed from Recharge Settings on the left and is applied on top of every plan amount.</span>
+                            </div>
                             <div class="form-group">
                                 <label>Name</label>
                                 <input type="text" class="form-control" name="name" placeholder="Daily / Weekly / Monthly"
                                     required>
                             </div>
                             <div class="form-group">
-                                <label>Duration (Days)</label>
+                                <label>Validity (Days)</label>
                                 <input type="number" min="1" max="365" class="form-control" name="duration_days" required>
+                                <small class="text-muted">How many days this recharge plan remains active for the driver.</small>
                             </div>
                             <div class="form-group">
-                                <label>Amount</label>
+                                <label>Base Amount</label>
                                 <input type="number" step="0.01" min="1" class="form-control" name="amount" required>
                                 <small class="text-muted">Base amount before GST.</small>
+                            </div>
+                            <div class="form-group">
+                                <label>GST Applied</label>
+                                <input type="text" class="form-control"
+                                    value="{{ number_format((float) $gstPercentage, 2) }}%" readonly>
+                                <small class="text-muted">This is the current global GST rate applied to this plan total.</small>
                             </div>
                             <div class="form-group">
                                 <label>Currency</label>
@@ -66,8 +78,9 @@
                                     value="{{ $currencyCode }}" maxlength="10" required>
                             </div>
                             <div class="form-group">
-                                <label>Sort Order</label>
+                                <label>Display Order</label>
                                 <input type="number" min="0" class="form-control" name="sort_order" value="0">
+                                <small class="text-muted">Lower numbers appear first in the driver app and admin list.</small>
                             </div>
                             <div class="checkbox">
                                 <label>
@@ -95,14 +108,15 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Name</th>
-                                    <th>Days</th>
-                                    <th>Amount</th>
+                                    <th>Validity</th>
+                                    <th>Base Amount</th>
                                     <th>GST</th>
                                     <th>Total</th>
                                     <th>Currency</th>
                                     <th>Active</th>
-                                    <th>Sort</th>
-                                    <th style="width: 320px;">Actions</th>
+                                    <th>Display Order</th>
+                                    <th style="width: 360px;">Edit Plan</th>
+                                    <th style="width: 90px;">Delete</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -123,29 +137,37 @@
                                         <td>{{ $plan->sort_order }}</td>
                                         <td>
                                             <form method="POST" action="{{ route('admin.recharge-plans.update', $plan->id) }}"
-                                                style="display:inline-block; width: 235px;">
+                                                class="recharge-plan-inline-form">
                                                 @csrf
                                                 @method('PUT')
-                                                <div class="row" style="margin:0;">
+                                                <div class="row" style="margin:0 -4px;">
                                                     <div class="col-xs-4" style="padding:0 4px;">
+                                                        <label class="small text-muted" style="display:block; margin-bottom:4px;">Validity</label>
                                                         <input class="form-control input-sm" type="number" name="duration_days"
                                                             min="1" value="{{ $plan->duration_days }}" required>
                                                     </div>
                                                     <div class="col-xs-4" style="padding:0 4px;">
+                                                        <label class="small text-muted" style="display:block; margin-bottom:4px;">Base amount</label>
                                                         <input class="form-control input-sm" type="number" step="0.01" min="1"
                                                             name="amount" value="{{ $plan->amount }}" required>
                                                     </div>
                                                     <div class="col-xs-4" style="padding:0 4px;">
+                                                        <label class="small text-muted" style="display:block; margin-bottom:4px;">Display order</label>
                                                         <input class="form-control input-sm" type="number" min="0"
                                                             name="sort_order" value="{{ $plan->sort_order }}">
                                                     </div>
+                                                </div>
+                                                <div class="small text-muted" style="margin-top:8px;">
+                                                    GST applied: {{ number_format((float) $gstPercentage, 2) }}% | Total:
+                                                    {{ number_format($totalAmount, 2) }} {{ $plan->currency_code }}
                                                 </div>
                                                 <input type="hidden" name="name" value="{{ $plan->name }}">
                                                 <input type="hidden" name="currency_code" value="{{ $plan->currency_code }}">
                                                 <input type="hidden" name="is_active" value="{{ $plan->is_active ? 1 : 0 }}">
                                                 <button type="submit" class="btn btn-xs btn-primary" style="margin-top:6px;">Update</button>
                                             </form>
-
+                                        </td>
+                                        <td>
                                             <form method="POST" action="{{ route('admin.recharge-plans.destroy', $plan->id) }}"
                                                 style="display:inline-block;"
                                                 onsubmit="return confirm('Delete this recharge plan?');">
@@ -157,7 +179,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="10" class="text-center">No recharge plans found.</td>
+                                        <td colspan="11" class="text-center">No recharge plans found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
