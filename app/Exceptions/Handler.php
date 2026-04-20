@@ -6,6 +6,7 @@ use App\Http\Controllers\Traits\ResponseTrait;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -72,6 +73,22 @@ class Handler extends ExceptionHandler
             }
 
             return back()->withErrors(['email' => $message])->withInput($request->except('password'));
+        });
+
+        $this->renderable(function (TokenMismatchException $e, $request) {
+            if (! $request->is('logout')) {
+                return null;
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Your session expired. Please sign in again.',
+                ], 419);
+            }
+
+            return redirect()
+                ->route('login')
+                ->with('message', 'Your session expired. Please sign in again.');
         });
     }
 

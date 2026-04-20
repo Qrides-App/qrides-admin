@@ -56,7 +56,7 @@ Route::middleware('guest')->group(function () {
     Route::post('password/reset', 'App\Http\Controllers\Auth\ResetPasswordController@reset')->name('password.update');
 });
 
-Route::post('logout', [LoginController::class, 'logout'])->name('logout');
+Route::match(['get', 'post'], 'logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::middleware('auth')->group(function () {
     Route::get('password/confirm', [ConfirmPasswordController::class, 'showConfirmForm'])->name('password.confirm');
