@@ -5,6 +5,7 @@ namespace App\Services;
 use Google_Client;
 use GuzzleHttp\Client as HttpClient;
 use GuzzleHttp\Exception\RequestException;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
 class FirestoreService
@@ -15,10 +16,17 @@ class FirestoreService
 
     public function __construct()
     {
-        $this->projectId = 'dummy-b0665';
+        $credentialsPath = storage_path('firebase/firebase_credentials.json');
+        $credentials = File::exists($credentialsPath)
+            ? json_decode(File::get($credentialsPath), true)
+            : [];
+
+        $this->projectId = env('FIREBASE_PROJECT_ID')
+            ?: ($credentials['project_id'] ?? null)
+            ?: 'dummy-b0665';
 
         $googleClient = new Google_Client;
-        $googleClient->setAuthConfig(storage_path('firebase/firebase_credentials.json'));
+        $googleClient->setAuthConfig($credentialsPath);
         $googleClient->addScope('https://www.googleapis.com/auth/datastore');
 
         $accessToken = $googleClient->fetchAccessTokenWithAssertion()['access_token'] ?? null;
@@ -48,6 +56,7 @@ class FirestoreService
             return $body['name'] ?? null;
         } catch (RequestException $e) {
             \Log::error('Firestore addDocument failed: '.$e->getMessage(), [
+                'project_id' => $this->projectId,
                 'collection' => $collection,
                 'data' => $data,
             ]);

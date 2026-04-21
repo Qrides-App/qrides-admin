@@ -492,7 +492,14 @@ class AppDriverController extends Controller
         if (! $user->firestore_id) {
             $firestoreData = $this->generateDriverFirestoreData($user);
             $firestoreDoc = $this->storeDriverInFirestore($firestoreData);
-            $firestoreDocId = $firestoreDoc->id();
+            $firestoreDocId = is_string($firestoreDoc) ? basename($firestoreDoc) : null;
+
+            if (! $firestoreDocId) {
+                return response()->json([
+                    'message' => 'Document verification updated, but Firestore sync failed. Check Firebase project credentials and Firestore permissions.',
+                ], 422);
+            }
+
             $user->update(['firestore_id' => $firestoreDocId]);
             $user['firestore_id'] = $firestoreDocId;
         }
