@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Open In Qrides</title>
+    <title>{{ $isApproved ? 'Open In Qrides' : 'Driver Not Available Yet' }}</title>
     <style>
         :root {
             color-scheme: light;
@@ -79,6 +79,15 @@
             color: var(--text);
             background: #fff;
         }
+        .note {
+            margin-top: 14px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(241, 181, 0, 0.12);
+            color: #7a5a00;
+            font-weight: 600;
+            line-height: 1.5;
+        }
         code {
             display: block;
             width: 100%;
@@ -95,21 +104,33 @@
 <body>
     <main class="card">
         <span class="badge">Qrides QR Hire</span>
-        <h1>Open in the Qrides app</h1>
-        <p>Use the button below to continue the hire flow for driver ID {{ $driverId }}.</p>
+        <h1>{{ $isApproved ? 'Open in the Qrides app' : 'Driver not available yet' }}</h1>
+        <p>
+            @if ($isApproved)
+                Use the button below to continue the hire flow for driver ID {{ $driverId }}.
+            @else
+                Driver ID {{ $driverId }} is not approved yet. QR hire stays disabled until admin approval is complete.
+            @endif
+        </p>
 
         <div class="actions">
-            <a class="btn btn-primary" id="open-app" href="{{ $appLink }}">Open In Qrides</a>
+            @if ($isApproved)
+                <a class="btn btn-primary" id="open-app" href="{{ $appLink }}">Open In Qrides</a>
+            @else
+                <div class="note">This driver has not been approved yet, so the hire link is intentionally disabled.</div>
+            @endif
             <a class="btn btn-secondary" href="https://play.google.com/store">Get Android app</a>
         </div>
 
-        <code>{{ $appLink }}</code>
+        <code>{{ $isApproved ? $appLink : 'QR hire unavailable until approval' }}</code>
     </main>
 
-    <script>
-        window.setTimeout(function () {
-            window.location.href = @json($appLink);
-        }, 250);
-    </script>
+    @if ($isApproved)
+        <script>
+            window.setTimeout(function () {
+                window.location.href = @json($appLink);
+            }, 250);
+        </script>
+    @endif
 </body>
 </html>

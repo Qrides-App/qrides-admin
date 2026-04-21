@@ -36,8 +36,19 @@ Route::get('/scan-to-hire', function () {
 
     abort_if($driverId === '', 404);
 
+    $driver = \App\Models\AppUser::select('id', 'first_name', 'last_name', 'host_status', 'status')
+        ->where('id', $driverId)
+        ->where('user_type', 'driver')
+        ->first();
+
+    abort_if(! $driver, 404);
+
+    $isApproved = (string) $driver->host_status === '1' && (string) $driver->status === '1';
+
     return view('Front.scan-to-hire', [
         'driverId' => $driverId,
+        'driver' => $driver,
+        'isApproved' => $isApproved,
         'appLink' => 'qrides://hire?driver_id='.$driverId,
     ]);
 })->name('scan-to-hire');

@@ -313,11 +313,17 @@ class AppDriverController extends Controller
             ->value('meta_value') ?? 'INR';
 
         $qrPayload = route('scan-to-hire', ['driver_id' => $driver->id]);
+        $qrEnabled = (string) $driver->host_status === '1' && (string) $driver->status === '1';
+        $qrUnavailableReason = $qrEnabled
+            ? null
+            : 'QR hire will be available only after this driver is approved and active.';
 
         return view('admin.appUsers.driver.hire', compact(
             'driver',
             'qrPayload',
             'currency',
+            'qrEnabled',
+            'qrUnavailableReason',
             'filters',
             'stats',
             'bookings'

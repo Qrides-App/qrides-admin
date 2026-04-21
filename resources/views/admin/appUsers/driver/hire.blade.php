@@ -11,13 +11,24 @@
                         <h3 class="box-title">Driver QR</h3>
                     </div>
                     <div class="box-body text-center">
-                        <p class="text-muted">Riders scan this code to start a hire with this driver.</p>
-                        <canvas id="driver_qr_canvas" width="240" height="240" style="margin-bottom:10px;"></canvas>
-                        <div><strong>Payload:</strong> <code>{{ $qrPayload }}</code></div>
-                        <div class="btn-group" style="margin-top:12px;">
-                            <button id="copy_payload" class="btn btn-default btn-sm"><i class="fa fa-copy"></i> Copy Link</button>
-                            <button id="download_qr" class="btn btn-primary btn-sm"><i class="fa fa-download"></i> Download</button>
-                        </div>
+                        @if ($qrEnabled)
+                            <p class="text-muted">Riders scan this code to start a hire with this driver.</p>
+                            <canvas id="driver_qr_canvas" width="240" height="240" style="margin-bottom:10px;"></canvas>
+                            <div><strong>Payload:</strong> <code>{{ $qrPayload }}</code></div>
+                            <div class="btn-group" style="margin-top:12px;">
+                                <button id="copy_payload" class="btn btn-default btn-sm"><i class="fa fa-copy"></i> Copy Link</button>
+                                <button id="download_qr" class="btn btn-primary btn-sm"><i class="fa fa-download"></i> Download</button>
+                            </div>
+                        @else
+                            <div class="alert alert-warning text-left" style="text-align:left; margin-bottom:16px;">
+                                <strong>QR hire unavailable.</strong><br>
+                                {{ $qrUnavailableReason }}
+                            </div>
+                            <div style="padding: 28px 12px; border:1px dashed #d7dce8; border-radius:18px; background:#f8fafc;">
+                                <i class="fa fa-ban" style="font-size:42px; color:#f0ad4e; margin-bottom:12px;"></i>
+                                <p class="text-muted" style="margin:0;">Approve the driver and activate the account before sharing a QR.</p>
+                            </div>
+                        @endif
                         <p style="margin-top:10px;" class="text-muted">Driver ID: {{ $driver->id }}</p>
                     </div>
                 </div>
@@ -128,29 +139,31 @@
 @endsection
 
 @section('scripts')
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-    <script>
-        (function() {
-            const payload = @json($qrPayload);
-            const canvas = document.getElementById('driver_qr_canvas');
-            new QRious({
-                element: canvas,
-                value: payload,
-                size: 240,
-                background: '#ffffff',
-                foreground: '#f1b500'
-            });
+    @if ($qrEnabled)
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+        <script>
+            (function() {
+                const payload = @json($qrPayload);
+                const canvas = document.getElementById('driver_qr_canvas');
+                new QRious({
+                    element: canvas,
+                    value: payload,
+                    size: 240,
+                    background: '#ffffff',
+                    foreground: '#f1b500'
+                });
 
-            document.getElementById('copy_payload').addEventListener('click', function() {
-                navigator.clipboard.writeText(payload).then(() => alert('Link copied to clipboard')).catch(() => alert('Could not copy'));
-            });
+                document.getElementById('copy_payload').addEventListener('click', function() {
+                    navigator.clipboard.writeText(payload).then(() => alert('Link copied to clipboard')).catch(() => alert('Could not copy'));
+                });
 
-            document.getElementById('download_qr').addEventListener('click', function() {
-                const link = document.createElement('a');
-                link.download = 'driver-qr-{{ $driver->id }}.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            });
-        })();
-    </script>
+                document.getElementById('download_qr').addEventListener('click', function() {
+                    const link = document.createElement('a');
+                    link.download = 'driver-qr-{{ $driver->id }}.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            })();
+        </script>
+    @endif
 @endsection
