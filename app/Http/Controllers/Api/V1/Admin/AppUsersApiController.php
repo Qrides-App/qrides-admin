@@ -20,6 +20,7 @@ use App\Http\Resources\Admin\AppUserResource;
 use App\Models\AppUser;
 use App\Models\AppUserMeta;
 use App\Models\BookingExtension;
+use App\Models\City;
 use App\Models\DriverRechargePlan;
 use App\Models\GeneralSetting;
 use App\Models\HireBooking;
@@ -1636,6 +1637,75 @@ class AppUsersApiController extends Controller
         } catch (\Exception $e) {
             return $this->addErrorResponse(500, $e->getMessage(), $e->getMessage());
         }
+    }
+
+    public function getActiveRegions(Request $request)
+    {
+        $regions = City::query()
+            ->where('status', '1')
+            ->orderBy('city_name')
+            ->get()
+            ->map(function (City $city) {
+                return [
+                    'id' => (string) $city->id,
+                    'name' => $city->city_name,
+                    'status' => 'active',
+                ];
+            })
+            ->values();
+
+        return $this->successResponse(200, 'Regions fetched successfully', $regions);
+    }
+
+    public function updateDriverPreferredRegion(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|exists:app_users,token',
+            'region_id' => ['required', 'integer', 'exists:cities,id'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorComputing($validator);
+        }
+
+        $userId = $this->checkUserByToken($request->token);
+        if (! $userId) {
+            return $this->addErrorResponse(419, trans('global.token_not_match'), '');
+        }
+
+        $region = City::query()
+            ->where('id', $request->input('region_id'))
+            ->where('status', '1')
+            ->first();
+
+        if (! $region) {
+            return $this->errorResponse(404, 'Preferred region not found');
+        }
+
+        AppUserMeta::updateOrCreate(
+            [
+                'user_id' => $userId,
+                'meta_key' => 'preferred_region_id',
+            ],
+            [
+                'meta_value' => (string) $region->id,
+            ]
+        );
+
+        AppUserMeta::updateOrCreate(
+            [
+                'user_id' => $userId,
+                'meta_key' => 'preferred_region_name',
+            ],
+            [
+                'meta_value' => $region->city_name,
+            ]
+        );
+
+        return $this->successResponse(200, 'Preferred location updated successfully', [
+            'region_id' => (string) $region->id,
+            'region_name' => $region->city_name,
+        ]);
     }
 
     public function getRechargePlans(Request $request)

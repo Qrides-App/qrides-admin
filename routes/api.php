@@ -83,6 +83,8 @@ Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', '
     // Cities
     Route::get('/yourLocations', 'CitiesApiController@yourLocations');
     Route::post('/searchCities', 'CitiesApiController@searchCities');
+    Route::get('/getActiveRegions', 'AppUsersApiController@getActiveRegions');
+    Route::post('/updateDriverPreferredRegion', 'AppUsersApiController@updateDriverPreferredRegion');
     // Item Type
     Route::get('/getAllCategories', 'ItemTypeApiController@getAllCategories');
     Route::post('/getItemsByItemType', 'ItemTypeApiController@getItemsByItemType');
