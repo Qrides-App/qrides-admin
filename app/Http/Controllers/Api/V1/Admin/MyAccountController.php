@@ -18,6 +18,7 @@ use App\Models\GeneralSetting;
 use App\Models\Modern\Item;
 use App\Models\Review;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Validator;
 
 class MyAccountController extends Controller
@@ -43,7 +44,9 @@ class MyAccountController extends Controller
         }
 
         $user->first_name = $request->input('first_name');
-        $user->gender = $request->input('gender', null);
+        if (Schema::hasColumn($user->getTable(), 'gender')) {
+            $user->gender = $request->input('gender', null);
+        }
 
         $user->save();
         $user = AppUser::where('token', $request->input('token'))->first();
