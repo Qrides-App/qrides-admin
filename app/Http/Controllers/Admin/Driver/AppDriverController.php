@@ -312,7 +312,7 @@ class AppDriverController extends Controller
         $currency = GeneralSetting::where('meta_key', 'general_default_currency')
             ->value('meta_value') ?? 'INR';
 
-        $qrPayload = 'qrides://hire?driver_id='.$driver->id;
+        $qrPayload = route('scan-to-hire', ['driver_id' => $driver->id]);
 
         return view('admin.appUsers.driver.hire', compact(
             'driver',

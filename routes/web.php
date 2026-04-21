@@ -31,6 +31,16 @@ Route::get('/payment_fail', 'App\Http\Controllers\Front\PaymentFrontController@p
 Route::get('/testing', 'App\Http\Controllers\Front\PaymentFrontController@testing')->name('testing');
 Route::get('/ride-tracking/{token}', [App\Http\Controllers\Front\RideTrackingController::class, 'show'])->name('ride-tracking.show');
 Route::get('/ride-tracking/{token}/snapshot', [App\Http\Controllers\Front\RideTrackingController::class, 'snapshot'])->name('ride-tracking.snapshot');
+Route::get('/scan-to-hire', function () {
+    $driverId = trim((string) request()->query('driver_id', ''));
+
+    abort_if($driverId === '', 404);
+
+    return view('Front.scan-to-hire', [
+        'driverId' => $driverId,
+        'appLink' => 'qrides://hire?driver_id='.$driverId,
+    ]);
+})->name('scan-to-hire');
 Route::get('/media/public/{path}', [PublicDiskMediaController::class, 'show'])
     ->where('path', '.*')
     ->name('media.public');
