@@ -37,6 +37,8 @@ use Gate;
 use Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\Facades\Image;
@@ -558,12 +560,22 @@ class AppUsersApiController extends Controller
 
         $valuesArray = ['OTP' => $otp, 'first_name' => $user->first_name, 'last_name' => $user->last_name];
         $template_id = 2;
-        $this->sendAllNotifications($valuesArray, $user->id, $template_id);
+        try {
+            $this->sendAllNotifications($valuesArray, $user->id, $template_id);
+        } catch (\Throwable $exception) {
+            Log::warning('Login OTP notification failed; OTP was still generated.', [
+                'user_id' => $user->id,
+                'message' => $exception->getMessage(),
+            ]);
+        }
 
-        $user->update([
+        $otpUpdate = [
             'reset_token' => $otp,
-            'otp_expires_at' => Carbon::now()->addMinutes(5),
-        ]);
+        ];
+        if (Schema::hasColumn('app_users', 'otp_expires_at')) {
+            $otpUpdate['otp_expires_at'] = Carbon::now()->addMinutes(5);
+        }
+        $user->update($otpUpdate);
 
         $responseData = [];
         $responseData['reset_token'] = '';

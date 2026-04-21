@@ -373,6 +373,12 @@ class EnsureAuthSchema extends Command
             });
         }
 
+        if (! Schema::hasColumn('app_users', 'otp_expires_at')) {
+            Schema::table('app_users', function (Blueprint $table) {
+                $table->timestamp('otp_expires_at')->nullable()->after('reset_token');
+            });
+        }
+
         if (! Schema::hasColumn('app_users', 'phone_country')) {
             Schema::table('app_users', function (Blueprint $table) {
                 $table->string('phone_country')->nullable()->after('phone');
