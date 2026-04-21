@@ -1641,8 +1641,11 @@ class AppUsersApiController extends Controller
 
     public function getActiveRegions(Request $request)
     {
+        $moduleId = (int) $request->input('module_id', 2);
+
         $regions = City::query()
             ->where('status', '1')
+            ->where('module', $moduleId)
             ->orderBy('city_name')
             ->get()
             ->map(function (City $city) {
