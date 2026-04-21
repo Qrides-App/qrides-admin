@@ -45,7 +45,7 @@ class EnsureDriverRechargeIsActive
 
         return new JsonResponse([
             'status' => 403,
-            'message' => 'Driver recharge required',
+            'message' => 'Captain recharge required',
             'data' => [
                 'error_key' => 'recharge_required',
                 'recharge_active' => false,
@@ -53,7 +53,7 @@ class EnsureDriverRechargeIsActive
                     ? Carbon::parse($driver->recharge_valid_until)->toDateTimeString()
                     : null,
             ],
-            'error' => 'Driver recharge required',
+            'error' => 'Captain recharge required',
         ], 403);
     }
 

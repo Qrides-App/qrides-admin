@@ -1762,7 +1762,7 @@ class AppUsersApiController extends Controller
 
         $driver = AppUser::where('id', $driverId)->where('user_type', 'driver')->first();
         if (! $driver) {
-            return $this->addErrorResponse(400, 'Only drivers can recharge', '');
+            return $this->addErrorResponse(400, 'Only captains can recharge', '');
         }
 
         $amountPerDay = (float) (GeneralSetting::getMetaValue('driver_recharge_amount_per_day') ?: 30);
@@ -1873,7 +1873,7 @@ class AppUsersApiController extends Controller
 
         $driver = AppUser::where('id', $driverId)->where('user_type', 'driver')->first();
         if (! $driver) {
-            return $this->addErrorResponse(400, 'Only drivers can recharge', '');
+            return $this->addErrorResponse(400, 'Only captains can recharge', '');
         }
 
         // Re-use pricing logic from rechargeWallet
@@ -2400,15 +2400,15 @@ class AppUsersApiController extends Controller
         }
 
         if ((string) $driver->host_status !== '1') {
-            return $this->addErrorResponse(403, 'Driver not approved yet', '');
+            return $this->addErrorResponse(403, 'Captain not approved yet', '');
         }
 
         if (! $this->canDriverRide($driver)) {
             return response()->json([
                 'status' => 403,
-                'message' => 'Driver recharge required',
+                'message' => 'Captain recharge required',
                 'data' => ['error_key' => 'recharge_required'],
-                'error' => 'Driver recharge required',
+                'error' => 'Captain recharge required',
             ], 403);
         }
 
@@ -2474,15 +2474,15 @@ class AppUsersApiController extends Controller
         }
 
         if ((string) $driver->host_status !== '1') {
-            return $this->addErrorResponse(403, 'Driver not approved yet', '');
+            return $this->addErrorResponse(403, 'Captain not approved yet', '');
         }
 
         if (! $this->canDriverRide($driver)) {
             return response()->json([
                 'status' => 403,
-                'message' => 'Driver recharge required',
+                'message' => 'Captain recharge required',
                 'data' => ['error_key' => 'recharge_required'],
-                'error' => 'Driver recharge required',
+                'error' => 'Captain recharge required',
             ], 403);
         }
 

@@ -1,16 +1,16 @@
 <?php
 
 return [
-    'driversData' => 'Drivers Data',
+    'driversData' => 'Captains Data',
     'ridesData' => 'Rides Data',
     'ridersData' => 'Riders Data',
     'bookingsData' => 'Rides Data',
 
-    'total_drivers' => 'Total Drivers',
-    'total_active_drivers' => 'Total Active Drivers',
-    'total_inactive_drivers' => 'Total Inactive Drivers',
-    'total_requested_drivers' => 'Total Requested Drivers',
-    'today_new_drivers' => 'Today New Drivers',
+    'total_drivers' => 'Total Captains',
+    'total_active_drivers' => 'Total Active Captains',
+    'total_inactive_drivers' => 'Total Inactive Captains',
+    'total_requested_drivers' => 'Total Requested Captains',
+    'today_new_drivers' => 'Today New Captains',
 
     'total_rides' => 'Total Rides',
     'total_active_rides' => 'Total Active Rides',
@@ -65,7 +65,7 @@ return [
     'total_revenue' => 'Total Revenue',
     'today_revenue' => "Today's Revenue",
     'ride_date' => 'Ride Date',
-    'driver' => 'Driver',
+    'driver' => 'Captain',
     'rider' => 'Rider',
     'latest_rides' => 'Latest Rides',
 

@@ -7,9 +7,9 @@ return [
     'role_title' => 'Roles',
     'user_title' => 'Users',
 
-    'driverManagement' => 'Driver Management',
-    'driver' => 'Driver',
-    'drivers' => 'Drivers',
+    'driverManagement' => 'Captain Management',
+    'driver' => 'Captain',
+    'drivers' => 'Captains',
     'requested' => 'Requested',
     'active' => 'Active',
     'inactive' => 'Inactive',
