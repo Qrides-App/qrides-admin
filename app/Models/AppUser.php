@@ -31,6 +31,7 @@ class AppUser extends Authenticatable implements HasMedia
         'created_at',
         'updated_at',
         'deleted_at',
+        'otp_expires_at',
     ];
 
     public const STATUS_SELECT = [
@@ -67,6 +68,8 @@ class AppUser extends Authenticatable implements HasMedia
         'firestore_id',
         'document_verify',
         'verified',
+        'reset_token',
+        'otp_expires_at',
     ];
 
     protected function serializeDate(DateTimeInterface $date)
@@ -90,6 +93,7 @@ class AppUser extends Authenticatable implements HasMedia
         'sms_notification' => 'string',
         'otp_value' => 'string',
         'reset_token' => 'string',
+        'otp_expires_at' => 'datetime',
         'document_verify' => 'string',
         'phone_verify' => 'string',
         'email_verify' => 'string',
