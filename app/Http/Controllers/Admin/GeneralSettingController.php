@@ -195,7 +195,7 @@ class GeneralSettingController extends Controller
             return null;
         }
 
-        return url('/media/public/' . ltrim($path, '/'));
+        return secure_url('/media/public/' . ltrim($path, '/'));
     }
 
     private function storePublicBrandingUpload($file, string $fileName): string

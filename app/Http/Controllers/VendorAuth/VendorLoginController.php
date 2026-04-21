@@ -269,7 +269,7 @@ class VendorLoginController extends Controller
             return $fallback;
         }
 
-        return url('/media/public/' . ltrim($path, '/')).'?v='.md5($path);
+        return secure_url('/media/public/' . ltrim($path, '/')).'?v='.md5($path);
     }
 
     public function putHostRequest(Request $request)

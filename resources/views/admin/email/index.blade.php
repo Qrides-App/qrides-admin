@@ -2,7 +2,7 @@
 
 @section('content')
     @php
-        $logoPath = !empty($branding['general_logo']) ? url('/media/public/' . ltrim($branding['general_logo'], '/')) : null;
+        $logoPath = !empty($branding['general_logo']) ? secure_url('/media/public/' . ltrim($branding['general_logo'], '/')) : null;
         $appName = $branding['general_name'] ?? config('app.name');
         $routeMap = [
             'user' => 'user.email-templates',

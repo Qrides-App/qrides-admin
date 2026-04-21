@@ -33,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
     {
         if (app()->environment('production')) {
             URL::forceScheme('https');
+            Config::set('cache.default', 'array');
         }
 
         $this->ensureStorageFrameworkDirectories();
