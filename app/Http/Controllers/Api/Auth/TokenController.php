@@ -56,8 +56,15 @@ class TokenController extends Controller
             $tokenInstance = $user->createToken('api-access');
             $token = $tokenInstance->plainTextToken;
             $expiration = $isRealUser ? now()->addDays(7) : now()->addMinutes(30);
-            $tokenInstance->accessToken->expires_at = $expiration;
-            $tokenInstance->accessToken->called_ip = $request->ip();
+
+            if (Schema::hasColumn('personal_access_tokens', 'expires_at')) {
+                $tokenInstance->accessToken->expires_at = $expiration;
+            }
+
+            if (Schema::hasColumn('personal_access_tokens', 'called_ip')) {
+                $tokenInstance->accessToken->called_ip = $request->ip();
+            }
+
             $tokenInstance->accessToken->save();
 
             return $this->addSuccessResponse(200, trans('front.authorized'), [

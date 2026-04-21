@@ -149,6 +149,18 @@ class EnsureAuthSchema extends Command
     private function ensurePersonalAccessTokensTable(): void
     {
         if (Schema::hasTable('personal_access_tokens')) {
+            if (! Schema::hasColumn('personal_access_tokens', 'called_ip')) {
+                Schema::table('personal_access_tokens', function (Blueprint $table) {
+                    $table->string('called_ip', 45)->nullable()->after('last_used_at');
+                });
+            }
+
+            if (! Schema::hasColumn('personal_access_tokens', 'expires_at')) {
+                Schema::table('personal_access_tokens', function (Blueprint $table) {
+                    $table->timestamp('expires_at')->nullable()->after('called_ip');
+                });
+            }
+
             return;
         }
 
@@ -159,6 +171,7 @@ class EnsureAuthSchema extends Command
             $table->string('token', 64)->unique();
             $table->text('abilities')->nullable();
             $table->timestamp('last_used_at')->nullable();
+            $table->string('called_ip', 45)->nullable();
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });
