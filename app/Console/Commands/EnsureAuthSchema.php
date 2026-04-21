@@ -308,6 +308,7 @@ class EnsureAuthSchema extends Command
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
             $table->string('phone_country')->nullable();
+            $table->string('default_country')->nullable();
             $table->string('password')->nullable();
             $table->string('user_type')->default('user');
             $table->enum('host_status', ['0', '1', '2'])->nullable()->default('0');
@@ -356,6 +357,18 @@ class EnsureAuthSchema extends Command
         if (! Schema::hasColumn('app_users', 'reset_token')) {
             Schema::table('app_users', function (Blueprint $table) {
                 $table->integer('reset_token')->nullable()->default(0)->after('token');
+            });
+        }
+
+        if (! Schema::hasColumn('app_users', 'phone_country')) {
+            Schema::table('app_users', function (Blueprint $table) {
+                $table->string('phone_country')->nullable()->after('phone');
+            });
+        }
+
+        if (! Schema::hasColumn('app_users', 'default_country')) {
+            Schema::table('app_users', function (Blueprint $table) {
+                $table->string('default_country')->nullable()->after('phone_country');
             });
         }
 

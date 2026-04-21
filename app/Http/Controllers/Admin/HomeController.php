@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class HomeController
 {
@@ -25,13 +26,13 @@ class HomeController
     {
         [$rangeStart, $rangeEnd, $rangePreset] = $this->resolveDashboardRange($request);
 
-        $module = Cache::remember('default_module', 3600, function () {
+        $module = $this->rememberSafely('default_module', 3600, function () {
             return Module::where('default_module', '1')->firstOrFail();
         });
 
         $moduleId = $module->id;
         $moduleName = $module->name;
-        $currency = Cache::remember('general_default_currency', 3600, function () {
+        $currency = $this->rememberSafely('general_default_currency', 3600, function () {
             return GeneralSetting::where('meta_key', 'general_default_currency')->first();
         });
 
@@ -76,7 +77,7 @@ class HomeController
     private function fetchDashboardMetrics($moduleId, Carbon $rangeStart, Carbon $rangeEnd)
     {
 
-        $driverMetrics = Cache::remember("driver_metrics_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($rangeStart, $rangeEnd) {
+        $driverMetrics = $this->rememberSafely("driver_metrics_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($rangeStart, $rangeEnd) {
             $today = Carbon::today()->toDateString();
 
             return AppUser::selectRaw("
@@ -91,7 +92,7 @@ class HomeController
                 ->first();
         });
 
-        $riderMetrics = Cache::remember("rider_metrics_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($rangeStart, $rangeEnd) {
+        $riderMetrics = $this->rememberSafely("rider_metrics_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($rangeStart, $rangeEnd) {
             $today = Carbon::today()->toDateString();
 
             return AppUser::selectRaw("
@@ -105,7 +106,7 @@ class HomeController
                 ->first();
         });
 
-        $bookingMetrics = Cache::remember("booking_metrics_{$moduleId}_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($moduleId, $rangeStart, $rangeEnd) {
+        $bookingMetrics = $this->rememberSafely("booking_metrics_{$moduleId}_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($moduleId, $rangeStart, $rangeEnd) {
             $today = Carbon::today()->toDateString();
             $ongoing = $this->quotedStatusList(self::STATUS_ALIASES['ongoing']);
             $completed = $this->quotedStatusList(self::STATUS_ALIASES['completed']);
@@ -225,7 +226,7 @@ class HomeController
 
     private function getLatestUsersData(Carbon $rangeStart, Carbon $rangeEnd)
     {
-        return Cache::remember("latest_users_data_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($rangeStart, $rangeEnd) {
+        return $this->rememberSafely("latest_users_data_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($rangeStart, $rangeEnd) {
             return AppUser::selectRaw('DATE(created_at) as date, COUNT(*) as count')
                 ->whereBetween('created_at', [$rangeStart, $rangeEnd])
                 ->groupBy('date')
@@ -242,7 +243,7 @@ class HomeController
 
     private function getLatestBookingsData($moduleId, Carbon $rangeStart, Carbon $rangeEnd)
     {
-        return Cache::remember("latest_bookings_data_{$moduleId}_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($moduleId, $rangeStart, $rangeEnd) {
+        return $this->rememberSafely("latest_bookings_data_{$moduleId}_{$rangeStart->toDateString()}_{$rangeEnd->toDateString()}", 3600, function () use ($moduleId, $rangeStart, $rangeEnd) {
             return Booking::selectRaw('DATE(created_at) as date, COUNT(*) as count')
                 ->where('module', $moduleId)
                 ->whereBetween('created_at', [$rangeStart, $rangeEnd])
@@ -286,6 +287,20 @@ class HomeController
         return collect($statuses)
             ->map(fn ($status) => DB::getPdo()->quote($status))
             ->implode(', ');
+    }
+
+    private function rememberSafely(string $key, int $seconds, \Closure $callback)
+    {
+        try {
+            return Cache::remember($key, $seconds, $callback);
+        } catch (\Throwable $e) {
+            Log::warning('Dashboard cache unavailable; using uncached data.', [
+                'key' => $key,
+                'message' => $e->getMessage(),
+            ]);
+
+            return $callback();
+        }
     }
 
     public function deleteInstaller()

@@ -48,7 +48,7 @@ services:
       - key: QUEUE_CONNECTION
         value: sync
       - key: CACHE_DRIVER
-        value: file
+        value: array
       - key: SESSION_DRIVER
         value: cookie
       - key: SESSION_SECURE_COOKIE

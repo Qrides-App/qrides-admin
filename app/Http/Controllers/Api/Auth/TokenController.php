@@ -7,6 +7,7 @@ use App\Http\Controllers\Traits\ResponseTrait;
 use App\Models\AppUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Validator;
 
 class TokenController extends Controller
@@ -91,9 +92,19 @@ class TokenController extends Controller
         $user->password = $user->password ?: bcrypt('f07c02db6c1c42289f58');
         $user->user_type = 'guest';
         $user->status = $user->status ?? 1;
-        $user->host_status = $user->host_status ?? '0';
-        $user->phone_country = $user->phone_country ?: '+91';
-        $user->default_country = $user->default_country ?: 'IN';
+
+        if (Schema::hasColumn('app_users', 'host_status')) {
+            $user->host_status = $user->host_status ?? '0';
+        }
+
+        if (Schema::hasColumn('app_users', 'phone_country')) {
+            $user->phone_country = $user->phone_country ?: '+91';
+        }
+
+        if (Schema::hasColumn('app_users', 'default_country')) {
+            $user->default_country = $user->default_country ?: 'IN';
+        }
+
         $user->save();
 
         return $user;
