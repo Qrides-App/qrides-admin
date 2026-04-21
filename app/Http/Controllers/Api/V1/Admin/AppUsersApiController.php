@@ -945,17 +945,6 @@ class AppUsersApiController extends Controller
 
     public function ResendOtp(Request $request)
     {
-
-        // $myfile = fopen($_SERVER['DOCUMENT_ROOT'] . "/resend_otp.txt", "w") or die("Unable to open file!");
-
-        // $txt = "phone = " . $request->input('phone') . "\n";
-        // fwrite($myfile, $txt);
-        // $txt = "phone_country = " . $request->input('phone_country') . "\n";
-        // fwrite($myfile, $txt);
-        // fclose($myfile);
-
-        //   try{
-
         $validator = Validator::make($request->all(), [
             'phone' => ['required', 'numeric'],
             'phone_country' => ['required'],
@@ -964,46 +953,36 @@ class AppUsersApiController extends Controller
         if ($validator->fails()) {
             return $this->errorComputing($validator);
         }
-        $checkdata = AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->first();
-        if (empty($checkdata)) {
-            $checkdata = DB::table('app_user_otps')->where('phone', $request->phone)->where('country_code', $request->phone_country)->first();
-        }
+        $user = AppUser::where('phone', $request->phone)
+            ->where('phone_country', $request->phone_country)
+            ->first();
 
-        $first_name = '';
-        $last_name = '';
-
-        $user = null;
-        if ($request->has('token')) {
-            $user = AppUser::where('token', $request->input('token'))->first();
-        }
         if (! $user) {
-            return $this->addErrorResponse(419, trans('global.token_not_match'), '');
-        } else {
-
-            $first_name = $user->first_name;
-            $last_name = $user->last_name;
-        }
-
-        if ($checkdata) {
-            $otp = $this->generateOtp($request->phone, $request->phone_country);
-            if (isset($checkdata->first_name)) {
-                $first_name = $checkdata->first_name;
-            }
-
-            if (isset($checkdata->last_name)) {
-                $last_name = $checkdata->last_name;
-            }
-
-            $valuesArray = ['OTP' => $otp, 'first_name' => $first_name, 'last_name' => $last_name];
-            $template_id = 37;
-            $this->sendAllNotifications($valuesArray, $checkdata->id, $template_id);
-            $responseData = [];
-            $responseData['otp_value'] = '';
-
-            return $this->successResponse(200, trans('global.OTP_sent_successfully'), $responseData);
-        } else {
             return $this->errorResponse(409, trans('global.user_record_not_match_44'));
         }
+
+        $otp = $this->generateOtp($user->phone, $user->phone_country);
+
+        $valuesArray = [
+            'OTP' => $otp,
+            'first_name' => $user->first_name ?? '',
+            'last_name' => $user->last_name ?? '',
+        ];
+        $template_id = 37;
+        $this->sendAllNotifications($valuesArray, $user->id, $template_id);
+
+        $user->update([
+            'reset_token' => $otp,
+            'otp_expires_at' => Carbon::now()->addMinutes(5),
+        ]);
+
+        $responseData = [
+            'otp_value' => '',
+            'phone' => $user->phone,
+            'phone_country' => $user->phone_country,
+        ];
+
+        return $this->successResponse(200, trans('global.OTP_sent_successfully'), $responseData);
         try {
         } catch (\Exception $e) {
             return $this->errorResponse(401, trans('global.something_wrong'));
