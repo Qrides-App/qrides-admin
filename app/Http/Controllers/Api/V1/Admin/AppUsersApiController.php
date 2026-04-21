@@ -156,7 +156,7 @@ class AppUsersApiController extends Controller
                 $valuesArray['support_email'] = $general_email;
                 $this->sendAllNotifications($valuesArray, $customer->id, 1);
                 $customer->update(['otp_value' => $otp]);
-                $customer['otp_value'] = GeneralSetting::getMetaValue('auto_fill_otp') ? $otp : '';
+                $customer['otp_value'] = '';
 
                 return $this->successResponse(200, trans('global.user_created_successfully'), $customer);
             }
@@ -185,7 +185,31 @@ class AppUsersApiController extends Controller
             'expires_at' => $expiresAt,
         ]);
 
+        $this->logOtpForTesting('phone', $countryCode.$phoneNumber, $otp);
+
         return $otp;
+    }
+
+    protected function logOtpForTesting(string $channel, string $recipient, string $otp): void
+    {
+        if (! $this->shouldLogOtpForTesting()) {
+            return;
+        }
+
+        \Log::info('OTP generated for testing', [
+            'channel' => $channel,
+            'recipient' => $recipient,
+            'otp' => $otp,
+        ]);
+    }
+
+    protected function shouldLogOtpForTesting(): bool
+    {
+        if (filter_var(env('OTP_LOGGING_ENABLED', false), FILTER_VALIDATE_BOOL)) {
+            return true;
+        }
+
+        return app()->environment(['local', 'development', 'testing']);
     }
 
     public function validateOtpFromDB($phoneNumber, $countryCode, $inputOtp)
@@ -366,9 +390,6 @@ class AppUsersApiController extends Controller
                     $otp = $this->generateOtp($customer->phone, $customer->phone_country);
                     $this->sendAllNotifications(['OTP' => $otp], $customer->id, 2);
                     $customer['reset_token'] = '';
-                    if (GeneralSetting::getMetaValue('auto_fill_otp')) {
-                        $customer['reset_token'] = $otp;
-                    }
 
                     return $this->successResponse(200, trans('global.account_inactive'), $customer);
                 }
@@ -577,12 +598,7 @@ class AppUsersApiController extends Controller
         }
         $user->update($otpUpdate);
 
-        $responseData = [];
-        $responseData['reset_token'] = '';
         $user['reset_token'] = '';
-        if (GeneralSetting::getMetaValue('auto_fill_otp')) {
-            $user['reset_token'] = $otp;
-        }
         $filteredUser = $user->only([
             'phone',
             'phone_country',
@@ -619,9 +635,6 @@ class AppUsersApiController extends Controller
         AppUser::where('email', $request->email)->update(['reset_token' => $otp, 'token' => '']);
         $responseData = [];
         $responseData['reset_token'] = '';
-        if (GeneralSetting::getMetaValue('auto_fill_otp')) {
-            $responseData['reset_token'] = $otp;
-        }
 
         return $this->successResponse(200, trans('global.Password_reset_OTP'), $responseData);
         try {
@@ -811,9 +824,6 @@ class AppUsersApiController extends Controller
         AppUser::where('email', $request->email)->update(['reset_token' => $otp, 'token' => '']);
         $responseData = [];
         $responseData['reset_token'] = '';
-        if (GeneralSetting::getMetaValue('auto_fill_otp')) {
-            $responseData['reset_token'] = $otp;
-        }
 
         return $this->successResponse(200, trans('global.Password_reset_OTP'), $responseData);
         try {
@@ -989,9 +999,6 @@ class AppUsersApiController extends Controller
             $this->sendAllNotifications($valuesArray, $checkdata->id, $template_id);
             $responseData = [];
             $responseData['otp_value'] = '';
-            if (GeneralSetting::getMetaValue('auto_fill_otp')) {
-                $responseData['otp_value'] = $otp;
-            }
 
             return $this->successResponse(200, trans('global.OTP_sent_successfully'), $responseData);
         } else {
@@ -1022,9 +1029,6 @@ class AppUsersApiController extends Controller
             $update_otp = AppUser::where('email', $request->email)->update(['reset_token' => $otp]);
             $responseData = [];
             $responseData['reset_token'] = '';
-            if (GeneralSetting::getMetaValue('auto_fill_otp')) {
-                $responseData['reset_token'] = $otp;
-            }
 
             return $this->successResponse(200, trans('global.OTP_resent_succesfully'), $responseData);
         } else {
@@ -1059,9 +1063,6 @@ class AppUsersApiController extends Controller
             $update_otp = AppUser::where('email', $request->email)->update(['reset_token' => $otp]);
             $responseData = [];
             $responseData['reset_token'] = '';
-            if (GeneralSetting::getMetaValue('auto_fill_otp')) {
-                $responseData['reset_token'] = $otp;
-            }
 
             return $this->successResponse(200, trans('global.OTP_resent_succesfully'), $responseData);
         } else {

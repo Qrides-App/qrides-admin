@@ -11,13 +11,7 @@ trait SMSTrait
 {
     public function sendSMS($subject, $message, $mobileNumber)
     {
-
-        $autoFillOtp = GeneralSetting::getMetaValue('auto_fill_otp');
         $smsProviderName = GeneralSetting::getMetaValue('sms_provider_name');
-
-        if ($autoFillOtp) {
-            return;
-        }
         switch ($smsProviderName) {
             case 'sinch':
                 $this->sendViaSinch($message, $mobileNumber);
@@ -37,7 +31,7 @@ trait SMSTrait
 
                 // Add other SMS providers here as needed
             default:
-                throw new Exception('SMS provider not supported: '.$smsProviderName);
+                throw new \Exception('SMS provider not supported: '.$smsProviderName);
         }
     }
 
@@ -96,9 +90,11 @@ trait SMSTrait
 
             // Close cURL session
             curl_close($ch);
-        } catch (Exception $e) {
-            // Handle exception
-            // echo 'Error: ' . $e->getMessage();
+        } catch (\Exception $e) {
+            Log::error('Sinch SMS send failed', [
+                'message' => $e->getMessage(),
+                'mobile' => $mobileNumber,
+            ]);
         }
     }
 
@@ -154,10 +150,16 @@ trait SMSTrait
         curl_close($curl);
 
         if ($err) {
-            echo 'cURL Error #:'.$err;
-        } else {
-            echo 'Status Code: '.$statusCode."\n";
-            echo 'Response: '.$response."\n";
+            Log::error('MSG91 SMS send failed', [
+                'error' => $err,
+                'mobile' => $mobileNumber,
+            ]);
+        } elseif ($statusCode >= 400) {
+            Log::error('MSG91 SMS send returned error response', [
+                'status_code' => $statusCode,
+                'response' => $response,
+                'mobile' => $mobileNumber,
+            ]);
         }
     }
 
