@@ -968,8 +968,15 @@ class AppUsersApiController extends Controller
             'first_name' => $user->first_name ?? '',
             'last_name' => $user->last_name ?? '',
         ];
-        $template_id = 37;
-        $this->sendAllNotifications($valuesArray, $user->id, $template_id);
+        $template_id = 2;
+        try {
+            $this->sendAllNotifications($valuesArray, $user->id, $template_id);
+        } catch (\Throwable $exception) {
+            Log::warning('Resend login OTP notification failed; OTP was still generated.', [
+                'user_id' => $user->id,
+                'message' => $exception->getMessage(),
+            ]);
+        }
 
         $user->update([
             'reset_token' => $otp,
