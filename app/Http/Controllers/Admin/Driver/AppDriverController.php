@@ -13,6 +13,7 @@ use App\Models\AllPackage;
 use App\Models\AppUser;
 use App\Models\AppUserMeta;
 use App\Models\GeneralSetting;
+use App\Models\HireBooking;
 use App\Models\Modern\Item;
 use App\Models\Modern\ItemVehicle;
 use App\Models\Modern\ItemType;
@@ -20,6 +21,7 @@ use App\Models\Payout;
 use App\Models\VendorWallet;
 use App\Models\VehicleMake;
 use App\Services\FirebaseAuthService;
+use Carbon\Carbon;
 use Gate;
 use Hash;
 use Illuminate\Http\Request;
@@ -255,6 +257,72 @@ class AppDriverController extends Controller
     }
 
     public function driverPayoutView(Request $request, $userId) {}
+
+    public function driverHireView(Request $request, $userId)
+    {
+        abort_if(Gate::denies('booking_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+        $driver = AppUser::select('id', 'first_name', 'last_name', 'phone_country', 'phone')
+            ->where('id', $userId)
+            ->where('user_type', 'driver')
+            ->firstOrFail();
+
+        $filters = $request->only(['status', 'from', 'to']);
+
+        $query = HireBooking::with([
+            'driver:id,first_name,last_name,phone',
+            'rider:id,first_name,last_name,phone',
+        ])->where('driver_id', $driver->id);
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['from'])) {
+            try {
+                $from = Carbon::parse($filters['from'])->startOfDay();
+                $query->where('start_at', '>=', $from);
+            } catch (\Throwable $e) {
+                // Ignore invalid date input and keep the page usable.
+            }
+        }
+
+        if (! empty($filters['to'])) {
+            try {
+                $to = Carbon::parse($filters['to'])->endOfDay();
+                $query->where('start_at', '<=', $to);
+            } catch (\Throwable $e) {
+                // Ignore invalid date input and keep the page usable.
+            }
+        }
+
+        $bookings = $query->orderByDesc('start_at')
+            ->paginate(25)
+            ->appends($filters);
+
+        $baseStatsQuery = HireBooking::where('driver_id', $driver->id);
+        $stats = [
+            'total' => (clone $baseStatsQuery)->count(),
+            'booked' => (clone $baseStatsQuery)->where('status', 'booked')->count(),
+            'ongoing' => (clone $baseStatsQuery)->where('status', 'ongoing')->count(),
+            'completed' => (clone $baseStatsQuery)->where('status', 'completed')->count(),
+            'cancelled' => (clone $baseStatsQuery)->where('status', 'cancelled')->count(),
+        ];
+
+        $currency = GeneralSetting::where('meta_key', 'general_default_currency')
+            ->value('meta_value') ?? 'INR';
+
+        $qrPayload = 'qrides://hire?driver_id='.$driver->id;
+
+        return view('admin.appUsers.driver.hire', compact(
+            'driver',
+            'qrPayload',
+            'currency',
+            'filters',
+            'stats',
+            'bookings'
+        ));
+    }
 
     public function driverVehicleView(Request $request, $userId)
     {

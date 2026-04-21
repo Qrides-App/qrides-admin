@@ -273,6 +273,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'mi
         ->name('driver.financial');
     Route::get('driver/account/{driver_id}', 'Driver\AppDriverController@driverAccountView')
         ->name('driver.account');
+    Route::get('driver/hire/{driver_id}', 'Driver\AppDriverController@driverHireView')
+        ->name('driver.hire');
     Route::get('driver/vehicle/{driver_id}', 'Driver\AppDriverController@driverVehicleView')
         ->name('driver.vehicle');
     Route::get('driver/document/{driver_id}', 'Driver\AppDriverController@driverDocumentView')

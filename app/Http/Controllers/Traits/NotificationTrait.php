@@ -38,10 +38,20 @@ trait NotificationTrait
             $vendorData = AppUser::with('metadata')->where('id', $vendor_id)->get();
         }
         $template = EmailSmsNotification::find($template_id);
-        if ($template->status == 0) {
+        if (! $template) {
+            \Log::warning('Notification template missing, skipping notification dispatch.', [
+                'template_id' => $template_id,
+                'user_id' => $user_id,
+                'vendor_id' => $vendor_id,
+            ]);
+            return;
+        }
+        if ((int) $template->status === 0) {
             return;
         }
         $subject = $this->replaceTemplatePlaceholders($template->subject, $valuesArray);
+        $adminsubject = $subject;
+        $vendorsubject = $subject;
         $testing = '';
 
         $message = $this->replaceTemplatePlaceholders($template->body, $valuesArray).$testing;
