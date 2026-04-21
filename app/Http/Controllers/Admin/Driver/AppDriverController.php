@@ -26,6 +26,7 @@ use Gate;
 use Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\View;
@@ -478,11 +479,16 @@ class AppDriverController extends Controller
     public function documentVerify(Request $request, $host_id, FirebaseAuthService $firebaseAuthService)
     {
         $verified = $request->input('document_verify');
-        $this->updateStatusField($host_id, 'document_verify', $verified);
         $user = AppUser::find($host_id);
         if (! $user) {
             return response()->json(['message' => 'User not found.'], 404);
         }
+
+        if (Schema::hasColumn('app_users', 'document_verify')) {
+            $user->document_verify = $verified;
+            $user->save();
+        }
+
         if (! $user->firestore_id) {
             $firestoreData = $this->generateDriverFirestoreData($user);
             $firestoreDoc = $this->storeDriverInFirestore($firestoreData);

@@ -325,6 +325,7 @@ class EnsureAuthSchema extends Command
             $table->string('password')->nullable();
             $table->string('user_type')->default('user');
             $table->enum('host_status', ['0', '1', '2'])->nullable()->default('0');
+            $table->boolean('document_verify')->default(false);
             $table->boolean('status')->nullable()->default(true);
             $table->unsignedBigInteger('package_id')->nullable()->default(1);
             $table->decimal('wallet', 15)->nullable();
@@ -376,6 +377,12 @@ class EnsureAuthSchema extends Command
         if (! Schema::hasColumn('app_users', 'otp_expires_at')) {
             Schema::table('app_users', function (Blueprint $table) {
                 $table->timestamp('otp_expires_at')->nullable()->after('reset_token');
+            });
+        }
+
+        if (! Schema::hasColumn('app_users', 'document_verify')) {
+            Schema::table('app_users', function (Blueprint $table) {
+                $table->boolean('document_verify')->default(false)->after('host_status');
             });
         }
 
