@@ -11,25 +11,18 @@ use Illuminate\Http\Request;
 class EnsureDriverRechargeIsActive
 {
     /**
-     * Routes that remain accessible even when driver recharge is expired/missing.
+     * Only ride-gating routes should be blocked when driver recharge is expired/missing.
+     * Driver should still be able to log in, access wallet/recharge screens, and use non-ride app features.
      */
-    private array $allowedPaths = [
-        'api/v1/userLogout',
-        'api/v1/getgeneralSettings',
-        'api/v1/fcmUpdate',
-        'api/v1/getRechargePlans',
-        'api/v1/getDriverRechargeStatus',
-        'api/v1/rechargeWallet',
-        'api/v1/startRechargePayment',
-        'api/v1/confirmRechargePayment',
-        'api/v1/getSupportTickets',
-        'api/v1/createSupportTicket',
-        'api/v1/replySupportTicket',
+    private array $protectedPaths = [
+        'api/v1/ride-requests',
+        'api/v1/updateBookingStatusByDriver',
+        'api/v1/updatePaymentStatusByDriver',
     ];
 
     public function handle(Request $request, Closure $next)
     {
-        if ($this->isAllowedPath($request)) {
+        if (! $this->isProtectedPath($request)) {
             return $next($request);
         }
 
@@ -64,11 +57,15 @@ class EnsureDriverRechargeIsActive
         ], 403);
     }
 
-    private function isAllowedPath(Request $request): bool
+    private function isProtectedPath(Request $request): bool
     {
         $path = trim($request->path(), '/');
 
-        return in_array($path, $this->allowedPaths, true);
+        if (in_array($path, $this->protectedPaths, true)) {
+            return true;
+        }
+
+        return preg_match('#^api/v1/ride-requests/\d+/status$#', $path) === 1;
     }
 
     private function canDriverRide(AppUser $driver): bool
