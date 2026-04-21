@@ -2,6 +2,8 @@
 
 .driver-profile-page {
   font-family: var(--font-family);
+  --primary-color: #2f6fe4;
+  --secondary-color: #dbe8ff;
 }
 
 .profile-container {
@@ -202,7 +204,7 @@
 
 .btn-green { color: #28a745; border-color: #28a745; }
 .btn-red { color: #dc3545; border-color: #dc3545; }
-.btn-orange { color: #fd7e14; border-color: #fd7e14; }
+.btn-orange { color: #2f6fe4; border-color: #2f6fe4; }
 .btn-gray { color: #6c757d; border-color: #ced4da; }
 
 .driver-header .btn:hover {

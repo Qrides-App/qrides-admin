@@ -10,9 +10,9 @@
                 <div class="row g-3 text-capitalize align-items-center">
                     @php
                         $toggles = [
-                            ['label' => __('user.profile_verify'), 'field' => 'status', 'value' => $appUser->status, 'class' => 'profileVerify'],
-                            ['label' => __('user.email_verify'), 'field' => 'email_verify', 'value' => $appUser->email_verify, 'class' => 'emailVerify'],
-                            ['label' => __('user.phone_verify'), 'field' => 'phone_verify', 'value' => $appUser->phone_verify, 'class' => 'phoneVerify']
+                            ['label' => 'Account Status', 'field' => 'status', 'value' => $appUser->status, 'class' => 'profileVerify'],
+                            ['label' => 'Email Verified', 'field' => 'email_verify', 'value' => $appUser->email_verify, 'class' => 'emailVerify'],
+                            ['label' => 'Phone Verified', 'field' => 'phone_verify', 'value' => $appUser->phone_verify, 'class' => 'phoneVerify']
                         ];
                     @endphp
 

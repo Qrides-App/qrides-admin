@@ -1,11 +1,108 @@
 @extends('layouts.admin')
+@section('styles')
+@parent
+<style>
+    .vehicle-makes-page .page-action-row {
+        margin-bottom: 18px;
+    }
+
+    .vehicle-makes-page .btn-add-make {
+        border-radius: 16px;
+        padding: 12px 18px;
+        font-weight: 700;
+    }
+
+    .vehicle-makes-page .filter-card,
+    .vehicle-makes-page .table-card {
+        border: 0;
+        border-radius: 24px;
+        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+
+    .vehicle-makes-page .filter-card .box-body,
+    .vehicle-makes-page .table-card .panel-body {
+        padding: 26px 28px;
+    }
+
+    .vehicle-makes-page .table-card .panel-heading {
+        border: 0;
+        background: #fff;
+        font-size: 18px;
+        font-weight: 700;
+        padding: 22px 28px 8px;
+    }
+
+    .vehicle-makes-page .filter-label {
+        display: block;
+        margin-bottom: 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+
+    .vehicle-makes-page .filter-actions {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        height: 100%;
+    }
+
+    .vehicle-makes-page .filter-actions .btn {
+        min-width: 110px;
+        border-radius: 14px;
+        font-weight: 600;
+    }
+
+    .vehicle-makes-page .dt-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .vehicle-makes-page .dt-buttons .btn {
+        border-radius: 14px;
+        font-weight: 600;
+        box-shadow: none;
+    }
+
+    .vehicle-makes-page .dt-buttons .btn-danger,
+    .vehicle-makes-page .dt-buttons .btn-outline-danger {
+        background: #fff5f5;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+
+    .vehicle-makes-page .dataTables_filter input,
+    .vehicle-makes-page .dataTables_length select,
+    .vehicle-makes-page #typeId {
+        border-radius: 14px;
+        min-height: 46px;
+    }
+
+    .vehicle-makes-page .type-badge-muted {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+    }
+</style>
+@endsection
+
 @section('content')
-<div class="content">
+<div class="content vehicle-makes-page">
 
 @can($permissionrealRoute.'_create')
-        <div style="margin-bottom: 10px;" class="row">
+        <div class="row page-action-row">
             <div class="col-lg-12">
-                <a class="btn btn-success" href="{{ route($createRoute) }}">
+                <a class="btn btn-primary btn-add-make" href="{{ route($createRoute) }}">
                     {{ trans('global.add') }} {{$title}}
                 </a>
             </div>
@@ -13,12 +110,12 @@
         @endcan
         <div class="row">
         <div class="col-lg-12">
-            <div class="box">
+            <div class="box filter-card">
                 <div class="box-body">
                     <form class="form-horizontal" id="propertyFilterForm" action="{{ route($indexRoute) }}" method="GET" accept-charset="UTF-8">
-                        <div class="row">
-                            <div class="col-md-2 col-sm-12 col-xs-12">
-                                <label>Type</label>
+                        <div class="row" style="display:flex;align-items:flex-end;row-gap:16px;">
+                            <div class="col-md-3 col-sm-12 col-xs-12">
+                                <label class="filter-label">Type</label>
                                 <select class="form-control select2" name="typeId" id="typeId">
                                     <option value="">{{ trans('global.pleaseSelect') }}</option>
                                     @foreach($types as $type)
@@ -26,10 +123,11 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-2 d-flex gap-2 mt-4 col-sm-2 col-xs-4 mt-5">
-                                <br>
+                            <div class="col-md-4 col-sm-12 col-xs-12">
+                                <div class="filter-actions">
                                 <button type="submit" name="btn" class="btn btn-primary btn-flat filterproduct">{{ trans('global.filter') }}</button>
-                                <button type="button" id="resetBtn" class="btn btn-primary btn-flat resetproduct">{{ trans('global.reset') }}</button>
+                                <button type="button" id="resetBtn" class="btn btn-default btn-flat resetproduct">{{ trans('global.reset') }}</button>
+                                </div>
                             </div>
                         </div>
                     </form>
@@ -39,7 +137,7 @@
     </div>
     <div class="row">
         <div class="col-lg-12">
-            <div class="panel panel-default">
+            <div class="panel panel-default table-card">
                 <div class="panel-heading">
                     {{ $title }} {{ trans('global.list') }}
                 </div>
@@ -66,9 +164,6 @@
                                     {{ trans('global.type') }}
                                 </th>
                                 <th>
-                                    {{ trans('global.image') }}
-                                </th>
-                                <th>
                                     &nbsp;
                                 </th>
                             </tr>
@@ -93,7 +188,7 @@
   let deleteButton = {
     text: '{{ trans("global.delete_all") }}',
     url: "{{ route('admin.vehicle-makes.deleteAll') }}", // Replace with your delete route
-    className: 'btn-danger',
+    className: 'btn-outline-danger',
     action: function (e, dt, node, config) {
         var ids = $.map(dt.rows({ selected: true }).data(), function (entry) {
             return entry.id;
@@ -240,8 +335,17 @@
         });
       }
     },
-    { data: 'typeName', name: 'typeName', orderable: false, searchable: false},   
-{ data: 'image', name: 'image', sortable: false, searchable: false },
+    {
+      data: 'typeName',
+      name: 'typeName',
+      orderable: false,
+      searchable: false,
+      render: function (data) {
+        return data && data.trim()
+          ? data
+          : '<span class="type-badge-muted">Not linked</span>';
+      }
+    },
 
 { 
 

@@ -15,10 +15,10 @@
                     {{-- Status Toggles --}}
                     @php
                         $toggles = [
-                            ['label' => __('user.profile_verify'), 'field' => 'status', 'value' => $appUser->status, 'class' => 'profileVerify'],
+                            ['label' => 'Account Status', 'field' => 'status', 'value' => $appUser->status, 'class' => 'profileVerify'],
                             // ['label' => __('user.email_verify'), 'field' => 'email_verify', 'value' => $appUser->email_verify, 'class' => 'emailVerify'],
                             // ['label' => __('user.phone_verify'), 'field' => 'phone_verify', 'value' => $appUser->phone_verify, 'class' => 'phoneVerify'],
-                             ['label' => __('user.document_verify'), 'field' => 'document_verify', 'value' => $appUser->document_verify, 'class' => 'documentVerify']
+                             ['label' => 'Document Verification', 'field' => 'document_verify', 'value' => $appUser->document_verify, 'class' => 'documentVerify']
                         ];
                     @endphp
 
