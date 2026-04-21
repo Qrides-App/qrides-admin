@@ -57,6 +57,10 @@ services:
         value: lax
       - key: LOG_CHANNEL
         value: stderr
+      - key: SANCTUM_ISSUE_SECRET
+        value: 49382716504938271650493827165049
+      - key: ALLOW_GUEST_TOKENS
+        value: true
       - key: GOOGLE_MAP_KEY
         sync: false
       - key: FIREBASE_SERVER_KEY

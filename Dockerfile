@@ -37,6 +37,7 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-di
 
 # Laravel permissions
 RUN chown -R www-data:www-data storage bootstrap/cache
+RUN chmod +x scripts/render-start.sh
 
 # Expose port
 EXPOSE 8080
@@ -47,4 +48,4 @@ RUN sed -i 's/80/8080/g' /etc/apache2/ports.conf /etc/apache2/sites-available/00
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
 
-CMD ["/bin/sh", "-lc", "mkdir -p storage/firebase storage/firebase/branding storage/firebase/branding/logo; chown -R www-data:www-data storage/firebase || true; chmod -R ug+rwX storage/firebase || true; php artisan app:ensure-auth-schema --no-interaction || true; php artisan app:reconcile-migrations --no-interaction || true; php artisan migrate --force --no-interaction || true; php artisan app:ensure-super-admin --no-interaction || true; php artisan optimize:clear || true; (while true; do php artisan schedule:run --no-interaction || true; sleep 60; done) & apache2-foreground"]
+CMD ["scripts/render-start.sh"]
