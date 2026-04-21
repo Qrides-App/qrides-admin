@@ -2902,4 +2902,61 @@ class AppUsersApiController extends Controller
             return $this->addErrorResponse(500, $e->getMessage(), $e->getMessage());
         }
     }
+
+    public function getDriverComplianceSummary(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'token' => 'required|exists:app_users,token',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->errorComputing($validator);
+            }
+
+            $userId = $this->checkUserByToken($request->token);
+            if (! $userId) {
+                return $this->addErrorResponse(419, trans('global.token_not_match'), '');
+            }
+
+            $user = AppUser::with(['metadata'])->find($userId);
+            if (! $user) {
+                return $this->addErrorResponse(404, trans('global.user_not_found'), '');
+            }
+
+            $statusKeys = [
+                'driving_licence_front_status',
+                'driving_licence_back_status',
+                'aadhaar_front_status',
+                'aadhaar_back_status',
+                'pan_card_status',
+                'vehicle_insurance_doc_status',
+            ];
+
+            $metaStatuses = $user->metadata
+                ->whereIn('meta_key', $statusKeys)
+                ->pluck('meta_value', 'meta_key');
+
+            $statuses = [];
+            foreach ($statusKeys as $key) {
+                $statuses[$key] = $metaStatuses[$key] ?? '';
+            }
+
+            $overallStatus = 'pending';
+            if (in_array('rejected', $statuses, true)) {
+                $overallStatus = 'rejected';
+            } elseif (count(array_filter($statuses, fn ($status) => $status !== 'approved')) === 0) {
+                $overallStatus = 'approved';
+            }
+
+            return $this->addSuccessResponse(200, 'Captain compliance summary fetched successfully', [
+                'verification_document_status' => $overallStatus,
+                'documents' => $statuses,
+                'host_status' => (string) $user->host_status,
+                'document_verify' => (string) $user->document_verify,
+            ]);
+        } catch (\Exception $e) {
+            return $this->addErrorResponse(500, $e->getMessage(), $e->getMessage());
+        }
+    }
 }

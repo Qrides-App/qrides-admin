@@ -74,6 +74,7 @@ Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', '
     Route::post('/deleteAccount', 'AppUsersApiController@deleteAccount');
     Route::post('/addEditVerificationDocuments', 'AppUsersApiController@addEditVerificationDocuments');
     Route::post('/getVerificationDocuments', 'AppUsersApiController@getVerificationDocuments');
+    Route::get('/getDriverComplianceSummary', 'AppUsersApiController@getDriverComplianceSummary');
 
     // UserProfile
     Route::post('/getUserProfile', 'UserProfileController@getUserProfile');
