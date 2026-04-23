@@ -4,7 +4,9 @@ namespace App\Strategies;
 
 use App\Http\Controllers\Traits\MiscellaneousTrait;
 use App\Http\Controllers\Traits\PaymentStatusUpdaterTrait;
+use App\Models\AppUser;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class CashfreeStrategy implements PaymentStrategy
 {
@@ -75,20 +77,37 @@ class CashfreeStrategy implements PaymentStrategy
 
     public function rechargeWallet($userID, $amount, $currency, $request)
     {
+        $userToken = $request->input('userToken');
+        $driver = AppUser::find($userID);
         $orderId = 'recharge_'.$userID.'_'.time();
+        $customerPhone = trim((string) (($driver->phone_country ?? '').($driver->phone ?? '')));
+        $customerEmail = trim((string) ($driver->email ?? ''));
         $payload = [
             'order_id' => $orderId,
             'order_amount' => (float) $amount,
             'order_currency' => $currency,
             'customer_details' => [
                 'customer_id' => 'driver_'.$userID,
+                'customer_phone' => $customerPhone !== '' ? $customerPhone : '9999999999',
+                'customer_email' => $customerEmail !== '' ? $customerEmail : 'driver_'.$userID.'@qrides.in',
             ],
             'order_meta' => [
-                'return_url' => url('/payment/return?booking='.$orderId.'&method=cashfree').'&cf_id={order_id}&cf_token={order_token}',
+                'return_url' => route('wallet_recharge_return', [
+                    'booking' => $orderId,
+                    'method' => 'cashfree',
+                    'token' => $userToken,
+                    'plan_id' => $request->input('plan_id'),
+                    'duration_days' => $request->input('duration_days'),
+                ]).'&cf_id={order_id}&cf_token={order_token}',
             ],
         ];
         $response = $this->createOrder($payload);
         if ($response['status'] !== 'success') {
+            Log::error('Cashfree recharge order failed', [
+                'user_id' => $userID,
+                'payload' => $payload,
+                'response' => $response['message'] ?? 'Cashfree order failed.',
+            ]);
             return redirect('/invalid-order')->with('error', $response['message'] ?? 'Cashfree order failed.');
         }
         return redirect($response['data']['payment_link']);
