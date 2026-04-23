@@ -17,7 +17,7 @@ class FirestoreService
     public function __construct()
     {
         $credentialsPath = $this->getFirebaseCredentialsPath();
-        $credentials = File::exists($credentialsPath)
+        $credentials = is_readable($credentialsPath)
             ? json_decode(File::get($credentialsPath), true)
             : [];
 
@@ -46,17 +46,22 @@ class FirestoreService
 
     private function getFirebaseCredentialsPath(): string
     {
+        $storagePath = storage_path('firebase/firebase_credentials.json');
+        if (is_readable($storagePath)) {
+            return $storagePath;
+        }
+
         $envPath = trim((string) env('FIREBASE_CREDENTIALS_PATH', ''));
-        if ($envPath !== '' && File::exists($envPath)) {
+        if ($envPath !== '' && is_readable($envPath)) {
             return $envPath;
         }
 
         $renderSecretPath = '/etc/secrets/firebase_credentials.json';
-        if (File::exists($renderSecretPath)) {
+        if (is_readable($renderSecretPath)) {
             return $renderSecretPath;
         }
 
-        return storage_path('firebase/firebase_credentials.json');
+        return $storagePath;
     }
 
     public function addDocument($collection, $data)

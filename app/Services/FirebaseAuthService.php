@@ -13,8 +13,8 @@ class FirebaseAuthService
     {
         $credentialsPath = $this->getFirebaseCredentialsPath();
 
-        if (! File::exists($credentialsPath)) {
-            throw new \Exception("Firebase credentials not found at: $credentialsPath");
+        if (! is_readable($credentialsPath)) {
+            throw new \Exception("Firebase credentials not readable at: $credentialsPath");
         }
 
         $this->credentials = json_decode(File::get($credentialsPath), true);
@@ -22,17 +22,22 @@ class FirebaseAuthService
 
     private function getFirebaseCredentialsPath(): string
     {
+        $storagePath = storage_path('firebase/firebase_credentials.json');
+        if (is_readable($storagePath)) {
+            return $storagePath;
+        }
+
         $envPath = trim((string) env('FIREBASE_CREDENTIALS_PATH', ''));
-        if ($envPath !== '' && File::exists($envPath)) {
+        if ($envPath !== '' && is_readable($envPath)) {
             return $envPath;
         }
 
         $renderSecretPath = '/etc/secrets/firebase_credentials.json';
-        if (File::exists($renderSecretPath)) {
+        if (is_readable($renderSecretPath)) {
             return $renderSecretPath;
         }
 
-        return storage_path('firebase/firebase_credentials.json');
+        return $storagePath;
     }
 
     /**
