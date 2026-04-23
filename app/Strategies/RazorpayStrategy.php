@@ -4,7 +4,12 @@ namespace App\Strategies;
 
 use App\Http\Controllers\Traits\MiscellaneousTrait;
 use App\Http\Controllers\Traits\PaymentStatusUpdaterTrait;
+use App\Models\AppUser;
+use App\Models\DriverRechargePlan;
+use App\Models\GeneralSetting;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class RazorpayStrategy implements PaymentStrategy
 {
@@ -65,6 +70,39 @@ class RazorpayStrategy implements PaymentStrategy
         return hash_equals($generatedSignature, $signature);
     }
 
+    public function rechargeWallet($userID, $amount, $currency, $request)
+    {
+        $planId = $request->input('plan_id');
+        $durationDays = $request->input('duration_days');
+        $userToken = $request->input('userToken');
+        $idempotencyKey = $request->input('idempotency_key');
+
+        $orderPayload = $this->createOrder(
+            $amount,
+            $currency,
+            'recharge_'.$userID.'_'.time(),
+            array_filter([
+                'driver_id' => (string) $userID,
+                'plan_id' => $planId ? (string) $planId : null,
+                'duration_days' => $durationDays ? (string) $durationDays : null,
+                'idempotency_key' => $idempotencyKey ?: null,
+            ], static fn ($value) => $value !== null && $value !== '')
+        );
+
+        if ($orderPayload['status'] !== 'success') {
+            return redirect()->route('wallet_recharge_fail', ['userToken' => $userToken])
+                ->with('error', $orderPayload['message'] ?? 'Payment initiation failed.');
+        }
+
+        return view('Front.WalletRecharge.razorpay-payment', [
+            'orderDetails' => $orderPayload['data'],
+            'apiKey' => $orderPayload['key_id'] ?? $this->apiKey,
+            'userToken' => $userToken,
+            'planId' => $planId,
+            'durationDays' => $durationDays,
+        ]);
+    }
+
     public function process($bookingId, $bookingData, $request)
     {
 
@@ -103,17 +141,28 @@ class RazorpayStrategy implements PaymentStrategy
     public function return($bookingId, $request)
     {
         $razorpayResponse = $request->all();
+        $isWalletRecharge = (($request['wallet_recharge'] ?? null) == '1' || ! empty($request['token']));
 
         $orderId = $request['razorpay_order_id'] ?? null;
         $paymentId = $request['razorpay_payment_id'] ?? null;
         $signature = $request['razorpay_signature'] ?? null;
 
         if (! $orderId || ! $paymentId || ! $signature) {
+            if ($isWalletRecharge) {
+                return route('wallet_recharge_fail', ['userToken' => $request['token'] ?? null]);
+            }
             return view('Front.Fail');
         }
 
         if (! $this->verifySignature($orderId, $paymentId, $signature)) {
+            if ($isWalletRecharge) {
+                return route('wallet_recharge_fail', ['userToken' => $request['token'] ?? null]);
+            }
             return view('Front.Fail');
+        }
+
+        if ($isWalletRecharge) {
+            return $this->handleRechargePaymentStatus($request, $paymentId, $razorpayResponse);
         }
 
         return $this->handlePaymentStatus($bookingId, $paymentId, $razorpayResponse);
@@ -156,6 +205,97 @@ class RazorpayStrategy implements PaymentStrategy
             // Payment failed
             return view('Front.Fail');
         }
+    }
+
+    private function handleRechargePaymentStatus(array $request, $paymentId, array $razorpayResponse = [])
+    {
+        $userToken = $request['token'] ?? null;
+        if (! $userToken) {
+            return route('wallet_recharge_fail');
+        }
+
+        $driverId = $this->checkUserByToken($userToken);
+        if (! $driverId) {
+            return route('wallet_recharge_fail', ['userToken' => $userToken]);
+        }
+
+        try {
+            DB::transaction(function () use ($driverId, $request, $paymentId, $razorpayResponse) {
+                $driverLocked = AppUser::where('id', $driverId)
+                    ->where('user_type', 'driver')
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $existingTransaction = DB::table('vendor_wallets')
+                    ->where('vendor_id', $driverLocked->id)
+                    ->where('payment_method', 'razorpay')
+                    ->where('txn_id', $paymentId)
+                    ->first();
+
+                if ($existingTransaction) {
+                    return;
+                }
+
+                $currencyCode = strtoupper(GeneralSetting::getMetaValue('driver_recharge_currency') ?: 'INR');
+                $amountPerDay = (float) (GeneralSetting::getMetaValue('driver_recharge_amount_per_day') ?: 30);
+                $gstPercentage = round((float) (GeneralSetting::getMetaValue('driver_recharge_gst_percentage') ?: 0), 2);
+                $durationDays = (int) ($request['duration_days'] ?? 0);
+                $baseAmount = 0.0;
+
+                if (! empty($request['plan_id'])) {
+                    $plan = DriverRechargePlan::active()->find($request['plan_id']);
+                    if (! $plan) {
+                        throw new \RuntimeException('Recharge plan not found');
+                    }
+                    $durationDays = (int) $plan->duration_days;
+                    $baseAmount = (float) $plan->amount;
+                    $currencyCode = strtoupper($plan->currency_code ?: $currencyCode);
+                } else {
+                    if ($durationDays <= 0) {
+                        throw new \RuntimeException('Duration is required when no plan is selected');
+                    }
+                    $baseAmount = round($durationDays * $amountPerDay, 2);
+                }
+
+                $gstAmount = round(($baseAmount * $gstPercentage) / 100, 2);
+                $amount = round($baseAmount + $gstAmount, 2);
+
+                if ($durationDays <= 0 || $baseAmount <= 0 || $amount <= 0) {
+                    throw new \RuntimeException('Invalid recharge request');
+                }
+
+                $base = $driverLocked->recharge_valid_until && Carbon::parse($driverLocked->recharge_valid_until)->gt(Carbon::now())
+                    ? Carbon::parse($driverLocked->recharge_valid_until)
+                    : Carbon::now();
+
+                $driverLocked->recharge_valid_until = $base->copy()->addDays($durationDays);
+                $driverLocked->recharge_active = true;
+                $driverLocked->save();
+
+                DB::table('vendor_wallets')->insert([
+                    'vendor_id' => $driverLocked->id,
+                    'amount' => $amount,
+                    'type' => 'credit',
+                    'payment_method' => 'razorpay',
+                    'payment_status' => 'completed',
+                    'txn_id' => $paymentId,
+                    'currency' => $currencyCode,
+                    'note' => 'Driver recharge online payment',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            });
+        } catch (\Throwable $e) {
+            Log::error('Razorpay recharge confirmation failed', [
+                'driver_id' => $driverId,
+                'payment_id' => $paymentId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return route('wallet_recharge_fail', ['userToken' => $userToken]);
+        }
+
+        return route('wallet_recharge_success', ['userToken' => $userToken]);
     }
 
     public function refund($bookingId, $bookingData) {}

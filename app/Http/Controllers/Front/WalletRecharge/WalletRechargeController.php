@@ -185,7 +185,7 @@ class WalletRechargeController extends Controller
             'razorpay' => [
                 'active' => $status_razorpay,
                 'route' => $walletRoute('razorpay'),
-                'image' => '/front/paymentLogo/razorpay.png',
+                'image' => '/front/paymentLogo/Razorpay.png',
                 'id' => 'razorpay-form',
                 'form' => true,
             ],
