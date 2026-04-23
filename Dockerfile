@@ -4,12 +4,14 @@ FROM php:8.3-apache
 # Install system deps
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       git unzip libzip-dev libpng-dev libonig-dev libxml2-dev libicu-dev \
+       git unzip libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
+       libonig-dev libxml2-dev libicu-dev \
        libssl-dev zlib1g-dev pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql zip gd intl exif
+RUN docker-php-ext-configure gd --with-jpeg --with-freetype \
+    && docker-php-ext-install pdo pdo_mysql zip gd intl exif
 
 # Required PECL extensions
 RUN pecl install mongodb \
