@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Traits;
 
 use App\Models\GeneralSetting;
 use Google\Client;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -23,6 +24,16 @@ trait PushNotificationTrait
 
     private function getFirebaseCredentialsPath(): string
     {
+        $envPath = trim((string) env('FIREBASE_CREDENTIALS_PATH', ''));
+        if ($envPath !== '' && File::exists($envPath)) {
+            return $envPath;
+        }
+
+        $renderSecretPath = '/etc/secrets/firebase_credentials.json';
+        if (File::exists($renderSecretPath)) {
+            return $renderSecretPath;
+        }
+
         return storage_path('firebase/firebase_credentials.json');
     }
 
