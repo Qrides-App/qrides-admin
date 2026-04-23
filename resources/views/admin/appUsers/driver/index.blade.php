@@ -151,17 +151,50 @@
                             @foreach($appUsers as $key => $appUser)
                                                 @php
                                                     $statuses = $appUser->metadata->whereIn('meta_key', $documentKeys)->pluck('meta_value');
-                                                    $documentCollections = [
-                                                        'driving_licence_front',
-                                                        'driving_licence_back',
-                                                        'aadhaar_front',
-                                                        'aadhaar_back',
-                                                        'pan_card',
-                                                        'vehicle_insurance_doc',
+                                                    $documentDefinitions = [
+                                                        [
+                                                            'collection' => 'driving_licence_front',
+                                                            'status_key' => 'driving_licence_front_status',
+                                                            'label' => 'DL Front',
+                                                        ],
+                                                        [
+                                                            'collection' => 'driving_licence_back',
+                                                            'status_key' => 'driving_licence_back_status',
+                                                            'label' => 'DL Back',
+                                                        ],
+                                                        [
+                                                            'collection' => 'aadhaar_front',
+                                                            'status_key' => 'aadhaar_front_status',
+                                                            'label' => 'Aadhaar Front',
+                                                        ],
+                                                        [
+                                                            'collection' => 'aadhaar_back',
+                                                            'status_key' => 'aadhaar_back_status',
+                                                            'label' => 'Aadhaar Back',
+                                                        ],
+                                                        [
+                                                            'collection' => 'pan_card',
+                                                            'status_key' => 'pan_card_status',
+                                                            'label' => 'PAN',
+                                                        ],
+                                                        [
+                                                            'collection' => 'vehicle_insurance_doc',
+                                                            'status_key' => 'vehicle_insurance_doc_status',
+                                                            'label' => 'Insurance',
+                                                        ],
                                                     ];
-                                                    $uploadedDocumentCount = collect($documentCollections)->filter(fn($collection) => $appUser->getMedia($collection)->isNotEmpty())->count();
-                                                    $approvedDocumentCount = collect($documentKeys)->filter(fn($key) => strtolower((string) optional($appUser->metadata->firstWhere('meta_key', $key))->meta_value) === 'approved')->count();
-                                                    $docsReady = $uploadedDocumentCount === count($documentCollections) && $approvedDocumentCount === count($documentKeys);
+                                                    $uploadedDocumentCount = collect($documentDefinitions)->filter(fn($document) => $appUser->getMedia($document['collection'])->isNotEmpty())->count();
+                                                    $approvedDocumentCount = collect($documentDefinitions)->filter(fn($document) => strtolower((string) optional($appUser->metadata->firstWhere('meta_key', $document['status_key']))->meta_value) === 'approved')->count();
+                                                    $missingDocumentLabels = collect($documentDefinitions)
+                                                        ->filter(function ($document) use ($appUser) {
+                                                            $hasUpload = $appUser->getMedia($document['collection'])->isNotEmpty();
+                                                            $status = strtolower((string) optional($appUser->metadata->firstWhere('meta_key', $document['status_key']))->meta_value);
+
+                                                            return ! $hasUpload || $status !== 'approved';
+                                                        })
+                                                        ->pluck('label')
+                                                        ->values();
+                                                    $docsReady = $missingDocumentLabels->isEmpty();
                                                     $vehicleReady = $appUser->item
                                                         && !empty($appUser->item->registration_number)
                                                         && !empty(optional($appUser->item->itemVehicle)->year)
@@ -270,6 +303,12 @@
                                                                 <span class="badge badge-pill label-warning">Docs {{ $approvedDocumentCount }}/{{ count($documentKeys) }} approved</span>
                                                             @else
                                                                 <span class="badge badge-pill label-danger">Docs missing</span>
+                                                            @endif
+
+                                                            @if(!$docsReady)
+                                                                <small class="text-muted">
+                                                                    Missing: {{ $missingDocumentLabels->join(', ') }}
+                                                                </small>
                                                             @endif
 
                                                             @if($vehicleReady)
