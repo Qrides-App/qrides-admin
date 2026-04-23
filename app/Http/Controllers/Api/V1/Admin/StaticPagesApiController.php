@@ -64,7 +64,20 @@ class StaticPagesApiController extends Controller
         try {
             $staticdata = StaticPage::where('id', $request->id)->first();
             if (! $staticdata) {
-                return $this->addErrorResponse(500, trans('global.incorrect_page_name'), '');
+                $fallbackContent = match ((string) $request->id) {
+                    '2' => '<p>QRIDES by BAMIRA TRANSPORTATION PRIVATE LIMITED.</p>',
+                    '4' => '<p>For help with rides, earnings, or your account, contact QRIDES support.</p>',
+                    default => '<p>Content not available.</p>',
+                };
+
+                return $this->addSuccessResponse(200, trans('global.static_page_data'), [
+                    'StaticPage' => [
+                        'id' => (int) $request->id,
+                        'name' => 'Content',
+                        'content' => $fallbackContent,
+                        'status' => '1',
+                    ],
+                ]);
             }
 
             return $this->addSuccessResponse(200, trans('global.static_page_data'), ['StaticPage' => $staticdata]);

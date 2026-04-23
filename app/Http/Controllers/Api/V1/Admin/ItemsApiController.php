@@ -106,19 +106,29 @@ class ItemsApiController extends Controller
         if (! $userData->firestore_id) {
             $firestoreData = $this->generateDriverFirestoreData($userData);
             $firestoreDoc = $this->storeDriverInFirestore($firestoreData);
-            $firestoreDocId = basename($firestoreDoc);
 
-            $userData->update([
-                'firestore_id' => $firestoreDocId,
-                'user_type' => 'driver',
-            ]);
+            if ($firestoreDoc) {
+                $firestoreDocId = basename($firestoreDoc);
 
-            $user['firestore_id'] = $firestoreDocId;
+                $userData->update([
+                    'firestore_id' => $firestoreDocId,
+                    'user_type' => 'driver',
+                ]);
+
+                $user['firestore_id'] = $firestoreDocId;
+                $userData->refresh();
+            } else {
+                \Log::warning('Skipping Firestore driver update because document creation failed.', [
+                    'driver_id' => $userData->id,
+                ]);
+            }
         }
 
         $firestoreData = $this->generateDriverFirestoreData($userData);
         $documentId = $userData->firestore_id;
-        $this->updateDocument('drivers', $documentId, $firestoreData);
+        if (! empty($documentId)) {
+            $this->updateDocument('drivers', $documentId, $firestoreData);
+        }
 
         return $this->addSuccessResponse(200, trans('global.item_updated_successfully'), $item);
 
