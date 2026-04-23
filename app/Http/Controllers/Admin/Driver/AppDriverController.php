@@ -580,8 +580,10 @@ class AppDriverController extends Controller
             $documentFields = [
                 'driving_licence_front',
                 'driving_licence_back',
-                'driver_id_front',
-                'driver_id_back',
+                'aadhaar_front',
+                'aadhaar_back',
+                'pan_card',
+                'vehicle_insurance_doc',
             ];
 
             $documents = [];
