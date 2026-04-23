@@ -213,6 +213,34 @@ class AppUsersApiController extends Controller
         return app()->environment(['local', 'development', 'testing']);
     }
 
+    protected function createPlaceholderDriverItem(AppUser $customer, int $module): Item
+    {
+        $driverName = trim(implode(' ', array_filter([
+            $customer->first_name ?? null,
+            $customer->last_name ?? null,
+        ])));
+
+        $data = [
+            'userid_id' => $customer->id,
+            'token' => strtoupper(Str::random(20)),
+            'title' => ($driverName !== '' ? $driverName : 'Captain').' Vehicle',
+        ];
+
+        if (Schema::hasColumn('rental_items', 'module')) {
+            $data['module'] = $module;
+        }
+
+        if (Schema::hasColumn('rental_items', 'status')) {
+            $data['status'] = 0;
+        }
+
+        if (Schema::hasColumn('rental_items', 'is_verified')) {
+            $data['is_verified'] = 0;
+        }
+
+        return Item::create($data);
+    }
+
     public function validateOtpFromDB($phoneNumber, $countryCode, $inputOtp)
     {
 
@@ -281,10 +309,7 @@ class AppUsersApiController extends Controller
                 $item = Item::where('userid_id', $customer->id)->first();
 
                 if (! $item) {
-
-                    $item = Item::create([
-                        'userid_id' => $customer->id,
-                    ]);
+                    $item = $this->createPlaceholderDriverItem($customer, $module);
                 }
 
                 $customer['item_id'] = $item->id;
@@ -510,11 +535,7 @@ class AppUsersApiController extends Controller
                     $item = Item::where('userid_id', $customer->id)->first();
 
                     if (! $item) {
-
-                        $item = Item::create([
-                            'userid_id' => $customer->id,
-                        ]);
-                        echo 'here';
+                        $item = $this->createPlaceholderDriverItem($customer, $module);
                     }
 
                     if ($item) {
