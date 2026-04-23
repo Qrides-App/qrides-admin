@@ -49,16 +49,30 @@ class ItemsApiController extends Controller
         }
 
         $item = Item::where('id', $request->input('id'))->where('userid_id', $user_id)->first();
-        $item->update([
+
+        if (! $item) {
+            return $this->addErrorResponse(404, trans('global.item_not_found'), '');
+        }
+
+        $itemData = [
             'item_type_id' => $request->item_type_id,
             'status' => $item->status,
             'place_id' => $request->place_id,
             'latitude' => $request->platitude,
             'longitude' => $request->plongitude,
-            'category_id' => $request->make ?: $item->category_id,
-            'subcategory_id' => $request->model ?: $item->subcategory_id,
+            'model' => $request->model ?: $item->model,
+            'make' => $request->make ?: $item->make,
+        ];
 
-        ]);
+        if (is_numeric($request->make)) {
+            $itemData['category_id'] = (int) $request->make;
+        }
+
+        if (is_numeric($request->subcategory_id)) {
+            $itemData['subcategory_id'] = (int) $request->subcategory_id;
+        }
+
+        $item->update($itemData);
         ItemVehicle::updateOrCreate(
             ['item_id' => $item->id],
             [
