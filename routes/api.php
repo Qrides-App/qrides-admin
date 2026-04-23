@@ -62,7 +62,9 @@ Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', '
     Route::post('/confirmRechargePayment', 'AppUsersApiController@confirmRechargePayment');
     Route::post('/getSupportTickets', 'AppUsersApiController@getSupportTickets');
     Route::post('/createSupportTicket', 'AppUsersApiController@createSupportTicket');
+    Route::post('/getSupportTicketThread', 'AppUsersApiController@getSupportTicketThread');
     Route::post('/replySupportTicket', 'AppUsersApiController@replySupportTicket');
+    Route::post('/updateSupportTicketStatus', 'AppUsersApiController@updateSupportTicketStatus');
 
     // payoutMethod
     Route::post('/update-payout-method', 'PayoutMethodApiController@updatePayoutMethod');
