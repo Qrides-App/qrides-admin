@@ -37,7 +37,7 @@ class CashfreeStrategy implements PaymentStrategy
                 'customer_email' => '',
             ],
             'order_meta' => [
-                'return_url' => url('/payment/return?booking='.$bookingId.'&method=cashfree&order_id='.$orderId).'&cf_id={order_id}&cf_token={order_token}',
+                'return_url' => url('/payment/return?booking='.$bookingId.'&method=cashfree&order_id='.$orderId),
             ],
         ];
 
@@ -98,7 +98,7 @@ class CashfreeStrategy implements PaymentStrategy
                     'token' => $userToken,
                     'plan_id' => $request->input('plan_id'),
                     'duration_days' => $request->input('duration_days'),
-                ]).'&cf_id={order_id}&cf_token={order_token}',
+                ]),
             ],
         ];
         $response = $this->createOrder($payload);
