@@ -12,6 +12,7 @@ use App\Models\AppUser;
 use App\Models\Modern\Item;
 use App\Models\Modern\ItemVehicle;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Validator;
 
@@ -60,9 +61,23 @@ class ItemsApiController extends Controller
             'place_id' => $request->place_id,
             'latitude' => $request->platitude,
             'longitude' => $request->plongitude,
-            'model' => $request->model ?: $item->model,
-            'make' => $request->make ?: $item->make,
         ];
+
+        $metaData = [];
+
+        if ($request->filled('model')) {
+            $metaData['model'] = $request->model;
+            if (Schema::hasColumn('rental_items', 'model')) {
+                $itemData['model'] = $request->model;
+            }
+        }
+
+        if ($request->filled('make')) {
+            $metaData['make'] = $request->make;
+            if (Schema::hasColumn('rental_items', 'make')) {
+                $itemData['make'] = $request->make;
+            }
+        }
 
         if (is_numeric($request->make)) {
             $itemData['category_id'] = (int) $request->make;
@@ -73,6 +88,11 @@ class ItemsApiController extends Controller
         }
 
         $item->update($itemData);
+
+        if (! empty($metaData)) {
+            $this->addOrUpdateItemMeta($item->id, $metaData);
+        }
+
         ItemVehicle::updateOrCreate(
             ['item_id' => $item->id],
             [
