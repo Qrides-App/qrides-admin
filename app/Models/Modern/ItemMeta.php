@@ -9,6 +9,7 @@ class ItemMeta extends Model
     protected $table = 'rental_item_meta';
 
     protected $fillable = [
+        'rental_item_id',
         'item_id',
         'meta_key',
         'meta_value',
