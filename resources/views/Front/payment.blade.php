@@ -77,6 +77,11 @@
         </div>
 
         <div class="payment-list">
+            @if (!collect($paymentMethods)->contains(fn ($details) => $details['active']))
+                <div class="payment-item text-center">
+                    <span>No payment gateway is active. Please configure a payment gateway in admin settings.</span>
+                </div>
+            @endif
             @foreach ($paymentMethods as $method => $details)
                 @if ($details['active'])
                     <div class="payment-item" @if ($method == 'paypal') class="noinel" @endif
@@ -104,9 +109,6 @@
                         @endif
 
                     </div>
-                @endif
-                @if ($method == 'stripe' && Route::currentRouteName() == 'wallet_recharge_form')
-                    @break
                 @endif
             @endforeach
         </div>
@@ -202,62 +204,64 @@
             });
         });
 
-        var stripe = Stripe('{{ $paymentMethods['stripe']['public_key'] }}');
-        var elements = stripe.elements();
+        var stripePublicKey = '{{ $paymentMethods['stripe']['public_key'] ?? '' }}';
+        if (stripePublicKey) {
+            var stripe = Stripe(stripePublicKey);
+            var elements = stripe.elements();
 
+            var style = {
+                base: {
+                    fontSize: '16px',
+                    fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+                    color: '#32325d',
+                },
+            };
 
-        var style = {
-            base: {
-                fontSize: '16px',
-                fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
-                color: '#32325d',
-            },
-        };
-
-        var cardNumber = elements.create('cardNumber', {
-            style: style
-        });
-        cardNumber.mount('#card-number');
-
-        var cardExpiry = elements.create('cardExpiry', {
-            style: style
-        });
-        cardExpiry.mount('#card-expiry');
-
-        var cardCvc = elements.create('cardCvc', {
-            style: style
-        });
-        cardCvc.mount('#card-cvc');
-
-        var form = document.getElementById('payment-form');
-        var submitButton = document.getElementById('submit-button');
-
-        form.addEventListener('submit', function(event) {
-            event.preventDefault();
-            submitButton.disabled = true;
-            loader.style.display = 'block';
-            stripe.createToken(cardNumber).then(function(result) {
-                if (result.error) {
-                    var errorElement = document.getElementById('card-errors');
-                    errorElement.textContent = result.error.message;
-                    loader.style.display = 'none';
-                    submitButton.disabled = false;
-                } else {
-                    stripeTokenHandler(result.token);
-                }
+            var cardNumber = elements.create('cardNumber', {
+                style: style
             });
-        });
+            cardNumber.mount('#card-number');
 
-        function stripeTokenHandler(token) {
+            var cardExpiry = elements.create('cardExpiry', {
+                style: style
+            });
+            cardExpiry.mount('#card-expiry');
+
+            var cardCvc = elements.create('cardCvc', {
+                style: style
+            });
+            cardCvc.mount('#card-cvc');
+
             var form = document.getElementById('payment-form');
-            var hiddenInput = document.createElement('input');
-            var hiddenInput = document.getElementById('stripeToken');
-            hiddenInput.setAttribute('value', token.id);
-            hiddenInput.setAttribute('type', 'hidden');
-            hiddenInput.setAttribute('name', 'stripeToken');
-            hiddenInput.setAttribute('value', token.id);
-            form.appendChild(hiddenInput);
-            form.submit();
+            var submitButton = document.getElementById('submit-button');
+
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+                submitButton.disabled = true;
+                loader.style.display = 'block';
+                stripe.createToken(cardNumber).then(function(result) {
+                    if (result.error) {
+                        var errorElement = document.getElementById('card-errors');
+                        errorElement.textContent = result.error.message;
+                        loader.style.display = 'none';
+                        submitButton.disabled = false;
+                    } else {
+                        stripeTokenHandler(result.token);
+                    }
+                });
+            });
+
+            function stripeTokenHandler(token) {
+                var form = document.getElementById('payment-form');
+                var hiddenInput = document.createElement('input');
+                var hiddenInput = document.getElementById('stripeToken');
+                hiddenInput.setAttribute('value', token.id);
+                hiddenInput.setAttribute('type', 'hidden');
+                hiddenInput.setAttribute('name', 'stripeToken');
+                hiddenInput.setAttribute('value', token.id);
+                form.appendChild(hiddenInput);
+                form.submit();
+            }
         }
 
         var errorMessage = '{{ session('error') }}';

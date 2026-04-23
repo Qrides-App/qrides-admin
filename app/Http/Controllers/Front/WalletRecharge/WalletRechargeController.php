@@ -142,77 +142,70 @@ class WalletRechargeController extends Controller
         $paydunya_status = $settings->get('paydunya_status') ?? null;
         $myfatoorah_status = $settings->get('myfatoorah_status') ?? null;
 
-        if ($stripe_status->meta_value == 'Active') {
-            $status_stripe = true;
-        } else {
-            $status_stripe = false;
-        }
+        $status_stripe = optional($stripe_status)->meta_value === 'Active';
+        $status_paypal = optional($paypal_status)->meta_value === 'Active';
+        $status_payduniya = optional($paydunya_status)->meta_value === 'Active';
+        $status_razorpay = optional($razorpay_status)->meta_value === 'Active';
+        $status_cashfree = optional($cashfree_status)->meta_value === 'Active';
+        $status_myfatoorah = optional($myfatoorah_status)->meta_value === 'Active';
 
-        if ($paypal_status->meta_value == 'Active') {
-            $status_paypal = true;
-        } else {
-            $status_paypal = false;
-        }
+        $stripeMode = $this->getGeneralSettingValue('stripe_options');
+        $stripePublicKey = $stripeMode === 'test'
+            ? $this->getGeneralSettingValue('test_stripe_public_key')
+            : $this->getGeneralSettingValue('live_stripe_public_key');
 
-        if ($paydunya_status->meta_value == 'Active') {
-            $status_payduniya = true;
-        } else {
-            $status_payduniya = false;
-        }
-        if ($razorpay_status && $razorpay_status->meta_value == 'Active') {
-            $status_razorpay = true;
-        } else {
-            $status_razorpay = false;
-        }
-        if ($cashfree_status && $cashfree_status->meta_value == 'Active') {
-            $status_cashfree = true;
-        } else {
-            $status_cashfree = false;
-        }
-        if ($myfatoorah_status->meta_value == 'Active') {
-            $status_myfatoorah = true;
-        } else {
-            $status_myfatoorah = false;
-        }
+        $walletRoute = function (string $method) use ($request, $userToken) {
+            return route('wallet_recharge', array_filter([
+                'userToken' => $userToken,
+                'method' => $method,
+                'amount' => $request->query('amount'),
+                'currency' => $request->query('currency'),
+                'plan_id' => $request->query('plan_id'),
+                'duration_days' => $request->query('duration_days'),
+                'idempotency_key' => $request->query('idempotency_key'),
+            ], static fn ($value) => $value !== null && $value !== ''));
+        };
+
         $paymentMethods = [
             'stripe' => [
                 'active' => $status_stripe, // or false
                 'route' => '#', // Since Stripe uses JavaScript, we use a placeholder
                 'image' => '/front/paymentLogo/Stripe.png',
                 'id' => 'stripe-link',
+                'public_key' => $stripePublicKey,
                 'form' => false, // Stripe doesn't use a form
             ],
             'paypal' => [
                 'active' => $status_paypal, // or false
-                'route' => route('payment', ['booking' => $bookingId, 'method' => 'paypal']),
+                'route' => $walletRoute('paypal'),
                 'image' => '/front/paymentLogo/Paypal.png',
                 'id' => 'paypal-form',
                 'form' => true,
             ],
             'razorpay' => [
                 'active' => $status_razorpay,
-                'route' => route('payment', ['booking' => $bookingId, 'method' => 'razorpay']),
+                'route' => $walletRoute('razorpay'),
                 'image' => '/front/paymentLogo/razorpay.png',
                 'id' => 'razorpay-form',
                 'form' => true,
             ],
             'cashfree' => [
                 'active' => $status_cashfree,
-                'route' => route('payment', ['booking' => $bookingId, 'method' => 'cashfree']),
+                'route' => $walletRoute('cashfree'),
                 'image' => '/front/paymentLogo/Cashfree.svg',
                 'id' => 'cashfree-form',
                 'form' => true,
             ],
             'payduniya' => [
                 'active' => $status_payduniya, // or false
-                'route' => route('payment', ['booking' => $bookingId, 'method' => 'payduniya']),
+                'route' => $walletRoute('payduniya'),
                 'image' => '/front/paymentLogo/Payduniya.png',
                 'id' => 'payduniya-form',
                 'form' => true,
             ],
             'myfatoorah' => [
                 'active' => $status_myfatoorah, // or false
-                'route' => route('payment', ['booking' => $bookingId, 'method' => 'myfatoorah']),
+                'route' => $walletRoute('myfatoorah'),
                 'image' => '/front/paymentLogo/my-fatoorah.png',
                 'id' => 'myfatoorah-form',
                 'form' => true,

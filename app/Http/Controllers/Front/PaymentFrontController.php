@@ -128,17 +128,8 @@ class PaymentFrontController extends Controller
             ? $this->getGeneralSettingValue('test_stripe_public_key')
             : $this->getGeneralSettingValue('live_stripe_public_key');
 
-        if ($stripe_status->meta_value == 'Active') {
-            $status_stripe = true;
-        } else {
-            $status_stripe = false;
-        }
-
-        if ($paypal_status->meta_value == 'Active') {
-            $status_paypal = true;
-        } else {
-            $status_paypal = false;
-        }
+        $status_stripe = optional($stripe_status)->meta_value === 'Active';
+        $status_paypal = optional($paypal_status)->meta_value === 'Active';
         $paymentMethods = [
             'stripe' => [
                 'active' => $status_stripe,
