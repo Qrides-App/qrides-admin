@@ -7,7 +7,7 @@ services:
     autoDeploy: true
     disk:
       name: branding-storage
-      mountPath: /var/www/html/storage/firebase
+      mountPath: /var/www/html/storage
       sizeGB: 1
     envVars:
       - key: APP_ENV

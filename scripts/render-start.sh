@@ -4,6 +4,8 @@ set -eu
 ensure_laravel_writable_paths() {
     mkdir -p \
         bootstrap/cache \
+        storage/tmp \
+        storage/tmp/uploads \
         storage/app/public \
         storage/firebase \
         storage/firebase/branding \
