@@ -44,6 +44,10 @@ class UpdateAppUserRequest extends FormRequest
                 'string',
                 'nullable',
             ],
+            'gender' => [
+                'string',
+                'nullable',
+            ],
         ];
     }
 }

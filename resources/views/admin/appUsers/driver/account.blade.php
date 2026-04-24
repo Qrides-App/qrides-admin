@@ -71,6 +71,20 @@
                             @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
+                        <div class="col-md-6 form-group">
+                            <label for="gender">{{ __('user.gender') }}</label>
+                            @php
+                                $genderValue = old('gender', $appUser->gender);
+                            @endphp
+                            <select name="gender" id="gender" class="form-control @error('gender') is-invalid @enderror">
+                                <option value="">{{ trans('global.pleaseSelect') }}</option>
+                                <option value="male" {{ $genderValue === 'male' ? 'selected' : '' }}>Male</option>
+                                <option value="female" {{ $genderValue === 'female' ? 'selected' : '' }}>Female</option>
+                                <option value="other" {{ $genderValue === 'other' ? 'selected' : '' }}>Other</option>
+                            </select>
+                            @error('gender')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+
                         {{-- Phone --}}
                         <div class="col-md-6 form-group">
                             <div class="row g-2">
