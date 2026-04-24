@@ -310,11 +310,24 @@
 
                             {{-- Actions --}}
                             <td>
+                                @php
+                                    $playerId = optional($appUser->metadata->firstWhere('meta_key', 'player_id'))->meta_value;
+                                    $hasPushToken = filled($appUser->fcm) || filled($playerId);
+                                @endphp
+
                                 @if($appUser->firestore_id)
                                 <i class="fas fa-cloud" title="{{ $appUser->firestore_id }}"
                                     style="color: #00c851;"></i>
                                 @else
                                 <i class="fas fa-cloud-slash" title="Not connected to Firestore"
+                                    style="color: #ff4444;"></i>
+                                @endif
+
+                                @if($hasPushToken)
+                                <i class="fas fa-bell" title="Push ready{{ filled($appUser->fcm) ? ' via FCM' : ' via player_id' }}"
+                                    style="color: #00c851;"></i>
+                                @else
+                                <i class="fas fa-bell-slash" title="Push token missing"
                                     style="color: #ff4444;"></i>
                                 @endif
 

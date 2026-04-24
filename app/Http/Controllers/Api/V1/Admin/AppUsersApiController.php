@@ -2524,13 +2524,24 @@ class AppUsersApiController extends Controller
         ];
 
         try {
-            $this->sendFcmMessage($deviceToken, $subject, $messageText, $payload, 0, $notificationUserType);
+            $sent = $this->sendFcmMessage($deviceToken, $subject, $messageText, $payload, 0, $notificationUserType);
         } catch (\Throwable $e) {
             \Log::warning('ride_chat_push_failed', [
                 'ride_id' => $rideId,
                 'sender_id' => $senderIdStr,
                 'receiver_id' => (string) $receiver->id,
                 'error' => $e->getMessage(),
+            ]);
+
+            return $this->addErrorResponse(500, 'Failed to send push notification.', '');
+        }
+
+        if (! $sent) {
+            \Log::warning('ride_chat_push_failed', [
+                'ride_id' => $rideId,
+                'sender_id' => $senderIdStr,
+                'receiver_id' => (string) $receiver->id,
+                'error' => 'FCM send returned false.',
             ]);
 
             return $this->addErrorResponse(500, 'Failed to send push notification.', '');

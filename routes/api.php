@@ -126,6 +126,7 @@ Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', '
     Route::post('/updateBookingStatusByUser', 'BookingApiController@updateBookingStatusByUser');
     Route::post('/generateShareTrackingLink', 'BookingApiController@generateShareTrackingLink');
     Route::post('/revokeShareTrackingLink', 'BookingApiController@revokeShareTrackingLink');
+    Route::post('/sendRideChatPush', 'AppUsersApiController@sendRideChatPush');
 
     Route::post('/editProfile', 'MyAccountController@editProfile');
     Route::post('/getCurrentProfile', 'MyAccountController@getCurrentProfile');

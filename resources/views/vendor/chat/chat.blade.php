@@ -79,6 +79,27 @@
     font-weight: bold;
 }
 
+.chat-warning-banner {
+   margin: 0 0 12px;
+   padding: 12px 14px;
+   border-radius: 8px;
+   border: 1px solid #f2cf7d;
+   background: #fff7e0;
+   color: #7a5a00;
+   font-size: 13px;
+   line-height: 1.5;
+}
+
+.chat-warning-banner.is-danger {
+   border-color: #f1b5b5;
+   background: #fff1f1;
+   color: #8a2d2d;
+}
+
+.chat-warning-banner[hidden] {
+   display: none !important;
+}
+
 
 </style>
 @endsection
@@ -101,11 +122,17 @@
 
       <!-- Right Side: Chat Window -->
       <div class="col-md-6">
+         @if(!empty($firebaseProjectMismatch))
+         <div class="chat-warning-banner is-danger">
+            Chat is using Firebase web project <strong>{{ $firebaseConfig['projectId'] ?? 'unknown' }}</strong>, but backend push is configured for <strong>{{ $firebaseProjectId }}</strong>. Keep both on the same Firebase project if you expect chat and push to stay aligned.
+         </div>
+         @endif
          <div class="panel panel-default">
             <div class="panel-heading">
                <h4 class="panel-title" id="chat-heading"></h4>
             </div>
             <div class="panel-body" id="chat-body" style="height: 400px; overflow-y: auto;">
+               <div class="chat-warning-banner" id="chat-token-warning" hidden></div>
                <!-- Messages will be dynamically populated here -->
             </div>
             <div class="panel-footer">
@@ -161,22 +188,41 @@
 
 <script>
    try {
-         const firebaseConfig = {
-         apiKey: "AIzaSyDJmfSsQoJwx9OCf6t3m-0tcXNT6NilbcI",
-         authDomain: "unibookervehicle.firebaseapp.com",
-         databaseURL: "https://unibookervehicle-default-rtdb.firebaseio.com",
-         projectId: "unibookervehicle",
-         storageBucket: "unibookervehicle.appspot.com",
-         messagingSenderId: "951328556833",
-         appId: "1:951328556833:web:4a922ffcaa3df4341de060"
-         };
+         const firebaseConfig = @json($firebaseConfig ?? []);
+         if (!firebaseConfig.apiKey || !firebaseConfig.databaseURL || !firebaseConfig.projectId) {
+            throw new Error('Firebase web config is incomplete.');
+         }
             firebase.initializeApp(firebaseConfig);
             var database = firebase.database();
          } catch (error) {
             Swal.fire('Error', 'Failed to initialize Firebase. Please check your configuration or try again later.', 'error');
          }
+      @if(!empty($firebaseProjectMismatch))
+      console.warn('Firebase web config project does not match backend push project.', {
+         webProjectId: firebaseConfig.projectId,
+         backendProjectId: @json($firebaseProjectId),
+      });
+      @endif
       const vendorId = {{ Auth::user()->id }};// Replace with the vendor's ID
 const chatListRef = database.ref(`chatList/${vendorId}`);
+const chatTokenWarning = document.getElementById('chat-token-warning');
+
+function setChatTokenWarning(message, tone = '') {
+   if (!chatTokenWarning) {
+      return;
+   }
+
+   if (!message) {
+      chatTokenWarning.hidden = true;
+      chatTokenWarning.textContent = '';
+      chatTokenWarning.classList.remove('is-danger');
+      return;
+   }
+
+   chatTokenWarning.hidden = false;
+   chatTokenWarning.textContent = message;
+   chatTokenWarning.classList.toggle('is-danger', tone === 'danger');
+}
 
 // Function to fetch chat list and render it
 function loadChatList() {
@@ -252,6 +298,7 @@ function loadChatMessages(chatKey,chatData, userid) {
    currentChatKey = chatKey; // Set the active chat key
 
    console.log("Loading messages for chat:", chatKey);
+   setChatTokenWarning('');
    var playerid_vendor = document.getElementById('playerid_vendor').value;
    if(playerid_vendor === "" || !playerid_vendor){
       playerid_vendor ="null";
@@ -404,6 +451,21 @@ document.getElementById('send-button').addEventListener('click', function() {
                 const vendorPlayerId = vendorSnapshot.val()?.playerId || playerid_vendor;
                 console.log('userPlayerId == ', userPlayerId);
                 console.log('vendorPlayerId == ', vendorPlayerId);
+
+                const missingTokens = [];
+                if (!userPlayerId) {
+                    missingTokens.push('rider');
+                }
+                if (!vendorPlayerId || vendorPlayerId === 'null') {
+                    missingTokens.push('captain');
+                }
+
+                if (missingTokens.length > 0) {
+                    const label = missingTokens.join(' and ');
+                    setChatTokenWarning(`Chat messages can still sync, but push notifications are unavailable because ${label} notification token${missingTokens.length > 1 ? 's are' : ' is'} missing. Ask both apps to refresh token registration.`, 'danger');
+                } else {
+                    setChatTokenWarning('');
+                }
 
                //  if (!userPlayerId || !vendorPlayerId) {
                //      console.error('Player IDs missing for user or vendor.');

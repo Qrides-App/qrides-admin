@@ -74,58 +74,127 @@ trait NotificationTrait
         }
 
         if ($template->smssent == 1) {
-
-            if (isset($valuesArray['temp_phone']) && ! empty($valuesArray['temp_phone'])) {
-                $phone = str_replace('+', '', $valuesArray['temp_phone']);
-                $this->sendSMS($subject, $smsMessage, $valuesArray['temp_phone']);
-            } elseif ($user) {
-                $phone = str_replace('+', '', $user->phone_country).$user->phone;
-                $this->sendSMS($subject, $smsMessage, $phone);
+            try {
+                if (isset($valuesArray['temp_phone']) && ! empty($valuesArray['temp_phone'])) {
+                    $phone = str_replace('+', '', $valuesArray['temp_phone']);
+                    $this->sendSMS($subject, $smsMessage, $valuesArray['temp_phone']);
+                } elseif ($user) {
+                    $phone = str_replace('+', '', $user->phone_country).$user->phone;
+                    $this->sendSMS($subject, $smsMessage, $phone);
+                }
+            } catch (\Throwable $exception) {
+                \Log::warning('Notification SMS send failed.', [
+                    'template_id' => $template_id,
+                    'user_id' => $user_id,
+                    'vendor_id' => $vendor_id,
+                    'message' => $exception->getMessage(),
+                ]);
             }
-
         }
         if ($template->emailsent == 1) {
-            if (isset($valuesArray['temp_email']) && ! empty($valuesArray['temp_email'])) {
-                $this->sendMail($subject, $message, $valuesArray['temp_email']);
-            } elseif ($user) {
-                $this->sendMail($subject, $message, $user->email);
+            try {
+                if (isset($valuesArray['temp_email']) && ! empty($valuesArray['temp_email'])) {
+                    $this->sendMail($subject, $message, $valuesArray['temp_email']);
+                } elseif ($user) {
+                    $this->sendMail($subject, $message, $user->email);
+                }
+            } catch (\Throwable $exception) {
+                \Log::warning('Notification email send failed.', [
+                    'template_id' => $template_id,
+                    'user_id' => $user_id,
+                    'vendor_id' => $vendor_id,
+                    'message' => $exception->getMessage(),
+                ]);
             }
         }
         if ($template->pushsent == 1 && $user) {
-            $playerId = optional($user->metadata->firstWhere('meta_key', 'player_id'))->meta_value;
-            $deviceToken = $user->fcm ?: $playerId;
-            if (! empty($deviceToken)) {
-                $this->sendFcmMessage($deviceToken, $subject, $pushMessage, $data);
+            try {
+                $playerId = optional($user->metadata->firstWhere('meta_key', 'player_id'))->meta_value;
+                $deviceToken = $user->fcm ?: $playerId;
+                if (! empty($deviceToken)) {
+                    $this->sendFcmMessage($deviceToken, $subject, $pushMessage, $data);
+                }
+            } catch (\Throwable $exception) {
+                \Log::warning('Notification push send failed.', [
+                    'template_id' => $template_id,
+                    'user_id' => $user_id,
+                    'vendor_id' => $vendor_id,
+                    'message' => $exception->getMessage(),
+                ]);
             }
         }
 
         // For Admin
         if ($template->adminsmssent == 1) {
-
-            $adminphone = $this->getGeneralSettingValue('general_phone');
-            $this->sendSMS($adminsubject, $adminsmsMessage, $adminphone);
+            try {
+                $adminphone = $this->getGeneralSettingValue('general_phone');
+                $this->sendSMS($adminsubject, $adminsmsMessage, $adminphone);
+            } catch (\Throwable $exception) {
+                \Log::warning('Admin notification SMS send failed.', [
+                    'template_id' => $template_id,
+                    'user_id' => $user_id,
+                    'vendor_id' => $vendor_id,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
         }
         if ($template->adminemailsent == 1) {
-            $this->sendMail($adminsubject, $adminmessage, $adminemail);
+            try {
+                $this->sendMail($adminsubject, $adminmessage, $adminemail);
+            } catch (\Throwable $exception) {
+                \Log::warning('Admin notification email send failed.', [
+                    'template_id' => $template_id,
+                    'user_id' => $user_id,
+                    'vendor_id' => $vendor_id,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
         }
 
         // For vendor
         if ($vendorData) {
             if ($template->vendorsmssent == 1) {
-                $vendorphone = str_replace('+', '', $vendorData->phone_country).$vendorData->phone;
-                $this->sendSMS($vendorsubject, $vendorsmsMessage, $vendorphone);
+                try {
+                    $vendorphone = str_replace('+', '', $vendorData->phone_country).$vendorData->phone;
+                    $this->sendSMS($vendorsubject, $vendorsmsMessage, $vendorphone);
+                } catch (\Throwable $exception) {
+                    \Log::warning('Vendor notification SMS send failed.', [
+                        'template_id' => $template_id,
+                        'user_id' => $user_id,
+                        'vendor_id' => $vendor_id,
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
             }
             if ($template->vendoremailsent == 1) {
-                $vendoremail = $vendorData->email;
-                $this->sendMail($vendorsubject, $vendormessage, $vendoremail);
+                try {
+                    $vendoremail = $vendorData->email;
+                    $this->sendMail($vendorsubject, $vendormessage, $vendoremail);
+                } catch (\Throwable $exception) {
+                    \Log::warning('Vendor notification email send failed.', [
+                        'template_id' => $template_id,
+                        'user_id' => $user_id,
+                        'vendor_id' => $vendor_id,
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
             }
 
             if ($template->vendorpushsent == 1) {
-                $vendorNotification = 1;
-                $playerId = optional($vendorData->metadata->firstWhere('meta_key', 'player_id'))->meta_value;
-                $deviceToken = $vendorData->fcm ?: $playerId;
-                if (! empty($deviceToken)) {
-                    $this->sendFcmMessage($deviceToken, $vendorsubject, $vendorpushMessage, $data, $vendorNotification);
+                try {
+                    $vendorNotification = 1;
+                    $playerId = optional($vendorData->metadata->firstWhere('meta_key', 'player_id'))->meta_value;
+                    $deviceToken = $vendorData->fcm ?: $playerId;
+                    if (! empty($deviceToken)) {
+                        $this->sendFcmMessage($deviceToken, $vendorsubject, $vendorpushMessage, $data, $vendorNotification);
+                    }
+                } catch (\Throwable $exception) {
+                    \Log::warning('Vendor notification push send failed.', [
+                        'template_id' => $template_id,
+                        'user_id' => $user_id,
+                        'vendor_id' => $vendor_id,
+                        'message' => $exception->getMessage(),
+                    ]);
                 }
             }
         }
