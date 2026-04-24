@@ -1,5 +1,9 @@
 @extends('layouts.admin')
 
+@section('styles')
+    <link rel="stylesheet" href="{{ asset('css/driver-profile.css') }}">
+@endsection
+
 @section('content')
     <div class="content container-fluid">
         @include('admin.appUsers.driver.menu')
