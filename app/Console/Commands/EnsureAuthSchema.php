@@ -398,6 +398,12 @@ class EnsureAuthSchema extends Command
             });
         }
 
+        if (! Schema::hasColumn('app_users', 'gender')) {
+            Schema::table('app_users', function (Blueprint $table) {
+                $table->string('gender')->nullable()->after('default_country');
+            });
+        }
+
         if (! Schema::hasColumn('app_users', 'recharge_active')) {
             Schema::table('app_users', function (Blueprint $table) {
                 $table->boolean('recharge_active')->default(false)->after('host_status');
