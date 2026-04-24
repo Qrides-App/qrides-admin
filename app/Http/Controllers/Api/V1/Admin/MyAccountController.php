@@ -41,6 +41,8 @@ class MyAccountController extends Controller
             return $this->addErrorResponse(404, trans('global.user_not_found'), '');
         }
 
+        $user = $this->syncDriverApprovalState($user);
+
         if ($user->identity_image) {
             $user['identity_image'] = $user->identity_image->url;
         } else {
@@ -112,6 +114,7 @@ class MyAccountController extends Controller
 
         $user->save();
         $user = AppUser::where('token', $request->input('token'))->first();
+        $user = $this->syncDriverApprovalState($user);
         if ($user->identity_image) {
             $user['identity_image'] = $user->identity_image->url;
         } else {
@@ -365,6 +368,30 @@ class MyAccountController extends Controller
         $data = getimagesizefromstring($decoded);
 
         return $data !== false && in_array($data[2], [IMAGETYPE_PNG, IMAGETYPE_JPEG, IMAGETYPE_GIF]);
+    }
+
+    protected function syncDriverApprovalState(AppUser $user): AppUser
+    {
+        if ((string) $user->user_type !== 'driver') {
+            return $user;
+        }
+
+        $documentVerified = (string) $user->document_verify === '1';
+        $hostStatus = (string) $user->host_status;
+        $targetHostStatus = null;
+
+        if ($documentVerified && $hostStatus !== '1') {
+            $targetHostStatus = '1';
+        } elseif (! $documentVerified && $hostStatus === '1') {
+            $targetHostStatus = '0';
+        }
+
+        if ($targetHostStatus !== null) {
+            $user->forceFill(['host_status' => $targetHostStatus])->save();
+            $user->host_status = $targetHostStatus;
+        }
+
+        return $user;
     }
 
     public function uploadProfileImage(Request $request)

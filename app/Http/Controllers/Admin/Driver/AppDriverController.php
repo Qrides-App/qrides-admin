@@ -67,6 +67,9 @@ class AppDriverController extends Controller
         }
 
         $appUsers = $query->paginate(20)->appends($filters);
+        $appUsers->getCollection()->transform(function (AppUser $driver) {
+            return $this->syncDriverApprovalState($driver);
+        });
 
         $searchfield = 'All';
         $searchfieldId = '';
@@ -235,6 +238,7 @@ class AppDriverController extends Controller
     public function driverAccountView(Request $request, $userId)
     {
         $appUser = AppUser::where('id', $userId)->firstOrFail();
+        $appUser = $this->syncDriverApprovalState($appUser);
         $packages = AllPackage::pluck('package_name', 'id')->prepend(trans('global.pleaseSelect'), '');
         $appUser->load('package');
 
@@ -267,6 +271,7 @@ class AppDriverController extends Controller
             ->where('id', $userId)
             ->where('user_type', 'driver')
             ->firstOrFail();
+        $driver = $this->syncDriverApprovalState($driver);
 
         $filters = $request->only(['status', 'from', 'to']);
 
@@ -334,6 +339,7 @@ class AppDriverController extends Controller
     public function driverVehicleView(Request $request, $userId)
     {
         $appUser = AppUser::select('id', 'first_name', 'last_name')->where('id', $userId)->firstOrFail();
+        $appUser = $this->syncDriverApprovalState($appUser);
         $vehicle = Item::with('itemVehicle')
             ->where('userid_id', $userId)
             ->firstOrFail();
@@ -374,6 +380,7 @@ class AppDriverController extends Controller
 
         $userType = $request->query('user_type');
         $appUser = AppUser::select('id', 'first_name', 'last_name')->where('id', $userId)->firstOrFail();
+        $appUser = $this->syncDriverApprovalState($appUser);
         $general_default_currency = GeneralSetting::where('meta_key', 'general_default_currency')->first();
         $hostspendmoney = number_format($this->getVendorWalletBalance($userId), 2);
         $hostpendingmoney = number_format($this->getTotalWithdrawlForVendor($userId, 'Pending'), 2);
@@ -391,6 +398,7 @@ class AppDriverController extends Controller
         }
 
         $appUser = AppUser::with(['hostBookings', 'items.itemVehicle', 'items.vehicleMake', 'items.subCategory'])->findOrFail($userId);
+        $appUser = $this->syncDriverApprovalState($appUser);
 
         $today = now()->startOfDay();
         $aggregates = $appUser->hostBookings()
@@ -450,6 +458,7 @@ class AppDriverController extends Controller
             $data['password'] = Hash::make($request->input('password'));
         }
         $appUser->update($data);
+        $appUser = $this->syncDriverApprovalState($appUser);
         if ($request->input('profile_image', false)) {
             if (! $appUser->profile_image || $request->input('profile_image') !== $appUser->profile_image->file_name) {
                 if ($appUser->profile_image) {
@@ -504,6 +513,7 @@ class AppDriverController extends Controller
             $user['firestore_id'] = $firestoreDocId;
         }
         $user->update(['host_status' => $verified ? 1 : 0]);
+        $user = $this->syncDriverApprovalState($user);
         $this->updateDocument('drivers', $user->firestore_id, [
             'docApprovedStatus' => $verified ? 'approved' : 'rejected',
             'driverId' => $user->id,
@@ -680,6 +690,9 @@ class AppDriverController extends Controller
         $to = request()->input('to');
         $status = request()->input('status');
         $appUser = AppUser::where('id', $driver_id)->first();
+        if ($appUser) {
+            $appUser = $this->syncDriverApprovalState($appUser);
+        }
         $query = Payout::with('vendor')
             ->where('vendorid', $driver_id);
         $isFiltered = ($from || $to || $status);
@@ -706,5 +719,29 @@ class AppDriverController extends Controller
         $payouts = $isFiltered ? $query->paginate(50) : $query->paginate(50);
 
         return view('admin.appUsers.driver.payouts', compact('payouts', 'appUser', 'driver_id'));
+    }
+
+    private function syncDriverApprovalState(AppUser $user): AppUser
+    {
+        if ((string) $user->user_type !== 'driver') {
+            return $user;
+        }
+
+        $documentVerified = (string) $user->document_verify === '1';
+        $hostStatus = (string) $user->host_status;
+        $targetHostStatus = null;
+
+        if ($documentVerified && $hostStatus !== '1') {
+            $targetHostStatus = '1';
+        } elseif (! $documentVerified && $hostStatus === '1') {
+            $targetHostStatus = '0';
+        }
+
+        if ($targetHostStatus !== null) {
+            $user->forceFill(['host_status' => $targetHostStatus])->save();
+            $user->host_status = $targetHostStatus;
+        }
+
+        return $user;
     }
 }
