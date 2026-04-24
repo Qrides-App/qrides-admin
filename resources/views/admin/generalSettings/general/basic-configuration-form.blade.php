@@ -15,7 +15,7 @@
                     <div>
                         <span class="settings-page-header__eyebrow">General settings</span>
                         <h1 class="settings-page-header__title">Branding and contact settings</h1>
-                        <p class="settings-page-header__subtitle">Update the QRIDES admin name, support contact details, default language, logo, and favicon used across the platform.</p>
+                        <p class="settings-page-header__subtitle">Update the QRIDES admin name, support contact details, GST identity, default language, logo, and favicon used across the platform.</p>
                     </div>
                 </div>
 
@@ -81,6 +81,20 @@
                             @if ($errors->has('general_phone'))
                                 <span class="help-block text-danger">{{ $errors->first('general_phone') }}</span>
                             @endif
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="general_gstin">GSTIN</label>
+                            <input class="form-control" type="text" name="general_gstin" id="general_gstin"
+                                value="{{ old('general_gstin', $general_gstin->meta_value ?? '') }}"
+                                placeholder="22AAAAA0000A1Z5">
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="general_upi_id">Platform UPI ID</label>
+                            <input class="form-control" type="text" name="general_upi_id" id="general_upi_id"
+                                value="{{ old('general_upi_id', $general_upi_id->meta_value ?? '') }}"
+                                placeholder="payments@upi">
                         </div>
 
                         <div class="settings-field">

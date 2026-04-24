@@ -21,6 +21,7 @@ use App\Models\AppUser;
 use App\Models\AppUserMeta;
 use App\Models\BookingExtension;
 use App\Models\City;
+use App\Models\DriverRechargeInvoice;
 use App\Models\DriverRechargePlan;
 use App\Models\GeneralSetting;
 use App\Models\HireBooking;
@@ -32,6 +33,7 @@ use App\Models\PayoutMethod;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketReply;
 use App\Models\Wallet;
+use App\Services\RechargeBillingService;
 use Auth;
 use Carbon\Carbon;
 use Gate;
@@ -1836,6 +1838,35 @@ class AppUsersApiController extends Controller
         ]);
     }
 
+    public function getRechargeInvoices(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|exists:app_users,token',
+            'limit' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorComputing($validator);
+        }
+
+        $driverId = $this->checkUserByToken($request->token);
+        if (! $driverId) {
+            return $this->addErrorResponse(419, trans('global.token_not_match'), '');
+        }
+
+        $billing = new RechargeBillingService();
+        $invoices = DriverRechargeInvoice::where('driver_id', $driverId)
+            ->latest('invoice_date')
+            ->limit((int) $request->input('limit', 10))
+            ->get()
+            ->map(fn (DriverRechargeInvoice $invoice) => $billing->toPayload($invoice))
+            ->values();
+
+        return $this->addSuccessResponse(200, 'Recharge invoices retrieved successfully.', [
+            'invoices' => $invoices,
+        ]);
+    }
+
     public function rechargeWallet(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -1887,8 +1918,10 @@ class AppUsersApiController extends Controller
             return $this->addErrorResponse(400, 'Invalid recharge request', '');
         }
 
+        $billing = new RechargeBillingService();
+
         try {
-            $payload = DB::transaction(function () use ($driverId, $amount, $durationDays, $currencyCode, $baseAmount, $gstAmount, $gstPercentage) {
+            $payload = DB::transaction(function () use ($driverId, $amount, $durationDays, $currencyCode, $baseAmount, $gstAmount, $gstPercentage, $request, $billing) {
                 $driverLocked = AppUser::where('id', $driverId)
                     ->where('user_type', 'driver')
                     ->lockForUpdate()
@@ -1924,6 +1957,22 @@ class AppUsersApiController extends Controller
                 $driverLocked->recharge_active = true;
                 $driverLocked->save();
 
+                $invoice = $billing->createInvoice($driverLocked, [
+                    'duration_days' => $durationDays,
+                    'base_amount' => $baseAmount,
+                    'gst_percentage' => $gstPercentage,
+                    'gst_amount' => $gstAmount,
+                    'amount' => $amount,
+                    'currency_code' => $currencyCode,
+                ], [
+                    'plan_id' => $request->input('plan_id'),
+                    'payment_method' => 'wallet',
+                    'payment_status' => 'completed',
+                    'metadata' => [
+                        'source' => 'wallet_recharge',
+                    ],
+                ]);
+
                 return [
                     'recharge_valid_until' => Carbon::parse($driverLocked->recharge_valid_until)->toDateTimeString(),
                     'recharge_active' => (bool) $driverLocked->recharge_active,
@@ -1934,6 +1983,7 @@ class AppUsersApiController extends Controller
                     'gst_amount' => round($gstAmount, 2),
                     'amount' => round($amount, 2),
                     'currency_code' => $currencyCode,
+                    'invoice' => $billing->toPayload($invoice),
                 ];
             });
 
@@ -2107,7 +2157,9 @@ class AppUsersApiController extends Controller
             return $this->addErrorResponse(400, 'Invalid recharge request', '');
         }
 
-        $payload = DB::transaction(function () use ($driverId, $durationDays, $amount, $currencyCode, $request, $baseAmount, $gstAmount, $gstPercentage) {
+        $billing = new RechargeBillingService();
+
+        $payload = DB::transaction(function () use ($driverId, $durationDays, $amount, $currencyCode, $request, $baseAmount, $gstAmount, $gstPercentage, $billing) {
             $driverLocked = AppUser::where('id', $driverId)
                 ->where('user_type', 'driver')
                 ->lockForUpdate()
@@ -2134,6 +2186,24 @@ class AppUsersApiController extends Controller
                 'updated_at' => now(),
             ]);
 
+            $invoice = $billing->createInvoice($driverLocked, [
+                'duration_days' => $durationDays,
+                'base_amount' => $baseAmount,
+                'gst_percentage' => $gstPercentage,
+                'gst_amount' => $gstAmount,
+                'amount' => $amount,
+                'currency_code' => $currencyCode,
+            ], [
+                'plan_id' => $request->input('plan_id'),
+                'payment_method' => 'razorpay',
+                'payment_status' => 'completed',
+                'transaction_id' => $request->razorpay_payment_id,
+                'metadata' => [
+                    'source' => 'confirm_recharge_payment',
+                    'razorpay_order_id' => $request->razorpay_order_id,
+                ],
+            ]);
+
             return [
                 'recharge_valid_until' => Carbon::parse($driverLocked->recharge_valid_until)->toDateTimeString(),
                 'recharge_active' => (bool) $driverLocked->recharge_active,
@@ -2144,6 +2214,7 @@ class AppUsersApiController extends Controller
                 'gst_amount' => round($gstAmount, 2),
                 'amount' => round($amount, 2),
                 'currency_code' => $currencyCode,
+                'invoice' => $billing->toPayload($invoice),
             ];
         });
 

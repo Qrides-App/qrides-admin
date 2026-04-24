@@ -36,8 +36,27 @@ sync_firebase_credentials() {
     fi
 }
 
+ensure_public_storage_link() {
+    public_storage_path="public/storage"
+    target_path="../storage/app/public"
+
+    if [ -L "$public_storage_path" ]; then
+        current_target="$(readlink "$public_storage_path" || true)"
+        if [ "$current_target" = "$target_path" ]; then
+            return
+        fi
+        rm -f "$public_storage_path"
+    elif [ -e "$public_storage_path" ]; then
+        rm -rf "$public_storage_path"
+    fi
+
+    ln -s "$target_path" "$public_storage_path"
+    chown -h www-data:www-data "$public_storage_path" 2>/dev/null || true
+}
+
 ensure_laravel_writable_paths
 sync_firebase_credentials
+ensure_public_storage_link
 
 php artisan app:ensure-auth-schema --no-interaction || true
 php artisan app:reconcile-migrations --no-interaction || true
@@ -49,6 +68,7 @@ php artisan optimize:clear || true
 # after cache clearing so Apache/PHP can write file-cache entries safely.
 ensure_laravel_writable_paths
 sync_firebase_credentials
+ensure_public_storage_link
 
 (while true; do
     php artisan schedule:run --no-interaction || true

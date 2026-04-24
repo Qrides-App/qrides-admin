@@ -50,6 +50,8 @@ class EnsureAuthSchema extends Command
         $this->ensureBookingsTable();
         $this->ensureBookingMetaTable();
         $this->ensureBookingExtensionsOfferBoostColumn();
+        $this->ensureBookingExtensionsPaymentColumns();
+        $this->ensureDriverRechargeInvoicesTable();
         $this->ensureLanguagesTable();
         $this->ensureSupportTicketsTable();
         $this->ensureSupportTicketRepliesTable();
@@ -579,27 +581,35 @@ class EnsureAuthSchema extends Command
             return;
         }
 
-        Schema::table('vendor_wallets', function (Blueprint $table) {
-            if (! Schema::hasColumn('vendor_wallets', 'payment_method')) {
+        if (! Schema::hasColumn('vendor_wallets', 'payment_method')) {
+            Schema::table('vendor_wallets', function (Blueprint $table) {
                 $table->string('payment_method')->nullable()->after('description');
-            }
+            });
+        }
 
-            if (! Schema::hasColumn('vendor_wallets', 'payment_status')) {
+        if (! Schema::hasColumn('vendor_wallets', 'payment_status')) {
+            Schema::table('vendor_wallets', function (Blueprint $table) {
                 $table->string('payment_status')->nullable()->after('payment_method');
-            }
+            });
+        }
 
-            if (! Schema::hasColumn('vendor_wallets', 'txn_id')) {
+        if (! Schema::hasColumn('vendor_wallets', 'txn_id')) {
+            Schema::table('vendor_wallets', function (Blueprint $table) {
                 $table->string('txn_id')->nullable()->after('payment_status');
-            }
+            });
+        }
 
-            if (! Schema::hasColumn('vendor_wallets', 'currency')) {
+        if (! Schema::hasColumn('vendor_wallets', 'currency')) {
+            Schema::table('vendor_wallets', function (Blueprint $table) {
                 $table->string('currency', 10)->nullable()->after('txn_id');
-            }
+            });
+        }
 
-            if (! Schema::hasColumn('vendor_wallets', 'note')) {
+        if (! Schema::hasColumn('vendor_wallets', 'note')) {
+            Schema::table('vendor_wallets', function (Blueprint $table) {
                 $table->text('note')->nullable()->after('currency');
-            }
-        });
+            });
+        }
     }
 
     private function ensureDriverRechargePlansTable(): void
@@ -945,6 +955,82 @@ class EnsureAuthSchema extends Command
 
         Schema::table('booking_extensions', function (Blueprint $table) {
             $table->decimal('offer_boost_amount', 10, 2)->default(0)->after('ride_id');
+        });
+    }
+
+    private function ensureBookingExtensionsPaymentColumns(): void
+    {
+        if (! Schema::hasTable('booking_extensions')) {
+            return;
+        }
+
+        if (! Schema::hasColumn('booking_extensions', 'captain_payment_mode')) {
+            Schema::table('booking_extensions', function (Blueprint $table) {
+                $table->string('captain_payment_mode')->nullable()->after('offer_boost_amount');
+            });
+        }
+
+        if (! Schema::hasColumn('booking_extensions', 'captain_payment_reference')) {
+            Schema::table('booking_extensions', function (Blueprint $table) {
+                $table->string('captain_payment_reference')->nullable()->after('captain_payment_mode');
+            });
+        }
+
+        if (! Schema::hasColumn('booking_extensions', 'payment_collection_note')) {
+            Schema::table('booking_extensions', function (Blueprint $table) {
+                $table->text('payment_collection_note')->nullable()->after('captain_payment_reference');
+            });
+        }
+
+        if (! Schema::hasColumn('booking_extensions', 'app_payment_request_token')) {
+            Schema::table('booking_extensions', function (Blueprint $table) {
+                $table->string('app_payment_request_token', 64)->nullable()->after('payment_collection_note');
+            });
+        }
+
+        if (! Schema::hasColumn('booking_extensions', 'app_payment_request_url')) {
+            Schema::table('booking_extensions', function (Blueprint $table) {
+                $table->text('app_payment_request_url')->nullable()->after('app_payment_request_token');
+            });
+        }
+
+        if (! Schema::hasColumn('booking_extensions', 'app_payment_request_expires_at')) {
+            Schema::table('booking_extensions', function (Blueprint $table) {
+                $table->timestamp('app_payment_request_expires_at')->nullable()->after('app_payment_request_url');
+            });
+        }
+
+        if (! Schema::hasColumn('booking_extensions', 'payment_collected_at')) {
+            Schema::table('booking_extensions', function (Blueprint $table) {
+                $table->timestamp('payment_collected_at')->nullable()->after('app_payment_request_expires_at');
+            });
+        }
+    }
+
+    private function ensureDriverRechargeInvoicesTable(): void
+    {
+        if (Schema::hasTable('driver_recharge_invoices')) {
+            return;
+        }
+
+        Schema::create('driver_recharge_invoices', function (Blueprint $table) {
+            $table->id();
+            $table->string('invoice_number')->unique();
+            $table->string('public_token', 64)->unique();
+            $table->unsignedBigInteger('driver_id')->index();
+            $table->unsignedBigInteger('driver_recharge_plan_id')->nullable()->index();
+            $table->string('payment_method', 40)->nullable();
+            $table->string('payment_status', 40)->nullable();
+            $table->string('transaction_id')->nullable();
+            $table->string('currency_code', 10)->default('INR');
+            $table->unsignedInteger('duration_days')->default(0);
+            $table->decimal('taxable_amount', 15, 2)->default(0);
+            $table->decimal('gst_rate', 5, 2)->default(0);
+            $table->decimal('gst_amount', 15, 2)->default(0);
+            $table->decimal('total_amount', 15, 2)->default(0);
+            $table->timestamp('invoice_date')->nullable();
+            $table->longText('metadata')->nullable();
+            $table->timestamps();
         });
     }
 }

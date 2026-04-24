@@ -677,12 +677,127 @@ class BookingApiController extends Controller
         ]);
     }
 
+    public function getRidePaymentOptions(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'booking_id' => 'required|exists:bookings,id',
+            'token' => 'required|exists:app_users,token',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorComputing($validator);
+        }
+
+        $driverId = $this->checkUserByToken($request->token);
+        if (! $driverId) {
+            return $this->addErrorResponse(419, trans('global.token_not_match'), '');
+        }
+
+        $booking = Booking::with(['extension', 'host'])
+            ->where('id', $request->booking_id)
+            ->where('host_id', $driverId)
+            ->first();
+
+        if (! $booking) {
+            return $this->addErrorResponse(404, trans('global.booking_not_found'), '');
+        }
+
+        $driver = $booking->host;
+        $personalQr = $this->getDriverPersonalQrData($driver, $booking);
+        $existingAppRequest = null;
+
+        if ($booking->extension && $booking->extension->app_payment_request_token && optional($booking->extension->app_payment_request_expires_at)->isFuture()) {
+            $existingAppRequest = [
+                'payment_url' => $booking->extension->app_payment_request_url,
+                'qr_payload' => $booking->extension->app_payment_request_url,
+                'expires_at' => optional($booking->extension->app_payment_request_expires_at)->toDateTimeString(),
+            ];
+        }
+
+        return $this->addSuccessResponse(200, 'Ride payment options retrieved successfully.', [
+            'booking_id' => $booking->id,
+            'booking_token' => $booking->token,
+            'payment_status' => $booking->payment_status,
+            'payment_method' => $booking->payment_method,
+            'available_methods' => [
+                ['code' => 'cash', 'label' => 'Cash', 'enabled' => true],
+                ['code' => 'personal_qr', 'label' => 'Captain Personal QR', 'enabled' => $personalQr['enabled']],
+                ['code' => 'app_dynamic_qr', 'label' => 'App Dynamic QR', 'enabled' => true],
+            ],
+            'personal_qr' => $personalQr,
+            'app_dynamic_qr' => $existingAppRequest,
+        ]);
+    }
+
+    public function createRidePaymentRequest(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'booking_id' => 'required|exists:bookings,id',
+            'token' => 'required|exists:app_users,token',
+            'expires_in_minutes' => 'nullable|integer|min:5|max:120',
+            'mark_ride_completed' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorComputing($validator);
+        }
+
+        $driverId = $this->checkUserByToken($request->token);
+        if (! $driverId) {
+            return $this->addErrorResponse(419, trans('global.token_not_match'), '');
+        }
+
+        $booking = Booking::with('extension')
+            ->where('id', $request->booking_id)
+            ->where('host_id', $driverId)
+            ->first();
+
+        if (! $booking) {
+            return $this->addErrorResponse(404, trans('global.booking_not_found'), '');
+        }
+
+        if (strtolower((string) $booking->payment_status) === 'paid') {
+            return $this->addErrorResponse(400, trans('global.payment_status_already_paid'), '');
+        }
+
+        $extension = $booking->extension ?: new BookingExtension(['booking_id' => $booking->id]);
+        $expiresAt = now()->addMinutes((int) $request->input('expires_in_minutes', 30));
+        $paymentToken = Str::random(48);
+        $paymentUrl = $this->buildDynamicRidePaymentPayload($booking, $paymentToken);
+
+        $extension->captain_payment_mode = 'app_dynamic_qr';
+        $extension->app_payment_request_token = $paymentToken;
+        $extension->app_payment_request_url = $paymentUrl;
+        $extension->app_payment_request_expires_at = $expiresAt;
+        $extension->save();
+
+        $booking->payment_status = 'pending';
+        $booking->payment_method = 'app_dynamic_qr';
+        if ($request->boolean('mark_ride_completed')) {
+            $booking->status = 'Completed';
+        }
+        $booking->save();
+
+        return $this->addSuccessResponse(200, 'Ride payment request created successfully.', [
+            'booking_id' => $booking->id,
+            'payment_status' => $booking->payment_status,
+            'payment_method' => $booking->payment_method,
+            'status' => $booking->status,
+            'payment_url' => $paymentUrl,
+            'qr_payload' => $paymentUrl,
+            'expires_at' => $expiresAt->toDateTimeString(),
+        ]);
+    }
+
     public function updatePaymentStatusByDriver(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'booking_id' => 'required|exists:bookings,id',
             'token' => 'required|exists:app_users,token',
-            'payment_method' => 'required|string',
+            'payment_method' => 'required|string|in:cash,personal_qr,app_dynamic_qr',
+            'payment_reference' => 'nullable|string|max:255',
+            'payment_note' => 'nullable|string|max:1000',
+            'mark_ride_completed' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -699,17 +814,31 @@ class BookingApiController extends Controller
         if (! $booking) {
             return $this->addErrorResponse(404, trans('global.booking_not_found'), '');
         }
-        if ($booking->payment_status == 'paid') {
+        if (strtolower((string) $booking->payment_status) == 'paid') {
             return $this->addErrorResponse(400, trans('global.payment_status_already_paid'), '');
         }
+
+        $paymentMethod = $this->normalizeCaptainPaymentMethod($request->input('payment_method'));
+        $extension = $booking->extension ?: new BookingExtension(['booking_id' => $booking->id]);
+
+        $extension->captain_payment_mode = $paymentMethod;
+        $extension->captain_payment_reference = $request->input('payment_reference');
+        $extension->payment_collection_note = $request->input('payment_note');
+        $extension->payment_collected_at = now();
+        $extension->save();
+
         $booking->payment_status = 'paid';
-        $booking->payment_method = $request->input('payment_method');
+        $booking->payment_method = $paymentMethod;
+        if ($request->boolean('mark_ride_completed')) {
+            $booking->status = 'Completed';
+        }
         $booking->save();
 
         return $this->addSuccessResponse(200, trans('global.payment_status_updated_successfully'), [
             'booking_id' => $booking->id,
             'payment_status' => $booking->payment_status,
             'payment_method' => $booking->payment_method,
+            'status' => $booking->status,
         ]);
     }
 
@@ -836,6 +965,72 @@ class BookingApiController extends Controller
         return $this->addSuccessResponse(200, 'Ride share link disabled successfully.', [
             'booking_id' => $booking->id,
             'share_tracking_enabled' => false,
+        ]);
+    }
+
+    private function normalizeCaptainPaymentMethod(string $method): string
+    {
+        return strtolower(trim($method));
+    }
+
+    private function getDriverPersonalQrData(?AppUser $driver, Booking $booking): array
+    {
+        if (! $driver) {
+            return [
+                'enabled' => false,
+                'upi_id' => null,
+                'upi_url' => null,
+            ];
+        }
+
+        $upiMeta = $driver->metadata()->where('meta_key', 'upi')->first();
+        $details = $upiMeta ? json_decode((string) $upiMeta->meta_value, true) : [];
+        $upiId = trim((string) ($details['upi_id'] ?? $details['email'] ?? ''));
+
+        if ($upiId === '') {
+            return [
+                'enabled' => false,
+                'upi_id' => null,
+                'upi_url' => null,
+            ];
+        }
+
+        $amount = number_format((float) ($booking->amount_to_pay ?: $booking->total ?: 0), 2, '.', '');
+        $payeeName = trim(($driver->first_name ?? '').' '.($driver->last_name ?? '')) ?: 'Captain';
+        $upiUrl = 'upi://pay?pa='.rawurlencode($upiId)
+            .'&pn='.rawurlencode($payeeName)
+            .'&am='.rawurlencode($amount)
+            .'&cu=INR'
+            .'&tn='.rawurlencode('Ride payment for booking '.$booking->token);
+
+        return [
+            'enabled' => true,
+            'upi_id' => $upiId,
+            'upi_url' => $upiUrl,
+            'amount' => $amount,
+            'currency' => 'INR',
+        ];
+    }
+
+    private function buildDynamicRidePaymentPayload(Booking $booking, string $paymentToken): string
+    {
+        $platformUpiId = trim((string) GeneralSetting::getMetaValue('general_upi_id'));
+
+        if ($platformUpiId !== '') {
+            $amount = number_format((float) ($booking->amount_to_pay ?: $booking->total ?: 0), 2, '.', '');
+            $payeeName = trim((string) (GeneralSetting::getMetaValue('general_name') ?: config('app.name')));
+
+            return 'upi://pay?pa='.rawurlencode($platformUpiId)
+                .'&pn='.rawurlencode($payeeName)
+                .'&am='.rawurlencode($amount)
+                .'&cu=INR'
+                .'&tr='.rawurlencode($booking->token.'-'.$paymentToken)
+                .'&tn='.rawurlencode('Ride payment for booking '.$booking->token);
+        }
+
+        return route('payment_methods', [
+            'booking' => $booking->id,
+            'payment_request' => $paymentToken,
         ]);
     }
 }

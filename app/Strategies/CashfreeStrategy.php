@@ -7,10 +7,12 @@ use App\Http\Controllers\Traits\PaymentStatusUpdaterTrait;
 use App\Models\AppUser;
 use App\Models\DriverRechargePlan;
 use App\Models\GeneralSetting;
+use App\Services\RechargeBillingService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\HtmlString;
 
 class CashfreeStrategy implements PaymentStrategy
@@ -294,17 +296,28 @@ HTML);
         $transactionId = $orderData['cf_order_id'] ?? $orderId;
 
         try {
-            DB::transaction(function () use ($driverId, $request, $transactionId) {
+            DB::transaction(function () use ($driverId, $request, $transactionId, $orderId) {
+                $walletColumns = $this->getVendorWalletColumns();
+                $billing = new RechargeBillingService();
                 $driverLocked = AppUser::where('id', $driverId)
                     ->where('user_type', 'driver')
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                $existingTransaction = DB::table('vendor_wallets')
-                    ->where('vendor_id', $driverLocked->id)
-                    ->where('payment_method', 'cashfree')
-                    ->where('txn_id', $transactionId)
-                    ->first();
+                $existingTransactionQuery = DB::table('vendor_wallets')
+                    ->where('vendor_id', $driverLocked->id);
+
+                if (isset($walletColumns['payment_method'])) {
+                    $existingTransactionQuery->where('payment_method', 'cashfree');
+                }
+
+                if (isset($walletColumns['txn_id'])) {
+                    $existingTransactionQuery->where('txn_id', $transactionId);
+                } else {
+                    $existingTransactionQuery->where('description', 'like', '%txn:'.$transactionId.'%');
+                }
+
+                $existingTransaction = $existingTransactionQuery->first();
 
                 if ($existingTransaction) {
                     return;
@@ -346,17 +359,53 @@ HTML);
                 $driverLocked->recharge_active = true;
                 $driverLocked->save();
 
-                DB::table('vendor_wallets')->insert([
+                $walletPayload = [
                     'vendor_id' => $driverLocked->id,
                     'amount' => $amount,
                     'type' => 'credit',
-                    'payment_method' => 'cashfree',
-                    'payment_status' => 'completed',
-                    'txn_id' => $transactionId,
-                    'currency' => $currencyCode,
-                    'note' => 'Driver recharge online payment',
+                    'description' => 'Driver recharge online payment via cashfree (txn:'.$transactionId.')',
                     'created_at' => now(),
                     'updated_at' => now(),
+                ];
+
+                if (isset($walletColumns['payment_method'])) {
+                    $walletPayload['payment_method'] = 'cashfree';
+                }
+
+                if (isset($walletColumns['payment_status'])) {
+                    $walletPayload['payment_status'] = 'completed';
+                }
+
+                if (isset($walletColumns['txn_id'])) {
+                    $walletPayload['txn_id'] = $transactionId;
+                }
+
+                if (isset($walletColumns['currency'])) {
+                    $walletPayload['currency'] = $currencyCode;
+                }
+
+                if (isset($walletColumns['note'])) {
+                    $walletPayload['note'] = 'Driver recharge online payment';
+                }
+
+                DB::table('vendor_wallets')->insert($walletPayload);
+
+                $billing->createInvoice($driverLocked, [
+                    'duration_days' => $durationDays,
+                    'base_amount' => $baseAmount,
+                    'gst_percentage' => $gstPercentage,
+                    'gst_amount' => $gstAmount,
+                    'amount' => $amount,
+                    'currency_code' => $currencyCode,
+                ], [
+                    'plan_id' => $request['plan_id'] ?? null,
+                    'payment_method' => 'cashfree',
+                    'payment_status' => 'completed',
+                    'transaction_id' => $transactionId,
+                    'metadata' => [
+                        'source' => 'cashfree_return',
+                        'order_id' => $orderId,
+                    ],
                 ]);
             });
         } catch (\Throwable $e) {
@@ -371,6 +420,15 @@ HTML);
         }
 
         return route('wallet_recharge_success', ['userToken' => $userToken]);
+    }
+
+    private function getVendorWalletColumns(): array
+    {
+        if (! Schema::hasTable('vendor_wallets')) {
+            return [];
+        }
+
+        return array_flip(Schema::getColumnListing('vendor_wallets'));
     }
 
     public function cancel($bookingId, $bookingData)

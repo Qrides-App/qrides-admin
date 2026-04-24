@@ -49,5 +49,7 @@ RUN sed -i 's/80/8080/g' /etc/apache2/ports.conf /etc/apache2/sites-available/00
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
+RUN printf "ServerName localhost\n" > /etc/apache2/conf-available/servername.conf \
+    && a2enconf servername
 
 CMD ["scripts/render-start.sh"]

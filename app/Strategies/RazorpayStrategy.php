@@ -7,9 +7,11 @@ use App\Http\Controllers\Traits\PaymentStatusUpdaterTrait;
 use App\Models\AppUser;
 use App\Models\DriverRechargePlan;
 use App\Models\GeneralSetting;
+use App\Services\RechargeBillingService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class RazorpayStrategy implements PaymentStrategy
 {
@@ -221,16 +223,27 @@ class RazorpayStrategy implements PaymentStrategy
 
         try {
             DB::transaction(function () use ($driverId, $request, $paymentId, $razorpayResponse) {
+                $walletColumns = $this->getVendorWalletColumns();
+                $billing = new RechargeBillingService();
                 $driverLocked = AppUser::where('id', $driverId)
                     ->where('user_type', 'driver')
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                $existingTransaction = DB::table('vendor_wallets')
-                    ->where('vendor_id', $driverLocked->id)
-                    ->where('payment_method', 'razorpay')
-                    ->where('txn_id', $paymentId)
-                    ->first();
+                $existingTransactionQuery = DB::table('vendor_wallets')
+                    ->where('vendor_id', $driverLocked->id);
+
+                if (isset($walletColumns['payment_method'])) {
+                    $existingTransactionQuery->where('payment_method', 'razorpay');
+                }
+
+                if (isset($walletColumns['txn_id'])) {
+                    $existingTransactionQuery->where('txn_id', $paymentId);
+                } else {
+                    $existingTransactionQuery->where('description', 'like', '%txn:'.$paymentId.'%');
+                }
+
+                $existingTransaction = $existingTransactionQuery->first();
 
                 if ($existingTransaction) {
                     return;
@@ -272,17 +285,53 @@ class RazorpayStrategy implements PaymentStrategy
                 $driverLocked->recharge_active = true;
                 $driverLocked->save();
 
-                DB::table('vendor_wallets')->insert([
+                $walletPayload = [
                     'vendor_id' => $driverLocked->id,
                     'amount' => $amount,
                     'type' => 'credit',
-                    'payment_method' => 'razorpay',
-                    'payment_status' => 'completed',
-                    'txn_id' => $paymentId,
-                    'currency' => $currencyCode,
-                    'note' => 'Driver recharge online payment',
+                    'description' => 'Driver recharge online payment via razorpay (txn:'.$paymentId.')',
                     'created_at' => now(),
                     'updated_at' => now(),
+                ];
+
+                if (isset($walletColumns['payment_method'])) {
+                    $walletPayload['payment_method'] = 'razorpay';
+                }
+
+                if (isset($walletColumns['payment_status'])) {
+                    $walletPayload['payment_status'] = 'completed';
+                }
+
+                if (isset($walletColumns['txn_id'])) {
+                    $walletPayload['txn_id'] = $paymentId;
+                }
+
+                if (isset($walletColumns['currency'])) {
+                    $walletPayload['currency'] = $currencyCode;
+                }
+
+                if (isset($walletColumns['note'])) {
+                    $walletPayload['note'] = 'Driver recharge online payment';
+                }
+
+                DB::table('vendor_wallets')->insert($walletPayload);
+
+                $billing->createInvoice($driverLocked, [
+                    'duration_days' => $durationDays,
+                    'base_amount' => $baseAmount,
+                    'gst_percentage' => $gstPercentage,
+                    'gst_amount' => $gstAmount,
+                    'amount' => $amount,
+                    'currency_code' => $currencyCode,
+                ], [
+                    'plan_id' => $request['plan_id'] ?? null,
+                    'payment_method' => 'razorpay',
+                    'payment_status' => 'completed',
+                    'transaction_id' => $paymentId,
+                    'metadata' => [
+                        'source' => 'razorpay_return',
+                        'gateway_response' => $razorpayResponse,
+                    ],
                 ]);
             });
         } catch (\Throwable $e) {
@@ -296,6 +345,15 @@ class RazorpayStrategy implements PaymentStrategy
         }
 
         return route('wallet_recharge_success', ['userToken' => $userToken]);
+    }
+
+    private function getVendorWalletColumns(): array
+    {
+        if (! Schema::hasTable('vendor_wallets')) {
+            return [];
+        }
+
+        return array_flip(Schema::getColumnListing('vendor_wallets'));
     }
 
     public function refund($bookingId, $bookingData) {}

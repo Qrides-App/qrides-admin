@@ -102,6 +102,8 @@ class GeneralSettingController extends Controller
             'general_description',
             'general_email',
             'general_phone',
+            'general_gstin',
+            'general_upi_id',
             'general_default_phone_country',
             'general_default_currency',
             'general_default_language',
@@ -113,6 +115,8 @@ class GeneralSettingController extends Controller
         $general_description = $settings['general_description'] ?? null;
         $general_email = $settings['general_email'] ?? null;
         $general_phone = $settings['general_phone'] ?? null;
+        $general_gstin = $settings['general_gstin'] ?? null;
+        $general_upi_id = $settings['general_upi_id'] ?? null;
         $general_default_phone_country = $settings['general_default_phone_country'] ?? null; //
         $general_default_currency = $settings['general_default_currency'] ?? null;
         $general_default_language = $settings['general_default_language'] ?? null;
@@ -123,7 +127,7 @@ class GeneralSettingController extends Controller
         $languagedata = Language::all();
         $allcurrency = Currency::where('status', 1)->get();
 
-        return view('admin.generalSettings.general.basic-configuration-form', compact('general_name', 'general_email', 'general_phone', 'general_default_phone_country', 'general_default_currency', 'general_default_language', 'general_favicon', 'general_logo', 'generalLogoPreviewUrl', 'generalFaviconPreviewUrl', 'allcurrency', 'languagedata', 'general_description'));
+        return view('admin.generalSettings.general.basic-configuration-form', compact('general_name', 'general_email', 'general_phone', 'general_gstin', 'general_upi_id', 'general_default_phone_country', 'general_default_currency', 'general_default_language', 'general_favicon', 'general_logo', 'generalLogoPreviewUrl', 'generalFaviconPreviewUrl', 'allcurrency', 'languagedata', 'general_description'));
     }
 
     public function addConfigurationWizard(Request $request)

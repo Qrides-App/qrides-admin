@@ -57,6 +57,7 @@ Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', '
     Route::post('/getPayoutTransactions', 'AppUsersApiController@getPayoutTransactions');
     Route::post('/getRechargePlans', 'AppUsersApiController@getRechargePlans');
     Route::post('/getDriverRechargeStatus', 'AppUsersApiController@getDriverRechargeStatus');
+    Route::post('/getRechargeInvoices', 'AppUsersApiController@getRechargeInvoices');
     Route::post('/rechargeWallet', 'AppUsersApiController@rechargeWallet');
     Route::post('/startRechargePayment', 'AppUsersApiController@startRechargePayment');
     Route::post('/confirmRechargePayment', 'AppUsersApiController@confirmRechargePayment');
@@ -118,6 +119,8 @@ Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', '
     Route::post('/confirmBookingByHost', 'BookingApiController@confirmBookingByHost');
 
     Route::post('/updateBookingStatusByDriver', 'BookingApiController@updateBookingStatusByDriver');
+    Route::post('/getRidePaymentOptions', 'BookingApiController@getRidePaymentOptions');
+    Route::post('/createRidePaymentRequest', 'BookingApiController@createRidePaymentRequest');
     Route::post('/updatePaymentStatusByDriver', 'BookingApiController@updatePaymentStatusByDriver');
     Route::post('/updatePaymentStatusByUser', 'BookingApiController@updatePaymentStatusByUser');
     Route::post('/updateBookingStatusByUser', 'BookingApiController@updateBookingStatusByUser');
