@@ -168,7 +168,7 @@
                                     ],
                                     [
                                         'label' => trans('user.is_driver_active'),
-                                        'status' => $appUser->status != 0,
+                                        'status' => (string) $appUser->host_status === '1',
                                         'key' =>
                                             'is_driver_active'
                                     ],

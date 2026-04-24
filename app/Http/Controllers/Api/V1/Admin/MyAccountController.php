@@ -25,6 +25,68 @@ class MyAccountController extends Controller
 {
     use BookingAvailableTrait, EmailTrait, MediaUploadingTrait, MiscellaneousTrait, NotificationTrait, OTPTrait, ResponseTrait, SMSTrait;
 
+    public function getCurrentProfile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorComputing($validator);
+        }
+
+        $user = AppUser::where('token', $request->input('token'))->first();
+
+        if (! $user) {
+            return $this->addErrorResponse(404, trans('global.user_not_found'), '');
+        }
+
+        if ($user->identity_image) {
+            $user['identity_image'] = $user->identity_image->url;
+        } else {
+            $user['identity_image'] = null;
+        }
+
+        $item = Item::where('userid_id', $user->id)->first();
+        if ($item) {
+            $user['item_id'] = $item->id;
+            $user['item_type_id'] = $item->item_type_id;
+        }
+
+        $imageFields = [
+            'driving_licence_front_status',
+            'driving_licence_back_status',
+            'aadhaar_front_status',
+            'aadhaar_back_status',
+            'pan_card_status',
+            'vehicle_insurance_doc_status',
+        ];
+
+        $metaStatuses = AppUserMeta::where('user_id', $user->id)
+            ->whereIn('meta_key', $imageFields)
+            ->pluck('meta_value', 'meta_key');
+
+        $statuses = [];
+        foreach ($imageFields as $field) {
+            $statuses[] = $metaStatuses[$field] ?? '';
+        }
+
+        if (in_array('rejected', $statuses, true)) {
+            $finalStatus = 'rejected';
+        } elseif (count(array_filter($statuses, fn ($s) => $s != 'approved')) > 0) {
+            $finalStatus = 'pending';
+        } else {
+            $finalStatus = 'approved';
+        }
+
+        $user['verification_document_status'] = $finalStatus;
+        $user['preferred_region_id'] = AppUserMeta::where('user_id', $user->id)
+            ->where('meta_key', 'preferred_region_id')
+            ->value('meta_value');
+
+        return $this->addSuccessResponse(200, trans('global.user_found'), $user);
+    }
+
     public function editProfile(Request $request)
     {
         // try {

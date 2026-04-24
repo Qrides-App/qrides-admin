@@ -125,6 +125,7 @@ Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', '
     Route::post('/revokeShareTrackingLink', 'BookingApiController@revokeShareTrackingLink');
 
     Route::post('/editProfile', 'MyAccountController@editProfile');
+    Route::post('/getCurrentProfile', 'MyAccountController@getCurrentProfile');
     Route::post('/uploadProfileImage', 'MyAccountController@uploadProfileImage');
     Route::post('/checkMobileNumber', 'MyAccountController@checkMobileNumber');
     Route::post('/changeMobileNumber', 'MyAccountController@changeMobileNumber');
