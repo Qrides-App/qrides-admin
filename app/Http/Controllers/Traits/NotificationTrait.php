@@ -28,14 +28,14 @@ trait NotificationTrait
             'general_email',
         ])->get()->pluck('meta_value', 'meta_key')->toArray();
 
-        $valuesArray['AppName'] = $settings['general_name'];
-        $valuesArray['website_name'] = $settings['general_name'];
-        $adminemail = $settings['general_email'];
+        $valuesArray['AppName'] = $settings['general_name'] ?? config('app.name');
+        $valuesArray['website_name'] = $settings['general_name'] ?? config('app.name');
+        $adminemail = $settings['general_email'] ?? config('mail.from.address');
 
-        $user = AppUser::with('metadata')->where('id', $user_id)->get();
-        $vendorData = '';
+        $user = AppUser::with('metadata')->find($user_id);
+        $vendorData = null;
         if ($vendor_id > 0) {
-            $vendorData = AppUser::with('metadata')->where('id', $vendor_id)->get();
+            $vendorData = AppUser::with('metadata')->find($vendor_id);
         }
         $template = EmailSmsNotification::find($template_id);
         if (! $template) {
@@ -78,8 +78,8 @@ trait NotificationTrait
             if (isset($valuesArray['temp_phone']) && ! empty($valuesArray['temp_phone'])) {
                 $phone = str_replace('+', '', $valuesArray['temp_phone']);
                 $this->sendSMS($subject, $smsMessage, $valuesArray['temp_phone']);
-            } elseif ($user->isNotEmpty()) {
-                $phone = str_replace('+', '', $user->first()->phone_country).$user->first()->phone;
+            } elseif ($user) {
+                $phone = str_replace('+', '', $user->phone_country).$user->phone;
                 $this->sendSMS($subject, $smsMessage, $phone);
             }
 
@@ -87,20 +87,16 @@ trait NotificationTrait
         if ($template->emailsent == 1) {
             if (isset($valuesArray['temp_email']) && ! empty($valuesArray['temp_email'])) {
                 $this->sendMail($subject, $message, $valuesArray['temp_email']);
-            } elseif ($user->isNotEmpty()) {
-                $this->sendMail($subject, $message, $user->first()->email);
+            } elseif ($user) {
+                $this->sendMail($subject, $message, $user->email);
             }
         }
-        if ($template->pushsent == 1) {
-            if ($user->isNotEmpty()) {
-                $userModel = $user->first();
-                $playerId = optional($userModel->metadata->firstWhere('meta_key', 'player_id'))->meta_value;
-                $deviceToken = $userModel->fcm ?: $playerId;
-                if (! empty($deviceToken)) {
-                    $this->sendFcmMessage($deviceToken, $subject, $pushMessage, $data);
-                }
+        if ($template->pushsent == 1 && $user) {
+            $playerId = optional($user->metadata->firstWhere('meta_key', 'player_id'))->meta_value;
+            $deviceToken = $user->fcm ?: $playerId;
+            if (! empty($deviceToken)) {
+                $this->sendFcmMessage($deviceToken, $subject, $pushMessage, $data);
             }
-
         }
 
         // For Admin
@@ -116,19 +112,18 @@ trait NotificationTrait
         // For vendor
         if ($vendorData) {
             if ($template->vendorsmssent == 1) {
-                $vendorphone = str_replace('+', '', $vendorData->first()->phone_country).$vendorData->first()->phone;
+                $vendorphone = str_replace('+', '', $vendorData->phone_country).$vendorData->phone;
                 $this->sendSMS($vendorsubject, $vendorsmsMessage, $vendorphone);
             }
             if ($template->vendoremailsent == 1) {
-                $vendoremail = $vendorData->first()->email;
+                $vendoremail = $vendorData->email;
                 $this->sendMail($vendorsubject, $vendormessage, $vendoremail);
             }
 
             if ($template->vendorpushsent == 1) {
                 $vendorNotification = 1;
-                $vendor = $vendorData->first();
-                $playerId = optional($vendor->metadata->firstWhere('meta_key', 'player_id'))->meta_value;
-                $deviceToken = $vendor->fcm ?: $playerId;
+                $playerId = optional($vendorData->metadata->firstWhere('meta_key', 'player_id'))->meta_value;
+                $deviceToken = $vendorData->fcm ?: $playerId;
                 if (! empty($deviceToken)) {
                     $this->sendFcmMessage($deviceToken, $vendorsubject, $vendorpushMessage, $data, $vendorNotification);
                 }
