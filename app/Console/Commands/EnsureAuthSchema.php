@@ -33,6 +33,7 @@ class EnsureAuthSchema extends Command
         $this->ensurePayoutsTable();
         $this->ensureVendorWalletsTable();
         $this->ensureVendorWalletsTokenColumn();
+        $this->ensureVendorWalletsRechargeColumns();
         $this->ensureDriverRechargePlansTable();
         $this->ensureSosNumbersTable();
         $this->normalizePayoutForeignKeyColumns();
@@ -570,6 +571,35 @@ class EnsureAuthSchema extends Command
                 $table->string('token', 32)->nullable()->after('type');
             });
         }
+    }
+
+    private function ensureVendorWalletsRechargeColumns(): void
+    {
+        if (! Schema::hasTable('vendor_wallets')) {
+            return;
+        }
+
+        Schema::table('vendor_wallets', function (Blueprint $table) {
+            if (! Schema::hasColumn('vendor_wallets', 'payment_method')) {
+                $table->string('payment_method')->nullable()->after('description');
+            }
+
+            if (! Schema::hasColumn('vendor_wallets', 'payment_status')) {
+                $table->string('payment_status')->nullable()->after('payment_method');
+            }
+
+            if (! Schema::hasColumn('vendor_wallets', 'txn_id')) {
+                $table->string('txn_id')->nullable()->after('payment_status');
+            }
+
+            if (! Schema::hasColumn('vendor_wallets', 'currency')) {
+                $table->string('currency', 10)->nullable()->after('txn_id');
+            }
+
+            if (! Schema::hasColumn('vendor_wallets', 'note')) {
+                $table->text('note')->nullable()->after('currency');
+            }
+        });
     }
 
     private function ensureDriverRechargePlansTable(): void
