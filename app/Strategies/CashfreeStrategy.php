@@ -7,6 +7,7 @@ use App\Http\Controllers\Traits\PaymentStatusUpdaterTrait;
 use App\Models\AppUser;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\HtmlString;
 
 class CashfreeStrategy implements PaymentStrategy
 {
@@ -47,7 +48,7 @@ class CashfreeStrategy implements PaymentStrategy
         }
 
         $data = $response['data'];
-        return redirect($data['payment_link']);
+        return $this->renderHostedCheckout($data, 'Unable to start Cashfree checkout for this booking.');
     }
 
     public function return($bookingId, $request)
@@ -110,7 +111,11 @@ class CashfreeStrategy implements PaymentStrategy
             ]);
             return redirect('/invalid-order')->with('error', $response['message'] ?? 'Cashfree order failed.');
         }
-        return redirect($response['data']['payment_link']);
+
+        return $this->renderHostedCheckout(
+            $response['data'],
+            'Unable to start Cashfree checkout for this recharge.'
+        );
     }
 
     public function refund($bookingId, $bookingData) {}
@@ -133,6 +138,66 @@ class CashfreeStrategy implements PaymentStrategy
         }
 
         return ['status' => 'error', 'message' => $resp->body()];
+    }
+
+    private function renderHostedCheckout(array $data, string $fallbackMessage)
+    {
+        if (! empty($data['payment_link'])) {
+            return redirect($data['payment_link']);
+        }
+
+        $paymentSessionId = $data['payment_session_id'] ?? null;
+        if (empty($paymentSessionId)) {
+            Log::error('Cashfree checkout payload missing payment_session_id', [
+                'payload' => $data,
+            ]);
+
+            return redirect('/invalid-order')->with('error', $fallbackMessage);
+        }
+
+        $checkoutAction = str_contains($this->baseUrl, 'sandbox')
+            ? 'https://sandbox.cashfree.com/pg/view/sessions/checkout'
+            : 'https://api.cashfree.com/pg/view/sessions/checkout';
+
+        $paymentSessionId = e((string) $paymentSessionId);
+        $checkoutAction = e($checkoutAction);
+
+        $html = new HtmlString(<<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting to Cashfree</title>
+</head>
+<body style="font-family: Arial, sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0;">
+    <form id="cashfree-checkout-form" action="{$checkoutAction}" method="post">
+        <input type="hidden" name="payment_session_id" value="{$paymentSessionId}">
+    </form>
+    <p style="color:#374151; font-size:16px;">Redirecting to secure payment page...</p>
+    <script>
+        (function () {
+            const form = document.getElementById('cashfree-checkout-form');
+            const meta = { userAgent: window.navigator.userAgent };
+            const sortedMeta = Object.entries(meta)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .reduce((acc, [key, value]) => {
+                    acc[key] = value;
+                    return acc;
+                }, {});
+            const browserMeta = document.createElement('input');
+            browserMeta.type = 'hidden';
+            browserMeta.name = 'browser_meta';
+            browserMeta.value = btoa(JSON.stringify(sortedMeta));
+            form.appendChild(browserMeta);
+            form.submit();
+        })();
+    </script>
+</body>
+</html>
+HTML);
+
+        return response($html, 200)->header('Content-Type', 'text/html; charset=UTF-8');
     }
 
     private function verifySignatureFromReturn($request)
