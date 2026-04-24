@@ -5,6 +5,10 @@ namespace App\Strategies;
 use App\Http\Controllers\Traits\MiscellaneousTrait;
 use App\Http\Controllers\Traits\PaymentStatusUpdaterTrait;
 use App\Models\AppUser;
+use App\Models\DriverRechargePlan;
+use App\Models\GeneralSetting;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
@@ -53,22 +57,38 @@ class CashfreeStrategy implements PaymentStrategy
 
     public function return($bookingId, $request)
     {
-        $verify = $this->verifySignatureFromReturn($request);
-        if ($verify !== true) {
-            return '/payment_fail';
+        $payload = $this->normalizePayload($request);
+        $orderId = $payload['order_id'] ?? $payload['cf_order_id'] ?? $bookingId;
+        $isWalletRecharge = str_starts_with((string) $bookingId, 'recharge_') || ! empty($payload['token']);
+        $orderData = $this->fetchOrderDetails($orderId);
+
+        if ($orderData === null) {
+            return $isWalletRecharge
+                ? route('wallet_recharge_fail', ['userToken' => $payload['token'] ?? null])
+                : '/payment_fail';
         }
 
-        $status = $request['order_status'] ?? '';
+        $status = strtoupper((string) ($orderData['order_status'] ?? $payload['order_status'] ?? ''));
         if ($status === 'PAID') {
+            if ($isWalletRecharge) {
+                return $this->handleRechargePaymentStatus($payload, $orderData, $orderId);
+            }
+
             $transactionData = new \stdClass;
-            $transactionData->response_data = json_encode($request);
+            $transactionData->response_data = json_encode([
+                'return_payload' => $payload,
+                'order' => $orderData,
+            ]);
             $transactionData->gateway_name = 'cashfree';
             $transactionData->payment_status = 'completed';
-            $transactionData->transaction_id = $request['cf_payment_id'] ?? '';
+            $transactionData->transaction_id = $orderData['cf_order_id'] ?? $orderId;
             $this->updateBookingStatus($bookingId, $transactionData);
             return '/payment_success';
         }
-        return '/payment_fail';
+
+        return $isWalletRecharge
+            ? route('wallet_recharge_fail', ['userToken' => $payload['token'] ?? null])
+            : '/payment_fail';
     }
 
     public function callback($bookingId, $request)
@@ -200,9 +220,22 @@ HTML);
         return response($html, 200)->header('Content-Type', 'text/html; charset=UTF-8');
     }
 
+    private function normalizePayload($request): array
+    {
+        if (is_array($request)) {
+            return $request;
+        }
+
+        if (is_object($request) && method_exists($request, 'all')) {
+            return $request->all();
+        }
+
+        return [];
+    }
+
     private function verifySignatureFromReturn($request)
     {
-        $payload = $request->all();
+        $payload = $this->normalizePayload($request);
         $signature = $payload['signature'] ?? '';
         $orderId = $payload['order_id'] ?? '';
         if ($signature === '' || $orderId === '') {
@@ -210,6 +243,134 @@ HTML);
         }
         $computed = base64_encode(hash_hmac('sha256', $orderId, $this->secretKey, true));
         return hash_equals($computed, $signature);
+    }
+
+    private function fetchOrderDetails(string $orderId): ?array
+    {
+        if ($orderId === '') {
+            return null;
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'x-client-id' => $this->appId,
+                'x-client-secret' => $this->secretKey,
+                'x-api-version' => '2023-08-01',
+            ])->get($this->baseUrl.'/orders/'.rawurlencode($orderId));
+
+            if (! $response->ok()) {
+                Log::error('Cashfree order lookup failed', [
+                    'order_id' => $orderId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return null;
+            }
+
+            return $response->json();
+        } catch (\Throwable $e) {
+            Log::error('Cashfree order lookup exception', [
+                'order_id' => $orderId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    private function handleRechargePaymentStatus(array $request, array $orderData, string $orderId)
+    {
+        $userToken = $request['token'] ?? null;
+        if (! $userToken) {
+            return route('wallet_recharge_fail');
+        }
+
+        $driverId = $this->checkUserByToken($userToken);
+        if (! $driverId) {
+            return route('wallet_recharge_fail', ['userToken' => $userToken]);
+        }
+
+        $transactionId = $orderData['cf_order_id'] ?? $orderId;
+
+        try {
+            DB::transaction(function () use ($driverId, $request, $transactionId) {
+                $driverLocked = AppUser::where('id', $driverId)
+                    ->where('user_type', 'driver')
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $existingTransaction = DB::table('vendor_wallets')
+                    ->where('vendor_id', $driverLocked->id)
+                    ->where('payment_method', 'cashfree')
+                    ->where('txn_id', $transactionId)
+                    ->first();
+
+                if ($existingTransaction) {
+                    return;
+                }
+
+                $currencyCode = strtoupper(GeneralSetting::getMetaValue('driver_recharge_currency') ?: 'INR');
+                $amountPerDay = (float) (GeneralSetting::getMetaValue('driver_recharge_amount_per_day') ?: 30);
+                $gstPercentage = round((float) (GeneralSetting::getMetaValue('driver_recharge_gst_percentage') ?: 0), 2);
+                $durationDays = (int) ($request['duration_days'] ?? 0);
+                $baseAmount = 0.0;
+
+                if (! empty($request['plan_id'])) {
+                    $plan = DriverRechargePlan::active()->find($request['plan_id']);
+                    if (! $plan) {
+                        throw new \RuntimeException('Recharge plan not found');
+                    }
+                    $durationDays = (int) $plan->duration_days;
+                    $baseAmount = (float) $plan->amount;
+                    $currencyCode = strtoupper($plan->currency_code ?: $currencyCode);
+                } else {
+                    if ($durationDays <= 0) {
+                        throw new \RuntimeException('Duration is required when no plan is selected');
+                    }
+                    $baseAmount = round($durationDays * $amountPerDay, 2);
+                }
+
+                $gstAmount = round(($baseAmount * $gstPercentage) / 100, 2);
+                $amount = round($baseAmount + $gstAmount, 2);
+
+                if ($durationDays <= 0 || $baseAmount <= 0 || $amount <= 0) {
+                    throw new \RuntimeException('Invalid recharge request');
+                }
+
+                $base = $driverLocked->recharge_valid_until && Carbon::parse($driverLocked->recharge_valid_until)->gt(Carbon::now())
+                    ? Carbon::parse($driverLocked->recharge_valid_until)
+                    : Carbon::now();
+
+                $driverLocked->recharge_valid_until = $base->copy()->addDays($durationDays);
+                $driverLocked->recharge_active = true;
+                $driverLocked->save();
+
+                DB::table('vendor_wallets')->insert([
+                    'vendor_id' => $driverLocked->id,
+                    'amount' => $amount,
+                    'type' => 'credit',
+                    'payment_method' => 'cashfree',
+                    'payment_status' => 'completed',
+                    'txn_id' => $transactionId,
+                    'currency' => $currencyCode,
+                    'note' => 'Driver recharge online payment',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            });
+        } catch (\Throwable $e) {
+            Log::error('Cashfree recharge confirmation failed', [
+                'driver_id' => $driverId,
+                'transaction_id' => $transactionId,
+                'order_id' => $orderId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return route('wallet_recharge_fail', ['userToken' => $userToken]);
+        }
+
+        return route('wallet_recharge_success', ['userToken' => $userToken]);
     }
 
     public function cancel($bookingId, $bookingData)
