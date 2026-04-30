@@ -8,7 +8,7 @@ use App\Http\Controllers\Traits\MiscellaneousTrait;
 use App\Http\Controllers\Traits\ResponseTrait;
 use App\Http\Controllers\Traits\UserWalletTrait;
 use App\Models\AppUser;
-use Illuminate\Http\Payout;
+use App\Models\Payout;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -29,7 +29,9 @@ class PayoutApiController extends Controller
             return $this->addErrorResponse(401, trans('global.user_not_found'), 'User not found');
         }
         $payoutStatus = 'Pending';
-        $totalPayoutMoney = Payout::where('vendorid', $user->id)->where('payout_status', $payoutStatus)->sum('amount');
+        $totalPayoutAmount = Payout::where('vendorid', $user->id)
+            ->where('payout_status', $payoutStatus)
+            ->sum('amount');
 
         return $this->addSuccessResponse(200, trans('global.Result_found'), ['total_payout_amount' => $totalPayoutAmount]);
     }
