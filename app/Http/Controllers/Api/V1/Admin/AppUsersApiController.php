@@ -215,6 +215,31 @@ class AppUsersApiController extends Controller
         return app()->environment(['local', 'development', 'testing']);
     }
 
+    protected function maskPhoneForLogs(?string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $phone);
+
+        if ($digits === '') {
+            return 'unknown';
+        }
+
+        if (strlen($digits) <= 4) {
+            return str_repeat('*', strlen($digits));
+        }
+
+        return str_repeat('*', max(strlen($digits) - 4, 0)).substr($digits, -4);
+    }
+
+    protected function logMobileLoginEvent(string $message, array $context = [], string $level = 'info'): void
+    {
+        if (isset($context['phone'])) {
+            $context['phone_masked'] = $this->maskPhoneForLogs((string) $context['phone']);
+            unset($context['phone']);
+        }
+
+        Log::log($level, $message, $context);
+    }
+
     protected function createPlaceholderDriverItem(AppUser $customer, int $module): Item
     {
         $driverName = trim(implode(' ', array_filter([
@@ -501,8 +526,19 @@ class AppUsersApiController extends Controller
         ]);
 
         if ($validator->fails()) {
+            $this->logMobileLoginEvent('Mobile login validation failed.', [
+                'phone' => $request->phone,
+                'phone_country' => $request->phone_country,
+                'errors' => $validator->errors()->toArray(),
+            ], 'warning');
             return $this->errorComputing($validator);
         }
+
+        $this->logMobileLoginEvent('Mobile login attempt received.', [
+            'phone' => $request->phone,
+            'phone_country' => $request->phone_country,
+            'user_type' => $request->user_type,
+        ]);
 
         if (AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->exists()) {
             $resultOtp = $this->validateOtpFromDB($request->phone, $request->phone_country, $request->otp_value);
@@ -511,6 +547,11 @@ class AppUsersApiController extends Controller
                 $token = Str::random(120);
                 $customer = AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->first();
                 if ($customer->status != 1) {
+                    $this->logMobileLoginEvent('Mobile login blocked because account is inactive.', [
+                        'phone' => $request->phone,
+                        'phone_country' => $request->phone_country,
+                        'user_id' => $customer->id,
+                    ], 'warning');
                     return $this->successResponse(200, trans('global.account_inactive'), $customer);
                 }
 
@@ -575,11 +616,29 @@ class AppUsersApiController extends Controller
                 //   $customer['verification_document_status'] = $customer->document_verify == 1 ? 'approved' : 'pending';
                 $customer['verification_document_status'] = $finalStatus;
 
+                $this->logMobileLoginEvent('Mobile login completed successfully.', [
+                    'phone' => $request->phone,
+                    'phone_country' => $request->phone_country,
+                    'user_id' => $customer->id,
+                    'user_type' => $customer->user_type,
+                ]);
+
                 return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
             } else {
+                $customer = AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->first();
+                $this->logMobileLoginEvent('Mobile login OTP validation failed.', [
+                    'phone' => $request->phone,
+                    'phone_country' => $request->phone_country,
+                    'user_id' => optional($customer)->id,
+                    'reason' => $resultOtp['message'] ?? 'unknown',
+                ], 'warning');
                 return $this->errorResponse(401, trans('global.Wrong_OTP'));
             }
         } else {
+            $this->logMobileLoginEvent('Mobile login rejected because user was not found.', [
+                'phone' => $request->phone,
+                'phone_country' => $request->phone_country,
+            ], 'warning');
             return $this->errorResponse(404, trans('global.User_not_register'));
         }
     }
@@ -592,12 +651,26 @@ class AppUsersApiController extends Controller
         ]);
 
         if ($validator->fails()) {
+            $this->logMobileLoginEvent('Mobile login OTP request validation failed.', [
+                'phone' => $request->phone,
+                'phone_country' => $request->phone_country,
+                'errors' => $validator->errors()->toArray(),
+            ], 'warning');
             return $this->errorComputing($validator);
         }
+
+        $this->logMobileLoginEvent('Mobile login OTP request received.', [
+            'phone' => $request->phone,
+            'phone_country' => $request->phone_country,
+        ]);
 
         $user = AppUser::where('phone', $request->input('phone'))->where('phone_country', $request->phone_country)->first();
 
         if (! $user) {
+            $this->logMobileLoginEvent('Mobile login OTP request rejected because user was not found.', [
+                'phone' => $request->phone,
+                'phone_country' => $request->phone_country,
+            ], 'warning');
             return $this->addErrorResponse(400, trans('global.User_not_found'), '');
         }
 
@@ -621,6 +694,12 @@ class AppUsersApiController extends Controller
             $otpUpdate['otp_expires_at'] = Carbon::now()->addMinutes(5);
         }
         $user->update($otpUpdate);
+
+        $this->logMobileLoginEvent('Mobile login OTP stored successfully.', [
+            'phone' => $user->phone,
+            'phone_country' => $user->phone_country,
+            'user_id' => $user->id,
+        ]);
 
         $user['reset_token'] = '';
         $filteredUser = $user->only([
@@ -975,13 +1054,27 @@ class AppUsersApiController extends Controller
         ]);
 
         if ($validator->fails()) {
+            $this->logMobileLoginEvent('Resend login OTP validation failed.', [
+                'phone' => $request->phone,
+                'phone_country' => $request->phone_country,
+                'errors' => $validator->errors()->toArray(),
+            ], 'warning');
             return $this->errorComputing($validator);
         }
+
+        $this->logMobileLoginEvent('Resend login OTP request received.', [
+            'phone' => $request->phone,
+            'phone_country' => $request->phone_country,
+        ]);
         $user = AppUser::where('phone', $request->phone)
             ->where('phone_country', $request->phone_country)
             ->first();
 
         if (! $user) {
+            $this->logMobileLoginEvent('Resend login OTP rejected because user was not found.', [
+                'phone' => $request->phone,
+                'phone_country' => $request->phone_country,
+            ], 'warning');
             return $this->errorResponse(409, trans('global.user_record_not_match_44'));
         }
 
@@ -1005,6 +1098,12 @@ class AppUsersApiController extends Controller
         $user->update([
             'reset_token' => $otp,
             'otp_expires_at' => Carbon::now()->addMinutes(5),
+        ]);
+
+        $this->logMobileLoginEvent('Resend login OTP stored successfully.', [
+            'phone' => $user->phone,
+            'phone_country' => $user->phone_country,
+            'user_id' => $user->id,
         ]);
 
         $responseData = [
