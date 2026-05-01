@@ -122,7 +122,7 @@
 
                     <div class="mail-variable-cloud">
                         @foreach ($sampleData as $key => $value)
-                            <span class="mail-variable-chip">@{{{{ $key }}}}</span>
+                            <span class="mail-variable-chip">{{ '{' . '{' . $key . '}' . '}' }}</span>
                         @endforeach
                     </div>
                 </div>
