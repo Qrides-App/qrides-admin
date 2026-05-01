@@ -60,6 +60,7 @@ class EnsureAuthSchema extends Command
         $this->ensureItemCityFareTable();
         $this->ensureDefaultModuleRow();
         $this->ensureDefaultLanguageRow();
+        $this->ensureDefaultOtpNotificationTemplate();
 
         $this->info('Auth schema check completed.');
 
@@ -271,6 +272,53 @@ class EnsureAuthSchema extends Command
             'language_status' => 1,
             'created_at' => now(),
             'updated_at' => now(),
+        ]);
+    }
+
+    private function ensureDefaultOtpNotificationTemplate(): void
+    {
+        if (! Schema::hasTable('email_sms_notification')) {
+            return;
+        }
+
+        if (DB::table('email_sms_notification')->where('id', 2)->exists()) {
+            return;
+        }
+
+        $now = now();
+
+        DB::table('email_sms_notification')->insert([
+            'id' => 2,
+            'temp_name' => 'Login OTP',
+            'module' => 2,
+            'role' => 'user',
+            'subject' => 'Your OTP for {{website_name}}',
+            'body' => '<p>Hello {{first_name}},</p><p>Your OTP is <strong>{{OTP}}</strong>.</p>',
+            'link_text' => 'OTP',
+            'lang' => 'en',
+            'lang_id' => 1,
+            'sms' => 'Your OTP for {{website_name}} is {{OTP}}.',
+            'push_notification' => 'Your OTP is {{OTP}}.',
+            'emailsent' => 0,
+            'smssent' => 1,
+            'pushsent' => 0,
+            'vendorsubject' => null,
+            'vendorbody' => null,
+            'vendorpush_notification' => null,
+            'vendoremailsent' => 0,
+            'vendorsmssent' => 0,
+            'vendorpushsent' => 0,
+            'vendorsms' => null,
+            'adminsubject' => null,
+            'adminbody' => null,
+            'adminpush_notification' => null,
+            'adminemailsent' => 0,
+            'adminsmssent' => 0,
+            'adminpushsent' => 0,
+            'adminsms' => null,
+            'status' => 1,
+            'created_at' => $now,
+            'updated_at' => $now,
         ]);
     }
 
