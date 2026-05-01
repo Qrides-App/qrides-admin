@@ -27,7 +27,7 @@
             'payouts' => 'Payouts',
             'reviews' => 'Reviews',
             'settings' => 'General settings',
-            'email-templates' => 'Email templates',
+            'email-templates' => 'Notification templates',
             'sos' => 'SOS',
             'recharge-plans' => 'Driver recharge plans',
             'static-pages' => 'Static pages',

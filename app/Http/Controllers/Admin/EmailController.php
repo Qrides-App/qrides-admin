@@ -66,20 +66,29 @@ class EmailController extends Controller
             $emaildata = EmailSmsNotification::where('id', $id)->firstOrNew();
 
             $emailEnabled = $request->has('vendoremailsent') ? '1' : '0';
-            $messageEnabled = $request->has('vendorsmssent') ? '1' : '0';
-            $pushEnabled = $request->has('vendorpushsent') ? '1' : '0';
             $body = html_entity_decode($request->input('vendorbody'));
 
-            $emaildata->fill([
+            $payload = [
 
                 'vendorsubject' => $request->vendorsubject,
                 'vendorbody' => $body,
-                'vendorpush_notification' => $request->vendorpush_notification,
                 'vendoremailsent' => $emailEnabled,
-                'vendorsmssent' => $messageEnabled,
-                'vendorpushsent' => $pushEnabled,
-                'vendorsms' => $request->vendorsms,
-            ]);
+            ];
+
+            if ($request->exists('vendorsmssent')) {
+                $payload['vendorsmssent'] = $request->has('vendorsmssent') ? '1' : '0';
+            }
+            if ($request->exists('vendorpushsent')) {
+                $payload['vendorpushsent'] = $request->has('vendorpushsent') ? '1' : '0';
+            }
+            if ($request->exists('vendorsms')) {
+                $payload['vendorsms'] = $request->vendorsms;
+            }
+            if ($request->exists('vendorpush_notification')) {
+                $payload['vendorpush_notification'] = $request->vendorpush_notification;
+            }
+
+            $emaildata->fill($payload);
 
             $emaildata->save();
 
@@ -109,8 +118,6 @@ class EmailController extends Controller
         $emaildata = EmailSmsNotification::where('id', $id)->firstOrNew();
 
         $emailEnabled = $request->has('emailsent') ? '1' : '0';
-        $messageEnabled = $request->has('smssent') ? '1' : '0';
-        $pushEnabled = $request->has('pushsent') ? '1' : '0';
         $status = 1;
         $link_text = 'abc';
         $lang = 'en';
@@ -118,19 +125,29 @@ class EmailController extends Controller
         $body = html_entity_decode($request->input('body'));
 
         // Update or create the record
-        $emaildata->fill([
+        $payload = [
             'subject' => $request->subject,
             'body' => $body,
             'link_text' => $link_text,
             'lang' => $lang,
             'lang_id' => $lang_id,
-            'sms' => $request->sms,
-            'push_notification' => $request->push_notification,
             'emailsent' => $emailEnabled,
-            'smssent' => $messageEnabled,
-            'pushsent' => $pushEnabled,
             'status' => $status,
-        ]);
+        ];
+        if ($request->exists('smssent')) {
+            $payload['smssent'] = $request->has('smssent') ? '1' : '0';
+        }
+        if ($request->exists('pushsent')) {
+            $payload['pushsent'] = $request->has('pushsent') ? '1' : '0';
+        }
+        if ($request->exists('sms')) {
+            $payload['sms'] = $request->sms;
+        }
+        if ($request->exists('push_notification')) {
+            $payload['push_notification'] = $request->push_notification;
+        }
+
+        $emaildata->fill($payload);
         $emaildata->save();
 
         return redirect()->route('user.email-templates', $id)->with('success', 'Updated successfully!');

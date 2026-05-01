@@ -55,7 +55,7 @@ return [
 
     'slider_title' => 'Sliders',
     'staticPage_title' => 'Static Pages',
-    'emailTemplate_title' => 'Email Templates',
+    'emailTemplate_title' => 'Notification Templates',
     'tickets_title' => 'Support Tickets',
 
     'change_password' => 'Change Password',
