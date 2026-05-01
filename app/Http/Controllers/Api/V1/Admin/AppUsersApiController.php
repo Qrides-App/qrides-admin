@@ -43,6 +43,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Intervention\Image\Facades\Image;
 use Symfony\Component\HttpFoundation\Response;
@@ -238,6 +239,14 @@ class AppUsersApiController extends Controller
         }
 
         Log::log($level, $message, $context);
+    }
+
+    protected function sanitizeLoginResponseData(AppUser $customer): array
+    {
+        return Arr::except($customer->toArray(), [
+            'reset_token',
+            'otp_expires_at',
+        ]);
     }
 
     protected function createPlaceholderDriverItem(AppUser $customer, int $module): Item
@@ -456,7 +465,6 @@ class AppUsersApiController extends Controller
                     $loginUpdate['otp_expires_at'] = null;
                 }
                 $customer->update($loginUpdate);
-                $customer->refresh();
 
                 $mediaItem = Media::where('model_id', $customer->id)
                     ->where('model_type', 'App\Models\AppUser')
@@ -514,7 +522,7 @@ class AppUsersApiController extends Controller
                     $customer['firebase_auth'] = $firebaseMeta->meta_value;
                 }
 
-                $responseCustomer = $customer->makeHidden(['reset_token', 'otp_expires_at']);
+                $responseCustomer = $this->sanitizeLoginResponseData($customer);
 
                 return $this->successResponse(200, trans('global.Login_Sucessfully'), $responseCustomer);
             } else {
@@ -573,7 +581,6 @@ class AppUsersApiController extends Controller
                     $loginUpdate['otp_expires_at'] = null;
                 }
                 $customer->update($loginUpdate);
-                $customer->refresh();
                 if ($request->user_type == 'driver' and $customer->user_type == 'user') {
                     $firestoreData = $this->generateDriverFirestoreData($customer);
                     $firestoreDoc = $this->storeDriverInFirestore($firestoreData);
@@ -641,7 +648,7 @@ class AppUsersApiController extends Controller
                     'user_type' => $customer->user_type,
                 ]);
 
-                $responseCustomer = $customer->makeHidden(['reset_token', 'otp_expires_at']);
+                $responseCustomer = $this->sanitizeLoginResponseData($customer);
 
                 return $this->successResponse(200, trans('global.Login_Sucessfully'), $responseCustomer);
             } else {
