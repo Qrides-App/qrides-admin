@@ -252,12 +252,15 @@
             const testSubject = document.getElementById('test_mail_subject');
             const testBody = document.getElementById('test_mail_body');
             let editorInstance = null;
+            const openToken = '{' + '{';
+            const closeToken = '}' + '}';
 
             const applyPreviewTokens = (content) => {
                 let output = content || '';
                 Object.entries(sampleData).forEach(([key, value]) => {
-                    const moustache = new RegExp('@?{{\\s*' + key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*}}', 'gi');
-                    const braces = new RegExp('{\\s*' + key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*}', 'gi');
+                    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const moustache = new RegExp('@?' + openToken + '\\s*' + escapedKey + '\\s*' + closeToken, 'gi');
+                    const braces = new RegExp('{\\s*' + escapedKey + '\\s*}', 'gi');
                     output = output.replace(moustache, value).replace(braces, value);
                 });
                 return output;
