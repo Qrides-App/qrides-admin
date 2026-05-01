@@ -14,10 +14,14 @@
             'vendor' => 'vendor.email-template.create',
             'admin' => 'admin.email-template.create',
         ];
-        $scopeLabel = ucfirst($scope);
-        $activeRoute = $routeMap[$scope] ?? 'user.email-templates';
-        $saveRoute = $saveRouteMap[$scope] ?? 'user.email-template.create';
-        $availableRoles = array_filter(explode('#', (string) $emaildata->role));
+        $availableRoles = array_values(array_filter(array_map('trim', explode('#', (string) $emaildata->role))));
+        $effectiveScope = $scope;
+        if (!empty($availableRoles) && !in_array($effectiveScope, $availableRoles, true)) {
+            $effectiveScope = $availableRoles[0];
+        }
+        $scopeLabel = ucfirst($effectiveScope);
+        $activeRoute = $routeMap[$effectiveScope] ?? 'user.email-templates';
+        $saveRoute = $saveRouteMap[$effectiveScope] ?? 'user.email-template.create';
         $smsPreview = trim((string) ($templateConfig['sms'] ?? ''));
         $pushPreview = trim((string) ($templateConfig['push'] ?? ''));
     @endphp
@@ -42,12 +46,12 @@
                 </div>
 
                 <div class="mail-scope-switcher">
-                    @foreach ($availableRoles as $role)
-                        @php
-                            $roleKey = trim($role);
-                        @endphp
+                        @foreach ($availableRoles as $role)
+                            @php
+                                $roleKey = trim($role);
+                            @endphp
                         @if (isset($routeMap[$roleKey]))
-                            <a href="{{ route($routeMap[$roleKey], ['id' => $emaildata->id]) }}" class="mail-scope-pill {{ $scope === $roleKey ? 'is-active' : '' }}">
+                            <a href="{{ route($routeMap[$roleKey], ['id' => $emaildata->id]) }}" class="mail-scope-pill {{ $effectiveScope === $roleKey ? 'is-active' : '' }}">
                                 {{ ucfirst($roleKey) }}
                             </a>
                         @endif
@@ -133,9 +137,9 @@
             <div class="col-md-8">
                 <form action="{{ route($saveRoute, ['id' => $emaildata->id]) }}" method="POST" id="template_editor_form">
                     @csrf
-                    @if ($scope === 'vendor')
+                    @if ($effectiveScope === 'vendor')
                         <input type="hidden" name="type" value="vendor">
-                    @elseif ($scope === 'admin')
+                    @elseif ($effectiveScope === 'admin')
                         <input type="hidden" name="type" value="admin">
                     @endif
 
@@ -150,9 +154,9 @@
                         <div class="mail-settings-grid">
                             <div class="form-group mail-settings-grid__full">
                                 <label>Subject</label>
-                                @if ($scope === 'vendor')
+                                @if ($effectiveScope === 'vendor')
                                     <input type="text" name="vendorsubject" id="template_subject_input" class="form-control" value="{{ old('vendorsubject', $templateConfig['subject']) }}" placeholder="Template subject">
-                                @elseif ($scope === 'admin')
+                                @elseif ($effectiveScope === 'admin')
                                     <input type="text" name="adminsubject" id="template_subject_input" class="form-control" value="{{ old('adminsubject', $templateConfig['subject']) }}" placeholder="Template subject">
                                 @else
                                     <input type="text" name="subject" id="template_subject_input" class="form-control" value="{{ old('subject', $templateConfig['subject']) }}" placeholder="Template subject">
@@ -161,13 +165,13 @@
                         </div>
 
                         <div class="mail-channel-switches">
-                            @if ($scope === 'admin')
+                            @if ($effectiveScope === 'admin')
                                 <label class="settings-switch">
                                     <input type="checkbox" name="adminemailsent" value="1" {{ old('adminemailsent', $templateConfig['email_enabled']) ? 'checked' : '' }}>
                                     <span class="settings-switch__slider"></span>
                                     <span class="settings-switch__label">Email delivery enabled</span>
                                 </label>
-                            @elseif ($scope === 'vendor')
+                            @elseif ($effectiveScope === 'vendor')
                                 <label class="settings-switch">
                                     <input type="checkbox" name="vendoremailsent" value="1" {{ old('vendoremailsent', $templateConfig['email_enabled']) ? 'checked' : '' }}>
                                     <span class="settings-switch__slider"></span>
@@ -184,9 +188,9 @@
 
                         <div class="form-group">
                             <label>Email Body</label>
-                            @if ($scope === 'vendor')
+                            @if ($effectiveScope === 'vendor')
                                 <textarea name="vendorbody" id="template_body_editor" class="form-control mail-template-editor">{{ old('vendorbody', $templateConfig['body']) }}</textarea>
-                            @elseif ($scope === 'admin')
+                            @elseif ($effectiveScope === 'admin')
                                 <textarea name="adminbody" id="template_body_editor" class="form-control mail-template-editor">{{ old('adminbody', $templateConfig['body']) }}</textarea>
                             @else
                                 <textarea name="body" id="template_body_editor" class="form-control mail-template-editor">{{ old('body', $templateConfig['body']) }}</textarea>

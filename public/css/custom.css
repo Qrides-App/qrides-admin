@@ -2651,15 +2651,19 @@ body.admin-theme {
 }
 
 .settings-switch {
-  position: relative;
   display: inline-flex;
-  width: 56px;
-  height: 30px;
+  align-items: center;
+  gap: 12px;
+  width: auto;
+  min-height: 30px;
 }
 
 .settings-switch__slider {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  display: inline-block;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 30px;
   border-radius: 999px;
   background: #cbd5e1;
   transition: background-color 0.16s ease;
@@ -2683,6 +2687,13 @@ body.admin-theme {
 
 .settings-switch input:checked + .settings-switch__slider::before {
   transform: translateX(26px);
+}
+
+.settings-switch__label {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .maintenance-action {
@@ -3039,6 +3050,7 @@ body.admin-theme {
   background: linear-gradient(180deg, #ffffff 0%, #f8fbfc 100%);
   padding: 20px;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+  align-self: start;
 }
 
 .mail-channel-panel__topline {
