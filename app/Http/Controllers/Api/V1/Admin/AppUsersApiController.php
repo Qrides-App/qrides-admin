@@ -43,7 +43,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Intervention\Image\Facades\Image;
 use Symfony\Component\HttpFoundation\Response;
@@ -239,14 +238,6 @@ class AppUsersApiController extends Controller
         }
 
         Log::log($level, $message, $context);
-    }
-
-    protected function sanitizeLoginResponseData(AppUser $customer): array
-    {
-        return Arr::except($customer->toArray(), [
-            'reset_token',
-            'otp_expires_at',
-        ]);
     }
 
     protected function createPlaceholderDriverItem(AppUser $customer, int $module): Item
@@ -522,9 +513,7 @@ class AppUsersApiController extends Controller
                     $customer['firebase_auth'] = $firebaseMeta->meta_value;
                 }
 
-                $responseCustomer = $this->sanitizeLoginResponseData($customer);
-
-                return $this->successResponse(200, trans('global.Login_Sucessfully'), $responseCustomer);
+                return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
             } else {
                 return $this->errorResponse(401, trans('global.user_not_exist'));
             }
@@ -648,9 +637,7 @@ class AppUsersApiController extends Controller
                     'user_type' => $customer->user_type,
                 ]);
 
-                $responseCustomer = $this->sanitizeLoginResponseData($customer);
-
-                return $this->successResponse(200, trans('global.Login_Sucessfully'), $responseCustomer);
+                return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
             } else {
                 $customer = AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->first();
                 $this->logMobileLoginEvent('Mobile login OTP validation failed.', [

@@ -20,6 +20,8 @@ class AppUser extends Authenticatable implements HasMedia
 
     protected $hidden = [
         'password',
+        'reset_token',
+        'otp_expires_at',
     ];
 
     protected $appends = [
