@@ -448,7 +448,15 @@ class AppUsersApiController extends Controller
                 }
 
                 $token = Str::random(120);
-                $customer->update(['token' => $token]);
+                $loginUpdate = [
+                    'token' => $token,
+                    'reset_token' => '',
+                ];
+                if (Schema::hasColumn('app_users', 'otp_expires_at')) {
+                    $loginUpdate['otp_expires_at'] = null;
+                }
+                $customer->update($loginUpdate);
+                $customer->refresh();
 
                 $mediaItem = Media::where('model_id', $customer->id)
                     ->where('model_type', 'App\Models\AppUser')
@@ -506,7 +514,9 @@ class AppUsersApiController extends Controller
                     $customer['firebase_auth'] = $firebaseMeta->meta_value;
                 }
 
-                return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
+                $responseCustomer = $customer->makeHidden(['reset_token', 'otp_expires_at']);
+
+                return $this->successResponse(200, trans('global.Login_Sucessfully'), $responseCustomer);
             } else {
                 return $this->errorResponse(401, trans('global.user_not_exist'));
             }
@@ -555,7 +565,15 @@ class AppUsersApiController extends Controller
                     return $this->successResponse(200, trans('global.account_inactive'), $customer);
                 }
 
-                $customer->update(['token' => $token]);
+                $loginUpdate = [
+                    'token' => $token,
+                    'reset_token' => '',
+                ];
+                if (Schema::hasColumn('app_users', 'otp_expires_at')) {
+                    $loginUpdate['otp_expires_at'] = null;
+                }
+                $customer->update($loginUpdate);
+                $customer->refresh();
                 if ($request->user_type == 'driver' and $customer->user_type == 'user') {
                     $firestoreData = $this->generateDriverFirestoreData($customer);
                     $firestoreDoc = $this->storeDriverInFirestore($firestoreData);
@@ -623,7 +641,9 @@ class AppUsersApiController extends Controller
                     'user_type' => $customer->user_type,
                 ]);
 
-                return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
+                $responseCustomer = $customer->makeHidden(['reset_token', 'otp_expires_at']);
+
+                return $this->successResponse(200, trans('global.Login_Sucessfully'), $responseCustomer);
             } else {
                 $customer = AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->first();
                 $this->logMobileLoginEvent('Mobile login OTP validation failed.', [
