@@ -450,7 +450,7 @@ class AppUsersApiController extends Controller
                 $token = Str::random(120);
                 $loginUpdate = [
                     'token' => $token,
-                    'reset_token' => '',
+                    'reset_token' => 0,
                 ];
                 if (Schema::hasColumn('app_users', 'otp_expires_at')) {
                     $loginUpdate['otp_expires_at'] = null;
@@ -564,7 +564,7 @@ class AppUsersApiController extends Controller
 
                 $loginUpdate = [
                     'token' => $token,
-                    'reset_token' => '',
+                    'reset_token' => 0,
                 ];
                 if (Schema::hasColumn('app_users', 'otp_expires_at')) {
                     $loginUpdate['otp_expires_at'] = null;
