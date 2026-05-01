@@ -709,7 +709,7 @@ class AppUsersApiController extends Controller
             'token',
         ]);
 
-        return $this->successResponse(200, trans('global.OTP_sent_successfully'), $user);
+        return $this->successResponse(200, trans('global.OTP_sent_successfully'), $filteredUser);
     }
 
     public function sendOnlyEmailLoginOtp(Request $request)

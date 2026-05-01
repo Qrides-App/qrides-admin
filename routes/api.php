@@ -17,13 +17,7 @@ Route::post('/generateToken', [TokenController::class, 'issueSanctumToken'])
     ->name('token.generate');
 // 'auth:sanctum'
 
-Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', 'middleware' => ['auth:sanctum', 'driver.recharge.active']], function () {
-    // Slider
-    Route::post('/ride-requests', [RideRequestController::class, 'createRide']);
-    Route::get('/ride-requests', [RideRequestController::class, 'getRides']);
-    Route::patch('/ride-requests/{id}/status', [RideRequestController::class, 'updateRideStatus']);
-    Route::post('/sliders', [SliderApiController::class, 'sliders']);
-
+Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin'], function () {
     // App Users
     Route::post('/userRegister', 'AppUsersApiController@userRegister')->name('userRegister');
     Route::post('/otpVerification', 'AppUsersApiController@otpVerification');
@@ -48,6 +42,15 @@ Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', '
     Route::post('/ResendOtp', 'AppUsersApiController@ResendOtp');
     Route::post('/ResendToken', 'AppUsersApiController@ResendToken');
     Route::post('/updatePassword', 'AppUsersApiController@updatePassword');
+});
+
+Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', 'middleware' => ['auth:sanctum', 'driver.recharge.active']], function () {
+    // Slider
+    Route::post('/ride-requests', [RideRequestController::class, 'createRide']);
+    Route::get('/ride-requests', [RideRequestController::class, 'getRides']);
+    Route::patch('/ride-requests/{id}/status', [RideRequestController::class, 'updateRideStatus']);
+    Route::post('/sliders', [SliderApiController::class, 'sliders']);
+
     Route::post('/getUserWallet', 'AppUsersApiController@getUserWallet');
     Route::post('/getUserWalletTransactions', 'AppUsersApiController@getUserWalletTransactions');
 
