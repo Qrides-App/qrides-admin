@@ -57,6 +57,30 @@
                         </div>
 
                         <div class="settings-field">
+                            <label for="driver_search_medium_supply_threshold">Medium Supply Threshold (drivers)</label>
+                            <input class="form-control" type="number" min="1" name="driver_search_medium_supply_threshold"
+                                id="driver_search_medium_supply_threshold" value="{{ $driver_search_medium_supply_threshold ?? '' }}">
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="driver_search_high_supply_threshold">High Supply Threshold (drivers)</label>
+                            <input class="form-control" type="number" min="1" name="driver_search_high_supply_threshold"
+                                id="driver_search_high_supply_threshold" value="{{ $driver_search_high_supply_threshold ?? '' }}">
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="driver_search_medium_supply_extra_time">Extra Search Time For Medium Supply (seconds)</label>
+                            <input class="form-control" type="number" min="0" name="driver_search_medium_supply_extra_time"
+                                id="driver_search_medium_supply_extra_time" value="{{ $driver_search_medium_supply_extra_time ?? '' }}">
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="driver_search_low_supply_extra_time">Extra Search Time For Low Supply (seconds)</label>
+                            <input class="form-control" type="number" min="0" name="driver_search_low_supply_extra_time"
+                                id="driver_search_low_supply_extra_time" value="{{ $driver_search_low_supply_extra_time ?? '' }}">
+                        </div>
+
+                        <div class="settings-field">
                             <label for="minimum_hits_time">Minimum Hits Time After Pickup (seconds)</label>
                             <input class="form-control" type="number" min="1" name="minimum_hits_time"
                                 id="minimum_hits_time" value="{{ $minimum_hits_time ?? '' }}">

@@ -1287,6 +1287,10 @@ class GeneralSettingController extends Controller
         $location_accuracy_threshold = GeneralSetting::where('meta_key', 'location_accuracy_threshold')->value('meta_value');
         $background_location_interval = GeneralSetting::where('meta_key', 'background_location_interval')->value('meta_value');
         $driver_search_interval = GeneralSetting::where('meta_key', 'driver_search_interval')->value('meta_value');
+        $driver_search_medium_supply_threshold = GeneralSetting::where('meta_key', 'driver_search_medium_supply_threshold')->value('meta_value');
+        $driver_search_high_supply_threshold = GeneralSetting::where('meta_key', 'driver_search_high_supply_threshold')->value('meta_value');
+        $driver_search_medium_supply_extra_time = GeneralSetting::where('meta_key', 'driver_search_medium_supply_extra_time')->value('meta_value');
+        $driver_search_low_supply_extra_time = GeneralSetting::where('meta_key', 'driver_search_low_supply_extra_time')->value('meta_value');
         $use_google_after_pickup = GeneralSetting::where('meta_key', 'use_google_after_pickup')->value('meta_value');
         $use_google_before_pickup = GeneralSetting::where('meta_key', 'use_google_before_pickup')->value('meta_value');
         $minimum_hits_time = GeneralSetting::where('meta_key', 'minimum_hits_time')->value('meta_value');
@@ -1297,6 +1301,10 @@ class GeneralSettingController extends Controller
             'location_accuracy_threshold',
             'background_location_interval',
             'driver_search_interval',
+            'driver_search_medium_supply_threshold',
+            'driver_search_high_supply_threshold',
+            'driver_search_medium_supply_extra_time',
+            'driver_search_low_supply_extra_time',
             'use_google_after_pickup',
             'use_google_before_pickup',
             'minimum_hits_time',
@@ -1314,6 +1322,10 @@ class GeneralSettingController extends Controller
             'location_accuracy_threshold' => 'nullable|numeric|min:0',
             'background_location_interval' => 'nullable|integer|min:1',
             'driver_search_interval' => 'nullable|integer|min:1',
+            'driver_search_medium_supply_threshold' => 'nullable|integer|min:1',
+            'driver_search_high_supply_threshold' => 'nullable|integer|min:1',
+            'driver_search_medium_supply_extra_time' => 'nullable|integer|min:0',
+            'driver_search_low_supply_extra_time' => 'nullable|integer|min:0',
             'use_google_after_pickup' => 'nullable|in:0,1',
             'use_google_before_pickup' => 'nullable|in:0,1',
             'minimum_hits_time' => 'nullable|integer|min:1',
@@ -1324,6 +1336,10 @@ class GeneralSettingController extends Controller
             'location_accuracy_threshold' => $request->location_accuracy_threshold,
             'background_location_interval' => $request->background_location_interval,
             'driver_search_interval' => $request->driver_search_interval,
+            'driver_search_medium_supply_threshold' => $request->driver_search_medium_supply_threshold,
+            'driver_search_high_supply_threshold' => $request->driver_search_high_supply_threshold,
+            'driver_search_medium_supply_extra_time' => $request->driver_search_medium_supply_extra_time,
+            'driver_search_low_supply_extra_time' => $request->driver_search_low_supply_extra_time,
             'use_google_after_pickup' => $request->use_google_after_pickup,
             'use_google_before_pickup' => $request->use_google_before_pickup,
             'minimum_hits_time' => $request->minimum_hits_time,
