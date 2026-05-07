@@ -940,11 +940,18 @@ class AppUsersApiController extends Controller
     private function generateAccessToken($email)
     {
         $token = Str::random(120);
-        AppUser::where('email', $email)->update([
+
+        $appUserColumns = array_flip(Schema::getColumnListing('app_users'));
+        $updateData = array_intersect_key([
             'otp_value' => '0',
             'token' => $token,
             'verified' => '1',
-        ]);
+        ], $appUserColumns);
+
+        if (! empty($updateData)) {
+            AppUser::where('email', $email)->update($updateData);
+        }
+
         $customer = AppUser::where('email', $email)->first();
 
         return $customer;
