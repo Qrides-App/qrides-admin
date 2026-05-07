@@ -817,86 +817,112 @@ class AppUsersApiController extends Controller
         if ($validator->fails()) {
             return $this->errorComputing($validator);
         }
-        // try {
-
-        $displayName = $request->input('displayName');
-        $names = explode(' ', $displayName);
-        $firstName = $names[0];
-        $lastName = isset($names[1]) ? $names[1] : '';
-
-        $socialId = $request->input('id');
-        $photoUrl = $request->input('profile_image');
-        $loginType = $request->input('login_type');
-        DB::beginTransaction();
-
-        if ($request->input('email')) {
-            $user = AppUser::where('email', $email)->withTrashed()->first();
-
-            if (! is_null($user) && $user->trashed()) {
-                return $this->addErrorResponse(400, trans('User has been block'), '');
-            }
-        } elseif ($request->input('id')) {
-            $user = AppUser::where('social_id', $request->input('id'))->first();
-        }
-
-        if ($user) {
-            $customer = $this->generateAccessToken($user->email);
-            $userIdForRemainingItems = $user->id;
-        } else {
-
-            $newUser = AppUser::create([
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'email' => $email,
-            ]);
-            $imagePath = null;
-
-            if (! empty($request->input('profile_image'))) {
-                $imageData = @file_get_contents($request->input('profile_image'));
-
-                if ($imageData !== false) {
-                    $imageName = Str::random(40).'.jpg';
-                    $imagePath = 'profile_images/'.$imageName;
-
-                    try {
-                        $image = Image::make($imageData);
-                        Storage::put($imagePath, $image->encode('jpg'));
-                    } catch (\Exception $e) {
-                        Log::error('Error processing profile image: '.$e->getMessage());
-                        $imagePath = null;
-                    }
-                } else {
-                    $imagePath = null;
-                }
-            } else {
-                $imagePath = null;
-            }
-
-            if ($imagePath) {
-                $newUser->addMedia(storage_path('app/'.$imagePath))->toMediaCollection('profile_image');
-            }
-            $newUser->social_id = $socialId;
-            $newUser->login_type = $loginType;
-            $newUser->save();
-
-            $userIdForRemainingItems = $newUser->id;
-            $customer = $this->generateAccessToken($email);
-        }
-        DB::commit();
-
-        $module = $this->getModuleIdOrDefault($request);
-        $remainingItems = $this->checkRemainingItems($userIdForRemainingItems, $module);
-
-        if ($remainingItems) {
-            $customer['remaining_items'] = $remainingItems;
-        } else {
-            $customer['remaining_items'] = 0;
-        }
-
-        return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
         try {
-        } catch (\Exception $e) {
+            $displayName = trim((string) $request->input('displayName', ''));
+            $names = preg_split('/\s+/', $displayName, -1, PREG_SPLIT_NO_EMPTY);
+            $firstName = $names[0] ?? 'User';
+            $lastName = count($names) > 1 ? implode(' ', array_slice($names, 1)) : '';
+
+            $socialId = $request->input('id');
+            $loginType = $request->input('login_type');
+            $user = null;
+            $hasSocialIdColumn = Schema::hasColumn('app_users', 'social_id');
+            $hasLoginTypeColumn = Schema::hasColumn('app_users', 'login_type');
+
+            DB::beginTransaction();
+
+            if ($request->filled('email')) {
+                $user = AppUser::where('email', $email)->withTrashed()->first();
+
+                if (! is_null($user) && $user->trashed()) {
+                    DB::rollBack();
+
+                    return $this->addErrorResponse(400, trans('User has been block'), '');
+                }
+            }
+
+            if (! $user && $hasSocialIdColumn && $request->filled('id')) {
+                $user = AppUser::where('social_id', $request->input('id'))->first();
+            }
+
+            if ($user) {
+                if ($hasSocialIdColumn) {
+                    $user->social_id = $socialId;
+                }
+                if ($hasLoginTypeColumn) {
+                    $user->login_type = $loginType;
+                }
+                if (! $user->verified) {
+                    $user->verified = 1;
+                }
+                $user->save();
+
+                $customer = $this->generateAccessToken($user->email);
+                $userIdForRemainingItems = $user->id;
+            } else {
+                $newUserData = [
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'email' => $email,
+                    'password' => Hash::make(Str::random(32)),
+                    'verified' => 1,
+                    'email_verify' => $request->filled('email') ? 1 : 0,
+                    'status' => 1,
+                    'user_type' => 'user',
+                ];
+
+                if ($hasLoginTypeColumn) {
+                    $newUserData['login_type'] = $loginType;
+                }
+
+                if ($hasSocialIdColumn) {
+                    $newUserData['social_id'] = $socialId;
+                }
+
+                $newUser = AppUser::create($newUserData);
+                $imagePath = null;
+
+                if ($request->filled('profile_image')) {
+                    $imageData = @file_get_contents($request->input('profile_image'));
+
+                    if ($imageData !== false) {
+                        $imageName = Str::random(40).'.jpg';
+                        $imagePath = 'profile_images/'.$imageName;
+
+                        try {
+                            $image = Image::make($imageData);
+                            Storage::put($imagePath, $image->encode('jpg'));
+                        } catch (\Exception $e) {
+                            Log::error('Error processing profile image: '.$e->getMessage());
+                            $imagePath = null;
+                        }
+                    }
+                }
+
+                if ($imagePath) {
+                    $newUser->addMedia(storage_path('app/'.$imagePath))->toMediaCollection('profile_image');
+                }
+
+                $userIdForRemainingItems = $newUser->id;
+                $customer = $this->generateAccessToken($email);
+            }
+
+            DB::commit();
+
+            $module = $this->getModuleIdOrDefault($request);
+            $remainingItems = $this->checkRemainingItems($userIdForRemainingItems, $module);
+            $customer['remaining_items'] = $remainingItems ?? 0;
+
+            return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
+        } catch (\Throwable $e) {
             DB::rollback();
+            Log::error('Social login failed', [
+                'login_type' => $request->input('login_type'),
+                'email' => $email,
+                'social_id' => $request->input('id'),
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return $this->addErrorResponse(500, trans('global.ServerError_internal_server_error'), $e->getMessage());
         }
