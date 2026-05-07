@@ -689,6 +689,12 @@ class AppUsersApiController extends Controller
         }
 
         $otp = $this->generateOtp($user->phone, $user->phone_country);
+        $this->logMobileLoginEvent('Mobile login OTP generated.', [
+            'phone' => $user->phone,
+            'phone_country' => $user->phone_country,
+            'user_id' => $user->id,
+            'otp' => $otp,
+        ]);
 
         $valuesArray = ['OTP' => $otp, 'first_name' => $user->first_name, 'last_name' => $user->last_name];
         $template_id = 2;
@@ -1135,6 +1141,12 @@ class AppUsersApiController extends Controller
         }
 
         $otp = $this->generateOtp($user->phone, $user->phone_country);
+        $this->logMobileLoginEvent('Resend login OTP generated.', [
+            'phone' => $user->phone,
+            'phone_country' => $user->phone_country,
+            'user_id' => $user->id,
+            'otp' => $otp,
+        ]);
 
         $valuesArray = [
             'OTP' => $otp,
