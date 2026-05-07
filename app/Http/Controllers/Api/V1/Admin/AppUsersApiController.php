@@ -1133,11 +1133,18 @@ class AppUsersApiController extends Controller
             ->first();
 
         if (! $user) {
-            $this->logMobileLoginEvent('Resend login OTP rejected because user was not found.', [
+            $otp = $this->generateOtp($request->phone, $request->phone_country);
+            $this->logMobileLoginEvent('Resend OTP generated without matched user record.', [
                 'phone' => $request->phone,
                 'phone_country' => $request->phone_country,
+                'otp' => $otp,
             ], 'warning');
-            return $this->errorResponse(409, trans('global.user_record_not_match_44'));
+
+            return $this->successResponse(200, trans('global.OTP_sent_successfully'), [
+                'otp_value' => '',
+                'phone' => $request->phone,
+                'phone_country' => $request->phone_country,
+            ]);
         }
 
         $otp = $this->generateOtp($user->phone, $user->phone_country);
