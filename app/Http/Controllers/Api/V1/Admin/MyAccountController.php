@@ -295,21 +295,25 @@ class MyAccountController extends Controller
 
         $resultOtp = $this->validateOtpFromDB($request->phone, $request->phone_country, $request->otp_value);
         if ($resultOtp['status'] === 'success') {
-            $user->phone = $request->input('phone');
-            $user->phone_country = $request->input('phone_country');
-            $user->default_country = $request->input('default_country');
-            $user->phone_verify = 1;
+            $appUserColumns = array_flip(Schema::getColumnListing('app_users'));
+            $updateData = array_intersect_key([
+                'phone' => $request->input('phone'),
+                'phone_country' => $request->input('phone_country'),
+                'default_country' => $request->input('default_country'),
+                'phone_verify' => 1,
+            ], $appUserColumns);
 
             if (! empty($request->input('email'))) {
-                $user->email = $request->input('email');
+                $updateData['email'] = $request->input('email');
             }
             if (! empty($request->input('first_name'))) {
-                $user->first_name = $request->input('first_name');
+                $updateData['first_name'] = $request->input('first_name');
             }
             if (! empty($request->input('last_name'))) {
-                $user->last_name = $request->input('last_name');
+                $updateData['last_name'] = $request->input('last_name');
             }
 
+            $user->fill(array_intersect_key($updateData, $appUserColumns));
             $user->save();
             $userdata = AppUser::where('token', $request->input('token'))->first();
 
