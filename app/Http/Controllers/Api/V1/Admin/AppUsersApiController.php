@@ -827,7 +827,10 @@ class AppUsersApiController extends Controller
             $loginType = $request->input('login_type');
             $user = null;
             $hasSocialIdColumn = Schema::hasColumn('app_users', 'social_id');
-            $hasLoginTypeColumn = Schema::hasColumn('app_users', 'login_type');
+            $appUserColumns = array_flip(Schema::getColumnListing('app_users'));
+            $hasSocialIdColumn = isset($appUserColumns['social_id']);
+            $hasLoginTypeColumn = isset($appUserColumns['login_type']);
+            $hasVerifiedColumn = isset($appUserColumns['verified']);
 
             DB::beginTransaction();
 
@@ -846,16 +849,22 @@ class AppUsersApiController extends Controller
             }
 
             if ($user) {
+                $userUpdates = [];
+
                 if ($hasSocialIdColumn) {
-                    $user->social_id = $socialId;
+                    $userUpdates['social_id'] = $socialId;
                 }
                 if ($hasLoginTypeColumn) {
-                    $user->login_type = $loginType;
+                    $userUpdates['login_type'] = $loginType;
                 }
-                if (! $user->verified) {
-                    $user->verified = 1;
+                if ($hasVerifiedColumn && ! $user->verified) {
+                    $userUpdates['verified'] = 1;
                 }
-                $user->save();
+
+                if (! empty($userUpdates)) {
+                    $user->fill($userUpdates);
+                    $user->save();
+                }
 
                 $customer = $this->generateAccessToken($user->email);
                 $userIdForRemainingItems = $user->id;
@@ -879,7 +888,7 @@ class AppUsersApiController extends Controller
                     $newUserData['social_id'] = $socialId;
                 }
 
-                $newUser = AppUser::create($newUserData);
+                $newUser = AppUser::create(array_intersect_key($newUserData, $appUserColumns));
                 $imagePath = null;
 
                 if ($request->filled('profile_image')) {
