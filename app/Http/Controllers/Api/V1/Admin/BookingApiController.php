@@ -600,6 +600,44 @@ class BookingApiController extends Controller
         return $pricingResult;
     }
 
+    public function getItemPricePreview(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'item_type_id' => 'required|exists:rental_item_types,id',
+            'distance' => 'required|numeric|min:0',
+            'coupon_code' => 'nullable|string',
+            'wallet_amount' => 'nullable|numeric|min:0',
+            'selected_currency_code' => 'nullable|string',
+            'duration_minutes' => 'nullable|numeric|min:0',
+            'surge' => 'nullable|numeric|min:0.1',
+            'region_id' => 'nullable',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorComputing($validator);
+        }
+
+        $itemTypeId = $request->input('item_type_id');
+        $distance = (float) $request->input('distance');
+        $couponCode = $request->input('coupon_code');
+        $walletAmount = (float) $request->input('wallet_amount', 0);
+        $selectedCurrencyCode = $request->input('selected_currency_code', 'USD');
+        $conversionRate = Currency::getValueByCurrencyCode($selectedCurrencyCode);
+        $durationMinutes = (float) $request->input('duration_minutes', 0);
+        $surgeMultiplier = (float) $request->input('surge', 1);
+
+        return $this->getItemPricesDetails(
+            $itemTypeId,
+            $distance,
+            $couponCode,
+            $walletAmount,
+            $selectedCurrencyCode,
+            $conversionRate,
+            $durationMinutes,
+            $surgeMultiplier
+        );
+    }
+
     public function updateBookingStatusByDriver(Request $request)
     {
         $validator = Validator::make($request->all(), [
