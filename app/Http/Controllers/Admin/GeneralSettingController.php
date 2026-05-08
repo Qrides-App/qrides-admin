@@ -1295,6 +1295,12 @@ class GeneralSettingController extends Controller
         $use_google_before_pickup = GeneralSetting::where('meta_key', 'use_google_before_pickup')->value('meta_value');
         $minimum_hits_time = GeneralSetting::where('meta_key', 'minimum_hits_time')->value('meta_value');
         $use_google_source_destination = GeneralSetting::where('meta_key', 'use_google_source_destination')->value('meta_value');
+        $rider_home_banner_eyebrow = GeneralSetting::where('meta_key', 'rider_home_banner_eyebrow')->value('meta_value');
+        $rider_home_banner_title = GeneralSetting::where('meta_key', 'rider_home_banner_title')->value('meta_value');
+        $rider_home_banner_subtitle = GeneralSetting::where('meta_key', 'rider_home_banner_subtitle')->value('meta_value');
+        $rider_home_banner_primary_color = GeneralSetting::where('meta_key', 'rider_home_banner_primary_color')->value('meta_value');
+        $rider_home_banner_secondary_color = GeneralSetting::where('meta_key', 'rider_home_banner_secondary_color')->value('meta_value');
+        $rider_home_banner_image = GeneralSetting::where('meta_key', 'rider_home_banner_image')->value('meta_value');
 
         return view('admin.generalSettings.app-settings.index', compact(
             'firebase_update_interval',
@@ -1308,7 +1314,13 @@ class GeneralSettingController extends Controller
             'use_google_after_pickup',
             'use_google_before_pickup',
             'minimum_hits_time',
-            'use_google_source_destination'
+            'use_google_source_destination',
+            'rider_home_banner_eyebrow',
+            'rider_home_banner_title',
+            'rider_home_banner_subtitle',
+            'rider_home_banner_primary_color',
+            'rider_home_banner_secondary_color',
+            'rider_home_banner_image'
         ));
     }
 
@@ -1330,7 +1342,34 @@ class GeneralSettingController extends Controller
             'use_google_before_pickup' => 'nullable|in:0,1',
             'minimum_hits_time' => 'nullable|integer|min:1',
             'use_google_source_destination' => 'nullable|in:0,1',
+            'rider_home_banner_eyebrow' => 'nullable|string|max:80',
+            'rider_home_banner_title' => 'nullable|string|max:120',
+            'rider_home_banner_subtitle' => 'nullable|string|max:220',
+            'rider_home_banner_primary_color' => ['nullable', 'regex:/^#?[0-9A-Fa-f]{6}$/'],
+            'rider_home_banner_secondary_color' => ['nullable', 'regex:/^#?[0-9A-Fa-f]{6}$/'],
+            'rider_home_banner_image' => 'nullable|image|max:4096',
         ]);
+
+        $bannerImageUrl = GeneralSetting::where('meta_key', 'rider_home_banner_image')->value('meta_value');
+        if ($request->hasFile('rider_home_banner_image')) {
+            if (! empty($bannerImageUrl)) {
+                $existingPath = ltrim(parse_url($bannerImageUrl, PHP_URL_PATH) ?? '', '/');
+                if (str_starts_with($existingPath, 'storage/')) {
+                    Storage::disk('public')->delete(substr($existingPath, strlen('storage/')));
+                }
+            }
+            $storedPath = $request->file('rider_home_banner_image')->store('promo-banners', 'public');
+            $bannerImageUrl = url(Storage::url($storedPath));
+        } elseif ($request->boolean('rider_home_banner_image_remove')) {
+            if (! empty($bannerImageUrl)) {
+                $existingPath = ltrim(parse_url($bannerImageUrl, PHP_URL_PATH) ?? '', '/');
+                if (str_starts_with($existingPath, 'storage/')) {
+                    Storage::disk('public')->delete(substr($existingPath, strlen('storage/')));
+                }
+            }
+            $bannerImageUrl = '';
+        }
+
         $settings = [
             'firebase_update_interval' => $request->firebase_update_interval,
             'location_accuracy_threshold' => $request->location_accuracy_threshold,
@@ -1344,9 +1383,19 @@ class GeneralSettingController extends Controller
             'use_google_before_pickup' => $request->use_google_before_pickup,
             'minimum_hits_time' => $request->minimum_hits_time,
             'use_google_source_destination' => $request->use_google_source_destination,
+            'rider_home_banner_eyebrow' => $request->rider_home_banner_eyebrow,
+            'rider_home_banner_title' => $request->rider_home_banner_title,
+            'rider_home_banner_subtitle' => $request->rider_home_banner_subtitle,
+            'rider_home_banner_primary_color' => $request->rider_home_banner_primary_color,
+            'rider_home_banner_secondary_color' => $request->rider_home_banner_secondary_color,
+            'rider_home_banner_image' => $bannerImageUrl,
         ];
         foreach ($settings as $key => $value) {
             GeneralSetting::updateOrCreate(['meta_key' => $key], ['meta_value' => $value]);
+        }
+
+        foreach ([1, 2, 3, 4] as $module) {
+            Cache::forget('general_settings_'.$module);
         }
 
         return response()->json(['success' => 'App settings updated successfully.']);

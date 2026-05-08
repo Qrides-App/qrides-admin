@@ -120,6 +120,74 @@
                         </div>
                     </div>
 
+                    <div class="settings-card__header">
+                        <div>
+                            <h3>Rider home banner</h3>
+                            <p>Change the rider app promo banner text and colors without publishing a new app build.</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-form-grid">
+                        <div class="settings-field">
+                            <label for="rider_home_banner_eyebrow">Banner label</label>
+                            <input class="form-control" type="text" name="rider_home_banner_eyebrow"
+                                id="rider_home_banner_eyebrow" value="{{ $rider_home_banner_eyebrow ?? 'First ride offer' }}"
+                                placeholder="First ride offer">
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="rider_home_banner_title">Banner headline</label>
+                            <input class="form-control" type="text" name="rider_home_banner_title"
+                                id="rider_home_banner_title" value="{{ $rider_home_banner_title ?? 'Get 20% Off' }}"
+                                placeholder="Get 20% Off">
+                        </div>
+
+                        <div class="settings-field settings-field--full">
+                            <label for="rider_home_banner_subtitle">Banner subtitle</label>
+                            <input class="form-control" type="text" name="rider_home_banner_subtitle"
+                                id="rider_home_banner_subtitle" value="{{ $rider_home_banner_subtitle ?? 'Ride across the city with a cleaner, faster booking experience.' }}"
+                                placeholder="Ride across the city with a cleaner, faster booking experience.">
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="rider_home_banner_primary_color">Primary color</label>
+                            <input class="form-control" type="text" name="rider_home_banner_primary_color"
+                                id="rider_home_banner_primary_color" value="{{ $rider_home_banner_primary_color ?? '#12284A' }}"
+                                placeholder="#12284A">
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="rider_home_banner_secondary_color">Secondary color</label>
+                            <input class="form-control" type="text" name="rider_home_banner_secondary_color"
+                                id="rider_home_banner_secondary_color" value="{{ $rider_home_banner_secondary_color ?? '#2F66E0' }}"
+                                placeholder="#2F66E0">
+                        </div>
+
+                        <div class="settings-field">
+                            <label for="rider_home_banner_image">Optional banner image</label>
+                            <input class="form-control" type="file" name="rider_home_banner_image"
+                                id="rider_home_banner_image" accept="image/*">
+                            <small class="text-muted">Optional. Leave empty to keep a clean text-only banner.</small>
+                        </div>
+
+                        <div class="settings-field">
+                            <label>Current banner image</label>
+                            <div class="settings-media-preview-wrap">
+                                <div class="settings-media-preview" id="rider_home_banner_image_preview">
+                                    @if (!empty($rider_home_banner_image))
+                                        <img src="{{ $rider_home_banner_image }}" alt="Current banner image">
+                                    @else
+                                        <span>No banner image uploaded</span>
+                                    @endif
+                                </div>
+                            </div>
+                            <label class="settings-inline-checkbox" style="margin-top: 10px;">
+                                <input type="checkbox" name="rider_home_banner_image_remove" value="1">
+                                <span>Remove current banner image</span>
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="settings-card__footer">
                         <button type="submit" class="btn btn-primary btn-space">{{ trans('global.save') }}</button>
                     </div>
@@ -131,14 +199,40 @@
 
 @section('scripts')
     <script>
+        function setupImagePreview(inputId, previewId, label) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+
+            if (!input || !preview) {
+                return;
+            }
+
+            input.addEventListener('change', function(event) {
+                const [file] = event.target.files || [];
+                if (!file) {
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" alt="${label}">`;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         $(document).ready(function() {
+            setupImagePreview('rider_home_banner_image', 'rider_home_banner_image_preview', 'Selected banner image');
             $('#app_settings_form').on('submit', function(event) {
                 event.preventDefault();
+                const formData = new FormData(this);
 
                 $.ajax({
                     url: $(this).attr('action'),
                     method: 'POST',
-                    data: $(this).serialize(),
+                    data: formData,
+                    processData: false,
+                    contentType: false,
                     success: function(response) {
                         toastr.success(response.success, 'Success', {
                             closeButton: true,

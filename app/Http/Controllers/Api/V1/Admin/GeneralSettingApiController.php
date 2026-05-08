@@ -66,6 +66,12 @@ class GeneralSettingApiController extends Controller
                     'use_google_before_pickup',
                     'minimum_hits_time',
                     'use_google_source_destination',
+                    'rider_home_banner_eyebrow',
+                    'rider_home_banner_title',
+                    'rider_home_banner_subtitle',
+                    'rider_home_banner_primary_color',
+                    'rider_home_banner_secondary_color',
+                    'rider_home_banner_image',
                 ];
 
                 $metaData = GeneralSetting::whereIn('meta_key', $keys)
