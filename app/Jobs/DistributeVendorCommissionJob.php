@@ -11,6 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -21,15 +22,24 @@ class DistributeVendorCommissionJob implements ShouldQueue
 
     public function handle()
     {
+        $lock = Cache::lock('vendor-commission-distribution-job', 55);
+
+        if (! $lock->get()) {
+            Log::warning('Skipped vendor commission distribution: previous run still holds the lock.');
+
+            return;
+        }
+
         try {
-            DB::transaction(function () {
+            $affectedBookings = DB::transaction(function () {
                 $currentDate = Carbon::now();
+                $affectedBookings = 0;
 
                 Booking::where('bookings.status', 'Completed')
                     ->where('bookings.vendor_commission_given', 0)
                     ->join('app_users', 'bookings.host_id', '=', 'app_users.id')
                     ->select('bookings.*')
-                    ->chunkById(100, function ($bookings) use ($currentDate) {
+                    ->chunkById(100, function ($bookings) use ($currentDate, &$affectedBookings) {
                         $walletInserts = [];
                         $updateIds = [];
 
@@ -134,15 +144,22 @@ class DistributeVendorCommissionJob implements ShouldQueue
                                 'vendor_commission_given' => 1,
                                 'updated_at' => $currentDate,
                             ]);
+                            $affectedBookings += count($updateIds);
                         }
                     });
+
+                return $affectedBookings;
             });
 
-            Log::info('✅ Vendor wallet updated: commissions on top, full amount credited last.');
+            if ($affectedBookings > 0) {
+                Log::info("Vendor wallet distribution completed for {$affectedBookings} booking(s).");
+            }
         } catch (\Throwable $e) {
             Log::error('❌ Vendor wallet update failed: '.$e->getMessage(), [
                 'exception' => $e,
             ]);
+        } finally {
+            optional($lock)->release();
         }
     }
 }
