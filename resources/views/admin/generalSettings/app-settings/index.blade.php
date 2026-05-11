@@ -521,22 +521,26 @@
                 $('#rider_home_banner_preview_visual').html(renderBannerPlaceholder());
             });
 
-            $('#rider_home_banner_reset_defaults').on('click', function() {
-                resetRiderBannerDefaults();
-            });
+            const $appSettingsForm = $('#app_settings_form');
+            const $formButtons = $appSettingsForm.find('button');
 
-            $('#app_settings_form').on('submit', function(event) {
-                event.preventDefault();
-                const formData = new FormData(this);
+            function submitAppSettingsForm(successMessage) {
+                const formElement = $appSettingsForm.get(0);
+                if (!formElement) {
+                    return;
+                }
+
+                const formData = new FormData(formElement);
+                $formButtons.prop('disabled', true);
 
                 $.ajax({
-                    url: $(this).attr('action'),
+                    url: $appSettingsForm.attr('action'),
                     method: 'POST',
                     data: formData,
                     processData: false,
                     contentType: false,
                     success: function(response) {
-                        toastr.success(response.success, 'Success', {
+                        toastr.success(successMessage || response.success, 'Success', {
                             closeButton: true,
                             progressBar: true,
                             positionClass: 'toast-bottom-right'
@@ -548,8 +552,25 @@
                             progressBar: true,
                             positionClass: 'toast-bottom-right'
                         });
+                    },
+                    complete: function() {
+                        $formButtons.prop('disabled', false);
                     }
                 });
+            }
+
+            $('#rider_home_banner_reset_defaults').on('click', function() {
+                if (!window.confirm('Reset the rider app banner and theme colors to the default values and save them now?')) {
+                    return;
+                }
+
+                resetRiderBannerDefaults();
+                submitAppSettingsForm('Defaults restored successfully.');
+            });
+
+            $appSettingsForm.on('submit', function(event) {
+                event.preventDefault();
+                submitAppSettingsForm();
             });
         });
     </script>
