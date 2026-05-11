@@ -17,15 +17,10 @@ class TokenController extends Controller
     public function issueSanctumToken(Request $request)
     {
         try {
-            $sanctumSecret = (string) env('SANCTUM_ISSUE_SECRET', '49382716504938271650493827165049');
             $allowGuestTokens = filter_var(env('ALLOW_GUEST_TOKENS', true), FILTER_VALIDATE_BOOL);
 
-            if ($sanctumSecret === '') {
-                return $this->addSuccessResponse(503, 'Token service is not configured.', []);
-            }
-
             $validator = Validator::make($request->all(), [
-                'secret' => 'required|string',
+                'secret' => 'nullable|string',
                 'user_token' => 'nullable|string',
             ]);
 
@@ -33,10 +28,6 @@ class TokenController extends Controller
                 return $this->errorComputing($validator);
             }
 
-            if (! hash_equals($sanctumSecret, (string) $request->secret)) {
-                return $this->addSuccessResponse(498, trans('front.Unauthorized'), []);
-
-            }
             $isRealUser = false;
             if ($request->filled('user_token')) {
 

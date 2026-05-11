@@ -74,9 +74,13 @@ class GoogleAuthController extends Controller
     private function getAccessTokenFromGoogle($code)
     {
         $url = 'https://oauth2.googleapis.com/token';
-        $client_id = '951328556833-6bgch0ffsohs22g0lt53bmkc836c3m7c.apps.googleusercontent.com';
-        $client_secret = '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';
+        $client_id = (string) config('services.google_oauth.client_id', '');
+        $client_secret = (string) config('services.google_oauth.client_secret', '');
         $redirect_uri = route('login.google.callback');
+
+        if ($client_id === '' || $client_secret === '') {
+            return null;
+        }
 
         $data = [
             'code' => $code,

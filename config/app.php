@@ -41,7 +41,14 @@ return [
     |
     */
 
-    'debug' => (bool) env('APP_DEBUG', false),
+    'debug' => (function () {
+        $environment = (string) env('APP_ENV', 'production');
+        if (in_array($environment, ['production', 'live'], true)) {
+            return false;
+        }
+
+        return (bool) env('APP_DEBUG', false);
+    })(),
 
     /*
     |--------------------------------------------------------------------------

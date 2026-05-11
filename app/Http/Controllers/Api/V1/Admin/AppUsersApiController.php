@@ -479,7 +479,15 @@ class AppUsersApiController extends Controller
                 if (! $firebaseMeta) {
 
                     $firebasePassword = Str::random(16);
-                    $apiKey = 'AIzaSyBrI9JUsS-TMmEx1Fnnq-yDlKIiH9WTWA0';
+                    $apiKey = (string) config('services.firebase_web.apiKey', '');
+
+                    if ($apiKey === '') {
+                        Log::warning('Firebase web API key is missing while provisioning firebase_auth metadata.', [
+                            'app_user_id' => $customer->id,
+                        ]);
+                        $customer['firebase_auth'] = 0;
+                        return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
+                    }
 
                     $userFirebase = $this->createFirebaseUser($request->email, $firebasePassword, $apiKey);
 

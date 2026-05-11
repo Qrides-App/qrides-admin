@@ -32,13 +32,18 @@ return [
     ],
 
     'firebase_web' => [
-        'apiKey' => env('FIREBASE_WEB_API_KEY', 'AIzaSyDJmfSsQoJwx9OCf6t3m-0tcXNT6NilbcI'),
-        'authDomain' => env('FIREBASE_WEB_AUTH_DOMAIN', 'unibookervehicle.firebaseapp.com'),
-        'databaseURL' => env('FIREBASE_WEB_DATABASE_URL', 'https://unibookervehicle-default-rtdb.firebaseio.com'),
-        'projectId' => env('FIREBASE_WEB_PROJECT_ID', 'unibookervehicle'),
-        'storageBucket' => env('FIREBASE_WEB_STORAGE_BUCKET', 'unibookervehicle.appspot.com'),
-        'messagingSenderId' => env('FIREBASE_WEB_MESSAGING_SENDER_ID', '951328556833'),
-        'appId' => env('FIREBASE_WEB_APP_ID', '1:951328556833:web:4a922ffcaa3df4341de060'),
+        'apiKey' => env('FIREBASE_WEB_API_KEY'),
+        'authDomain' => env('FIREBASE_WEB_AUTH_DOMAIN'),
+        'databaseURL' => env('FIREBASE_WEB_DATABASE_URL'),
+        'projectId' => env('FIREBASE_WEB_PROJECT_ID'),
+        'storageBucket' => env('FIREBASE_WEB_STORAGE_BUCKET'),
+        'messagingSenderId' => env('FIREBASE_WEB_MESSAGING_SENDER_ID'),
+        'appId' => env('FIREBASE_WEB_APP_ID'),
+    ],
+
+    'google_oauth' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
     ],
 
 ];
