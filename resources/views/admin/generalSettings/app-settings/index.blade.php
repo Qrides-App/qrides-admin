@@ -311,6 +311,9 @@
                         </button>
                         <button type="submit" class="btn btn-primary btn-space">{{ trans('global.save') }}</button>
                     </div>
+                    <small class="text-muted" style="display:block; margin-top: 12px;">
+                        Changes sync to the rider app automatically when it reopens, resumes, or when you tap Refresh App Settings inside the app.
+                    </small>
                 </form>
             </div>
         </div>
@@ -540,7 +543,7 @@
                     processData: false,
                     contentType: false,
                     success: function(response) {
-                        toastr.success(successMessage || response.success, 'Success', {
+                        toastr.success(successMessage || response.message || response.success, 'Success', {
                             closeButton: true,
                             progressBar: true,
                             positionClass: 'toast-bottom-right'

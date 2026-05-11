@@ -1414,11 +1414,21 @@ class GeneralSettingController extends Controller
             GeneralSetting::updateOrCreate(['meta_key' => $key], ['meta_value' => $value]);
         }
 
+        GeneralSetting::updateOrCreate(
+            ['meta_key' => 'app_settings_version'],
+            ['meta_value' => (string) now()->timestamp]
+        );
+
         foreach ([1, 2, 3, 4] as $module) {
             Cache::forget('general_settings_'.$module);
         }
+        Cache::forget('general_settings');
+        Cache::forget('cached_general_settings');
 
-        return response()->json(['success' => 'App settings updated successfully.']);
+        return response()->json([
+            'success' => 'App settings updated successfully.',
+            'message' => 'App settings updated successfully. The rider app will pick up the latest values on reopen or when it resumes.',
+        ]);
     }
 
     private function normalizeHexColor(?string $value, string $fallback): string

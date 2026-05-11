@@ -41,46 +41,45 @@ class GeneralSettingApiController extends Controller
             $domain = rtrim(env('APP_URL'), '/').'/';
             $cacheMinutes = 120;
             $cacheKey = 'general_settings_'.$module;
+            $settingsKeys = [
+                'general_default_phone_country',
+                'general_default_country_code',
+                'general_default_currency',
+                'general_default_language',
+                'socialnetwork_google_login',
+                'onlinepayment',
+                'firebase_update_interval',
+                'location_accuracy_threshold',
+                'background_location_interval',
+                'driver_search_interval',
+                'driver_search_medium_supply_threshold',
+                'driver_search_high_supply_threshold',
+                'driver_search_medium_supply_extra_time',
+                'driver_search_low_supply_extra_time',
+                'use_google_after_pickup',
+                'use_google_before_pickup',
+                'minimum_hits_time',
+                'use_google_source_destination',
+                'rider_home_banner_eyebrow',
+                'rider_home_banner_title',
+                'rider_home_banner_subtitle',
+                'rider_home_banner_primary_color',
+                'rider_home_banner_secondary_color',
+                'rider_home_banner_image',
+                'rider_app_primary_color',
+                'rider_app_accent_color',
+            ];
+            $otherInfoKeys = ['title', 'item_setting_image'];
 
             if ($request->has('refresh_cache') && $request->refresh_cache == true) {
                 Cache::forget($cacheKey);
             }
 
-            $metaData = Cache::remember($cacheKey, $cacheMinutes, function () use ($module) {
-                $keys = [
-                    'general_default_phone_country',
-                    'general_default_country_code',
-                    'general_default_currency',
-                    'general_default_language',
-                    'socialnetwork_google_login',
-                    'onlinepayment',
-                    'firebase_update_interval',
-                    'location_accuracy_threshold',
-                    'background_location_interval',
-                    'driver_search_interval',
-                    'driver_search_medium_supply_threshold',
-                    'driver_search_high_supply_threshold',
-                    'driver_search_medium_supply_extra_time',
-                    'driver_search_low_supply_extra_time',
-                    'use_google_after_pickup',
-                    'use_google_before_pickup',
-                    'minimum_hits_time',
-                    'use_google_source_destination',
-                    'rider_home_banner_eyebrow',
-                    'rider_home_banner_title',
-                    'rider_home_banner_subtitle',
-                    'rider_home_banner_primary_color',
-                    'rider_home_banner_secondary_color',
-                    'rider_home_banner_image',
-                    'rider_app_primary_color',
-                    'rider_app_accent_color',
-                ];
-
-                $metaData = GeneralSetting::whereIn('meta_key', $keys)
+            $metaData = Cache::remember($cacheKey, $cacheMinutes, function () use ($module, $settingsKeys, $otherInfoKeys) {
+                $metaData = GeneralSetting::whereIn('meta_key', $settingsKeys)
                     ->pluck('meta_value', 'meta_key')
                     ->toArray();
 
-                $otherInfoKeys = ['title', 'item_setting_image'];
                 $otherInfoData = GeneralSetting::whereIn('meta_key', $otherInfoKeys)
                     ->where('module', $module)
                     ->pluck('meta_value', 'meta_key')
@@ -88,8 +87,11 @@ class GeneralSettingApiController extends Controller
 
                 return array_merge($metaData, $otherInfoData);
             });
+
             $metaData['last_active'] = '0';
             $metaData['minimum_negative_balance'] = '9';
+            $settingsVersion = GeneralSetting::where('meta_key', 'app_settings_version')->value('meta_value');
+            $metaData['settings_version'] = $settingsVersion ? (string) $settingsVersion : '0';
 
             return $this->addSuccessResponse(200, trans('front.Result_found'), ['metaData' => $metaData]);
         } catch (\Exception $e) {
