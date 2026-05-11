@@ -305,7 +305,10 @@
                         </div>
                     </div>
 
-                    <div class="settings-card__footer">
+                    <div class="settings-card__footer settings-actions">
+                        <button type="button" class="btn settings-btn-secondary" id="rider_home_banner_reset_defaults">
+                            Reset to defaults
+                        </button>
                         <button type="submit" class="btn btn-primary btn-space">{{ trans('global.save') }}</button>
                     </div>
                 </form>
@@ -436,6 +439,58 @@
             });
         }
 
+        function renderBannerPlaceholder() {
+            return `
+                <div class="settings-banner-preview__placeholder">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            `;
+        }
+
+        function resetRiderBannerDefaults() {
+            const defaultValues = {
+                rider_app_primary_color: '#3E6BCB',
+                rider_app_accent_color: '#3ECF8E',
+                rider_home_banner_eyebrow: 'First ride offer',
+                rider_home_banner_title: 'Get 20% Off',
+                rider_home_banner_subtitle: 'Ride across the city with a cleaner, faster booking experience.',
+                rider_home_banner_primary_color: '#12284A',
+                rider_home_banner_secondary_color: '#2F66E0',
+            };
+
+            Object.entries(defaultValues).forEach(([fieldId, value]) => {
+                const field = document.getElementById(fieldId);
+                if (!field) {
+                    return;
+                }
+                field.value = value;
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+                field.dispatchEvent(new Event('blur', { bubbles: true }));
+            });
+
+            const imageInput = document.getElementById('rider_home_banner_image');
+            if (imageInput) {
+                imageInput.value = '';
+            }
+
+            const removeCheckbox = document.querySelector('input[name="rider_home_banner_image_remove"]');
+            if (removeCheckbox) {
+                removeCheckbox.checked = true;
+            }
+
+            const currentPreview = document.getElementById('rider_home_banner_image_preview');
+            if (currentPreview) {
+                currentPreview.innerHTML = '<span>No banner image uploaded</span>';
+            }
+
+            const bannerVisual = document.getElementById('rider_home_banner_preview_visual');
+            if (bannerVisual) {
+                bannerVisual.innerHTML = renderBannerPlaceholder();
+            }
+        }
+
         $(document).ready(function() {
             setupImagePreview('rider_home_banner_image', 'rider_home_banner_image_preview', 'Selected banner image');
             setupBannerColorControl('rider_app_primary_color', 'rider_app_primary_color_picker', '--app-primary', '#3E6BCB');
@@ -463,13 +518,11 @@
                     return;
                 }
 
-                $('#rider_home_banner_preview_visual').html(`
-                    <div class="settings-banner-preview__placeholder">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                `);
+                $('#rider_home_banner_preview_visual').html(renderBannerPlaceholder());
+            });
+
+            $('#rider_home_banner_reset_defaults').on('click', function() {
+                resetRiderBannerDefaults();
             });
 
             $('#app_settings_form').on('submit', function(event) {
