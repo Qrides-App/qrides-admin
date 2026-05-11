@@ -72,6 +72,8 @@ class GeneralSettingApiController extends Controller
                     'rider_home_banner_primary_color',
                     'rider_home_banner_secondary_color',
                     'rider_home_banner_image',
+                    'rider_app_primary_color',
+                    'rider_app_accent_color',
                 ];
 
                 $metaData = GeneralSetting::whereIn('meta_key', $keys)

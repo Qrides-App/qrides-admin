@@ -1298,9 +1298,23 @@ class GeneralSettingController extends Controller
         $rider_home_banner_eyebrow = GeneralSetting::where('meta_key', 'rider_home_banner_eyebrow')->value('meta_value');
         $rider_home_banner_title = GeneralSetting::where('meta_key', 'rider_home_banner_title')->value('meta_value');
         $rider_home_banner_subtitle = GeneralSetting::where('meta_key', 'rider_home_banner_subtitle')->value('meta_value');
-        $rider_home_banner_primary_color = GeneralSetting::where('meta_key', 'rider_home_banner_primary_color')->value('meta_value');
-        $rider_home_banner_secondary_color = GeneralSetting::where('meta_key', 'rider_home_banner_secondary_color')->value('meta_value');
+        $rider_home_banner_primary_color = $this->normalizeHexColor(
+            GeneralSetting::where('meta_key', 'rider_home_banner_primary_color')->value('meta_value'),
+            '#12284A'
+        );
+        $rider_home_banner_secondary_color = $this->normalizeHexColor(
+            GeneralSetting::where('meta_key', 'rider_home_banner_secondary_color')->value('meta_value'),
+            '#2F66E0'
+        );
         $rider_home_banner_image = GeneralSetting::where('meta_key', 'rider_home_banner_image')->value('meta_value');
+        $rider_app_primary_color = $this->normalizeHexColor(
+            GeneralSetting::where('meta_key', 'rider_app_primary_color')->value('meta_value'),
+            '#3E6BCB'
+        );
+        $rider_app_accent_color = $this->normalizeHexColor(
+            GeneralSetting::where('meta_key', 'rider_app_accent_color')->value('meta_value'),
+            '#3ECF8E'
+        );
 
         return view('admin.generalSettings.app-settings.index', compact(
             'firebase_update_interval',
@@ -1320,7 +1334,9 @@ class GeneralSettingController extends Controller
             'rider_home_banner_subtitle',
             'rider_home_banner_primary_color',
             'rider_home_banner_secondary_color',
-            'rider_home_banner_image'
+            'rider_home_banner_image',
+            'rider_app_primary_color',
+            'rider_app_accent_color'
         ));
     }
 
@@ -1347,6 +1363,8 @@ class GeneralSettingController extends Controller
             'rider_home_banner_subtitle' => 'nullable|string|max:220',
             'rider_home_banner_primary_color' => ['nullable', 'regex:/^#?[0-9A-Fa-f]{6}$/'],
             'rider_home_banner_secondary_color' => ['nullable', 'regex:/^#?[0-9A-Fa-f]{6}$/'],
+            'rider_app_primary_color' => ['nullable', 'regex:/^#?[0-9A-Fa-f]{6}$/'],
+            'rider_app_accent_color' => ['nullable', 'regex:/^#?[0-9A-Fa-f]{6}$/'],
             'rider_home_banner_image' => 'nullable|image|max:4096',
         ]);
 
@@ -1386,8 +1404,10 @@ class GeneralSettingController extends Controller
             'rider_home_banner_eyebrow' => $request->rider_home_banner_eyebrow,
             'rider_home_banner_title' => $request->rider_home_banner_title,
             'rider_home_banner_subtitle' => $request->rider_home_banner_subtitle,
-            'rider_home_banner_primary_color' => $request->rider_home_banner_primary_color,
-            'rider_home_banner_secondary_color' => $request->rider_home_banner_secondary_color,
+            'rider_home_banner_primary_color' => $this->normalizeHexColor($request->rider_home_banner_primary_color, '#12284A'),
+            'rider_home_banner_secondary_color' => $this->normalizeHexColor($request->rider_home_banner_secondary_color, '#2F66E0'),
+            'rider_app_primary_color' => $this->normalizeHexColor($request->rider_app_primary_color, '#3E6BCB'),
+            'rider_app_accent_color' => $this->normalizeHexColor($request->rider_app_accent_color, '#3ECF8E'),
             'rider_home_banner_image' => $bannerImageUrl,
         ];
         foreach ($settings as $key => $value) {
@@ -1399,5 +1419,15 @@ class GeneralSettingController extends Controller
         }
 
         return response()->json(['success' => 'App settings updated successfully.']);
+    }
+
+    private function normalizeHexColor(?string $value, string $fallback): string
+    {
+        $sanitized = strtoupper(ltrim(trim((string) $value), '#'));
+        if (preg_match('/^[0-9A-F]{6}$/', $sanitized) !== 1) {
+            return $fallback;
+        }
+
+        return '#'.$sanitized;
     }
 }
