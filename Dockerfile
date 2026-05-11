@@ -35,7 +35,8 @@ RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions 
 
 # Composer install (no dev, optimized autoload)
 # Skip ext-grpc platform check to avoid long grpc source builds on Render.
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-req=ext-grpc
+# Keep output cleaner in Render logs without hiding real failures.
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress --ignore-platform-req=ext-grpc
 
 # Laravel permissions
 RUN chown -R www-data:www-data storage bootstrap/cache
