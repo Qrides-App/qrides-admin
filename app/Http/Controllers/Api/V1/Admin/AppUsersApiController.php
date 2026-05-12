@@ -1496,10 +1496,17 @@ class AppUsersApiController extends Controller
                 }
             }
 
-            $user->update([
-                'fcm' => $request->input('fcm'),
-                'device_id' => $request->input('device_id'),
-            ]);
+            $updates = [];
+            if (Schema::hasColumn($user->getTable(), 'fcm')) {
+                $updates['fcm'] = $request->input('fcm');
+            }
+            if (Schema::hasColumn($user->getTable(), 'device_id')) {
+                $updates['device_id'] = $request->input('device_id');
+            }
+
+            if (! empty($updates)) {
+                $user->update($updates);
+            }
 
             return $this->addSuccessResponse(200, trans('global.fcm_updated_successfully'), $user);
         } catch (\Throwable $e) {
