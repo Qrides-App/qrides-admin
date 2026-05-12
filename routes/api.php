@@ -118,6 +118,8 @@ Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin', '
     Route::post('/getItemPrices', 'BookingApiController@getItemPrices');
     Route::post('/getItemPricePreview', 'BookingApiController@getItemPricePreview');
     Route::post('/bookItem', 'BookingApiController@bookItem'); // Need to change
+    Route::get('/getDriverForHire', 'AppUsersApiController@getDriverForHire');
+    Route::post('/bookHireByQr', 'AppUsersApiController@bookHireByQr');
     Route::post('/bookingRecord', 'BookingApiController@bookingRecord');
     Route::post('/vendorbookingRecord', 'BookingApiController@vendorBookingRecord');
     Route::post('/confirmBookingByHost', 'BookingApiController@confirmBookingByHost');
