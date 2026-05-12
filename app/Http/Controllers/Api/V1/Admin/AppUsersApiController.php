@@ -1484,7 +1484,16 @@ class AppUsersApiController extends Controller
             }
 
             if ($request->filled('player_id')) {
-                $this->storeUserMeta($user->id, 'player_id', $request->input('player_id'));
+                try {
+                    $this->storeUserMeta($user->id, 'player_id', $request->input('player_id'));
+                } catch (\Throwable $metaException) {
+                    Log::warning('fcmUpdate player_id store failed; continuing with FCM/device update.', [
+                        'user_id' => $user->id,
+                        'player_id_present' => true,
+                        'message' => $metaException->getMessage(),
+                        'exception' => get_class($metaException),
+                    ]);
+                }
             }
 
             $user->update([
@@ -1493,7 +1502,16 @@ class AppUsersApiController extends Controller
             ]);
 
             return $this->addSuccessResponse(200, trans('global.fcm_updated_successfully'), $user);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            Log::error('fcmUpdate failed', [
+                'message' => $e->getMessage(),
+                'exception' => get_class($e),
+                'token_present' => $request->filled('token'),
+                'fcm_present' => $request->filled('fcm'),
+                'device_id_present' => $request->filled('device_id'),
+                'player_id_present' => $request->filled('player_id'),
+            ]);
+
             return $this->addErrorResponse(500, trans('global.something_wrong'), '');
         }
     }
