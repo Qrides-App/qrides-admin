@@ -2761,7 +2761,7 @@ class AppUsersApiController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'token' => 'required|exists:app_users,token',
-            'driver_id' => 'required|exists:app_users,id',
+            'driver_id' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -2773,7 +2773,10 @@ class AppUsersApiController extends Controller
             return $this->addErrorResponse(419, trans('global.token_not_match'), '');
         }
 
-        $driver = AppUser::where('id', $request->driver_id)
+        $driver = AppUser::where(function ($query) use ($request) {
+            $query->where('id', $request->driver_id)
+                ->orWhere('firestore_id', $request->driver_id);
+        })
             ->where('user_type', 'driver')
             ->where('status', 1)
             ->first();
@@ -2824,7 +2827,7 @@ class AppUsersApiController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'token' => 'required|exists:app_users,token',
-            'driver_id' => 'required|exists:app_users,id',
+            'driver_id' => 'required|string',
             'duration_hours' => 'nullable|numeric|min:1|max:720',
             'duration_key' => 'nullable|string|max:30',
             'payment_method' => 'nullable|string|max:30',
@@ -2843,7 +2846,10 @@ class AppUsersApiController extends Controller
         }
 
         $rider = AppUser::find($userId);
-        $driver = AppUser::where('id', $request->driver_id)
+        $driver = AppUser::where(function ($query) use ($request) {
+            $query->where('id', $request->driver_id)
+                ->orWhere('firestore_id', $request->driver_id);
+        })
             ->where('user_type', 'driver')
             ->where('status', 1)
             ->first();
