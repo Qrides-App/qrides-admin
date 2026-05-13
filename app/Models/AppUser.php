@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ResolvesMediaUrls;
 use App\Models\Modern\Item;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +15,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class AppUser extends Authenticatable implements HasMedia
 {
-    use HasApiTokens, HasFactory, InteractsWithMedia, SoftDeletes;
+    use HasApiTokens, HasFactory, InteractsWithMedia, ResolvesMediaUrls, SoftDeletes;
 
     public $table = 'app_users';
 
@@ -106,25 +107,12 @@ class AppUser extends Authenticatable implements HasMedia
 
     public function getProfileImageAttribute()
     {
-        $file = $this->getMedia('profile_image')->last();
-        if ($file) {
-            $file->url = $file->getUrl();
-            $file->thumbnail = $file->getUrl('thumb');
-            $file->preview = $file->getUrl('preview');
-        }
-
-        return $file;
+        return $this->decorateMedia($this->getMedia('profile_image')->last());
     }
 
     public function getIdentityImageAttribute()
     {
-        $file = $this->getMedia('identity_image')->last();
-        if ($file) {
-            $file->url = $file->getUrl();
-            $file->thumbnail = $file->getUrl('thumb');
-        }
-
-        return $file;
+        return $this->decorateMedia($this->getMedia('identity_image')->last(), ['thumb']);
     }
 
     public function registerMediaConversions(?Media $media = null): void
