@@ -16,7 +16,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class StaticPagesApiController extends Controller
 {
-    use MediaUploadingTrait, MiscellaneousTrait, ResponseTrait;
+    use MediaUploadingTrait {
+        storeMedia as protected traitStoreMedia;
+    }
+    use MiscellaneousTrait, ResponseTrait;
 
     public function index()
     {
@@ -27,6 +30,8 @@ class StaticPagesApiController extends Controller
 
     public function store(StoreStaticPageRequest $request)
     {
+        abort_if(Gate::denies('static_page_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
         $staticPage = StaticPage::create($request->all());
 
         return (new StaticPageResource($staticPage))
@@ -43,11 +48,20 @@ class StaticPagesApiController extends Controller
 
     public function update(UpdateStaticPageRequest $request, StaticPage $staticPage)
     {
+        abort_if(Gate::denies('static_page_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
         $staticPage->update($request->all());
 
         return (new StaticPageResource($staticPage))
             ->response()
             ->setStatusCode(Response::HTTP_ACCEPTED);
+    }
+
+    public function storeMedia(Request $request)
+    {
+        abort_if(Gate::denies('static_page_create') && Gate::denies('static_page_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+        return $this->traitStoreMedia($request);
     }
 
     public function destroy(StaticPage $staticPage)

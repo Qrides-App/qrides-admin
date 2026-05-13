@@ -133,6 +133,12 @@ class PaypalStrategy implements PaymentStrategy
 
     public function handleWebhook(Request $request)
     {
+        if (! $this->verifyWebhookSignature($request)) {
+            Log::warning('PayPal webhook signature verification failed.');
+
+            return response()->json(['status' => 'ignored'], 400);
+        }
+
         $webhookData = $request->all();
         $eventType = $webhookData['event_type'] ?? null;
 
@@ -150,6 +156,46 @@ class PaypalStrategy implements PaymentStrategy
         }
 
         return response()->json(['status' => 'success']);
+    }
+
+    private function verifyWebhookSignature(Request $request): bool
+    {
+        $webhookId = (string) (env('PAYPAL_WEBHOOK_ID') ?: $this->getGeneralSettingValue('paypal_webhook_id'));
+        if ($webhookId === '') {
+            Log::warning('PayPal webhook received without PAYPAL_WEBHOOK_ID configuration.');
+
+            return false;
+        }
+
+        $transmissionId = $request->header('Paypal-Transmission-Id');
+        $transmissionTime = $request->header('Paypal-Transmission-Time');
+        $transmissionSig = $request->header('Paypal-Transmission-Sig');
+        $certUrl = $request->header('Paypal-Cert-Url');
+        $authAlgo = $request->header('Paypal-Auth-Algo');
+
+        if (! $transmissionId || ! $transmissionTime || ! $transmissionSig || ! $certUrl || ! $authAlgo) {
+            return false;
+        }
+
+        try {
+            $response = $this->paypalRequest('POST', '/v1/notifications/verify-webhook-signature', [
+                'auth_algo' => $authAlgo,
+                'cert_url' => $certUrl,
+                'transmission_id' => $transmissionId,
+                'transmission_sig' => $transmissionSig,
+                'transmission_time' => $transmissionTime,
+                'webhook_id' => $webhookId,
+                'webhook_event' => $request->all(),
+            ]);
+
+            return ($response['verification_status'] ?? null) === 'SUCCESS';
+        } catch (\Throwable $e) {
+            Log::error('PayPal webhook verification request failed', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     private function handlePaymentCaptureCompleted($webhookData)

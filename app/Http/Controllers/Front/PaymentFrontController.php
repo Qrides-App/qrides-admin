@@ -12,6 +12,7 @@ use App\Strategies\PaypalStrategy;
 use App\Strategies\RazorpayStrategy;
 use App\Strategies\StripeStrategy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 // Import any other strategies as needed

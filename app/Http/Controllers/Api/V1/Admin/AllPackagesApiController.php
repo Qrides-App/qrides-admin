@@ -9,11 +9,14 @@ use App\Http\Requests\UpdateAllPackageRequest;
 use App\Http\Resources\Admin\AllPackageResource;
 use App\Models\AllPackage;
 use Gate;
+use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class AllPackagesApiController extends Controller
 {
-    use MediaUploadingTrait;
+    use MediaUploadingTrait {
+        storeMedia as protected traitStoreMedia;
+    }
 
     public function index()
     {
@@ -24,6 +27,8 @@ class AllPackagesApiController extends Controller
 
     public function store(StoreAllPackageRequest $request)
     {
+        abort_if(Gate::denies('all_package_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
         $allPackage = AllPackage::create($request->all());
 
         if ($request->input('package_image', false)) {
@@ -44,6 +49,8 @@ class AllPackagesApiController extends Controller
 
     public function update(UpdateAllPackageRequest $request, AllPackage $allPackage)
     {
+        abort_if(Gate::denies('all_package_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
         $allPackage->update($request->all());
 
         if ($request->input('package_image', false)) {
@@ -60,5 +67,12 @@ class AllPackagesApiController extends Controller
         return (new AllPackageResource($allPackage))
             ->response()
             ->setStatusCode(Response::HTTP_ACCEPTED);
+    }
+
+    public function storeMedia(Request $request)
+    {
+        abort_if(Gate::denies('all_package_create') && Gate::denies('all_package_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+
+        return $this->traitStoreMedia($request);
     }
 }

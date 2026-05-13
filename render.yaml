@@ -61,6 +61,8 @@ services:
         value: 49382716504938271650493827165049
       - key: ALLOW_GUEST_TOKENS
         value: true
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
       - key: GOOGLE_MAP_KEY
         sync: false
       - key: FIREBASE_SERVER_KEY

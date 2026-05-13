@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\MiscellaneousTrait;
 use App\Http\Controllers\Traits\PaymentStatusUpdaterTrait;
 use App\Models\Booking;
+use App\Models\DriverRechargePlan;
 use App\Models\GeneralSetting;
 use App\Strategies\MyFatoorahStrategy;
 use App\Strategies\PayduniyaStrategy;
 use App\Strategies\PaypalStrategy;
 use App\Strategies\StripeStrategy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 // Import any other strategies as needed
 class WalletRechargeController extends Controller
@@ -20,7 +22,6 @@ class WalletRechargeController extends Controller
 
     public function handlePayment(Request $request)
     {
-        $token = $request->input('token');
         $userid = $this->checkUserByToken($request->userToken);
 
         if (! $userid) {
@@ -34,8 +35,35 @@ class WalletRechargeController extends Controller
         if (! $strategy) {
             return redirect('/invalid-order')->with('error', 'Invalid user');
         }
-        $amount = $request->amount;
-        $currency = $request->currency;
+
+        $currency = strtoupper((string) (GeneralSetting::getMetaValue('driver_recharge_currency') ?: 'INR'));
+        $amountPerDay = (float) (GeneralSetting::getMetaValue('driver_recharge_amount_per_day') ?: 30);
+        $gstPercentage = round((float) (GeneralSetting::getMetaValue('driver_recharge_gst_percentage') ?: 0), 2);
+        $durationDays = (int) $request->input('duration_days', 0);
+        $baseAmount = 0.0;
+
+        if ($request->filled('plan_id')) {
+            $plan = DriverRechargePlan::active()->find($request->input('plan_id'));
+            if (! $plan) {
+                return redirect('/invalid-order')->with('error', 'Recharge plan not found');
+            }
+            $durationDays = (int) $plan->duration_days;
+            $baseAmount = (float) $plan->amount;
+            $currency = strtoupper($plan->currency_code ?: $currency);
+        } else {
+            if ($durationDays <= 0) {
+                return redirect('/invalid-order')->with('error', 'Recharge duration is required');
+            }
+            $baseAmount = round($durationDays * $amountPerDay, 2);
+        }
+
+        $gstAmount = round(($baseAmount * $gstPercentage) / 100, 2);
+        $amount = round($baseAmount + $gstAmount, 2);
+
+        if ($durationDays <= 0 || $baseAmount <= 0 || $amount <= 0) {
+            return redirect('/invalid-order')->with('error', 'Invalid recharge request');
+        }
+
         $returnURL = $strategy->rechargeWallet($userid, $amount, $currency, $request);
 
         return $returnURL;
@@ -124,6 +152,11 @@ class WalletRechargeController extends Controller
 
         $bookingId = $request->booking;
         $userToken = $request->token;
+        $userId = $this->checkUserByToken($userToken);
+
+        if (! $userId) {
+            return redirect('/invalid-order')->with('error', 'Invalid user');
+        }
 
         $keys = [
             'stripe_status',
@@ -158,8 +191,6 @@ class WalletRechargeController extends Controller
             return route('wallet_recharge', array_filter([
                 'userToken' => $userToken,
                 'method' => $method,
-                'amount' => $request->query('amount'),
-                'currency' => $request->query('currency'),
                 'plan_id' => $request->query('plan_id'),
                 'duration_days' => $request->query('duration_days'),
                 'idempotency_key' => $request->query('idempotency_key'),
