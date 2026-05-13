@@ -38,7 +38,31 @@ trait OTPTrait
         $otpEntry->expires_at = $expiresAt;
         $otpEntry->save();
 
+        $this->logOtpForTesting('phone', trim($countryCode).trim($phoneNumber), $otpEntry->otp_code);
+
         return $otpEntry->otp_code;
+    }
+
+    protected function logOtpForTesting(string $channel, string $recipient, string $otp): void
+    {
+        if (! $this->shouldLogOtpForTesting()) {
+            return;
+        }
+
+        \Log::info('OTP generated for testing', [
+            'channel' => $channel,
+            'recipient' => $recipient,
+            'otp' => $otp,
+        ]);
+    }
+
+    protected function shouldLogOtpForTesting(): bool
+    {
+        if (filter_var(env('OTP_LOGGING_ENABLED', false), FILTER_VALIDATE_BOOL)) {
+            return true;
+        }
+
+        return app()->environment(['local', 'development', 'testing']);
     }
 
     public function validateOtpFromDB($phoneNumber, $countryCode, $inputOtp)
