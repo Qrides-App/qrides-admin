@@ -8,6 +8,7 @@ use App\Http\Controllers\Traits\MiscellaneousTrait;
 use App\Http\Controllers\Traits\ResponseTrait;
 use App\Http\Requests\UpdateGeneralSettingRequest;
 use App\Http\Resources\Admin\GeneralSettingResource;
+use App\Models\AddCoupon;
 use App\Models\GeneralSetting;
 use Gate;
 use Illuminate\Http\Request;
@@ -87,6 +88,25 @@ class GeneralSettingApiController extends Controller
 
                 return array_merge($metaData, $otherInfoData);
             });
+
+            $firstBookingCouponCode = GeneralSetting::where('meta_key', 'first_booking_coupon')->value('meta_value');
+            if (! empty($firstBookingCouponCode)) {
+                $coupon = AddCoupon::where('coupon_code', $firstBookingCouponCode)
+                    ->where('status', 1)
+                    ->where(function ($query) {
+                        $query->whereNull('coupon_expiry_date')
+                            ->orWhereDate('coupon_expiry_date', '>=', now()->toDateString());
+                    })
+                    ->first();
+
+                if ($coupon) {
+                    $metaData['first_booking_coupon_code'] = (string) $coupon->coupon_code;
+                    $metaData['first_booking_coupon_value'] = (string) $coupon->coupon_value;
+                    $metaData['first_booking_coupon_type'] = (string) ($coupon->coupon_type ?: 'percentage');
+                    $metaData['first_booking_coupon_title'] = (string) ($coupon->coupon_title ?: '');
+                    $metaData['first_booking_coupon_subtitle'] = (string) ($coupon->coupon_subtitle ?: '');
+                }
+            }
 
             $metaData['last_active'] = '0';
             $metaData['minimum_negative_balance'] = '9';

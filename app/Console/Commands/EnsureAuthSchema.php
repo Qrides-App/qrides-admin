@@ -431,6 +431,12 @@ class EnsureAuthSchema extends Command
             });
         }
 
+        if (! Schema::hasColumn('app_users', 'device_id')) {
+            Schema::table('app_users', function (Blueprint $table) {
+                $table->text('device_id')->nullable()->after('fcm');
+            });
+        }
+
         if (! Schema::hasColumn('app_users', 'document_verify')) {
             Schema::table('app_users', function (Blueprint $table) {
                 $table->boolean('document_verify')->default(false)->after('host_status');

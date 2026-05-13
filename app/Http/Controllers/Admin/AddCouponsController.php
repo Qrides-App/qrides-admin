@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Traits\MediaUploadingTrait;
 use App\Http\Requests\MassDestroyAddCouponRequest;
+use App\Http\Requests\StoreAddCouponRequest;
 use App\Http\Requests\UpdateAddCouponRequest;
 use App\Models\AddCoupon;
 use App\Models\GeneralSetting;
@@ -43,25 +44,30 @@ class AddCouponsController extends Controller
     {
         abort_if(Gate::denies('add_coupon_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        return view('admin.addCoupons.create');
+        $currentModule = Module::where('default_module', '1')->first();
+
+        return view('admin.addCoupons.create', compact('currentModule'));
     }
 
-    public function store(Request $request)
+    public function store(StoreAddCouponRequest $request)
     {
-        $request->validate([
-            'coupon_value' => [
-                'required',
-                'numeric',
-                'min:0',
-                'max:99',
-            ],
-            'coupon_type' => 'required|in:percentage',
-        ]);
-        $addCoupon = AddCoupon::create($request->all());
+        $currentModule = Module::where('default_module', '1')->first();
+        $payload = $request->validated();
+        $payload['coupon_code'] = strtoupper(trim($payload['coupon_code']));
+        $payload['module'] = $request->input('module', $currentModule?->id ?? 1);
+
+        $addCoupon = AddCoupon::create($payload);
 
         if ($media = $request->input('ck-media', false)) {
             Media::whereIn('id', $media)->update(['model_id' => $addCoupon->id]);
         }
+
+        if ($request->hasFile('coupon_image_file')) {
+            $addCoupon
+                ->addMediaFromRequest('coupon_image_file')
+                ->toMediaCollection('coupon_image');
+        }
+
         if ($request->has('is_first_booking')) {
             GeneralSetting::updateOrCreate(
                 ['meta_key' => 'first_booking_coupon'],
@@ -77,28 +83,34 @@ class AddCouponsController extends Controller
         abort_if(Gate::denies('add_coupon_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
         $firstBookingId = GeneralSetting::where('meta_key', 'first_booking_coupon')->value('meta_value');
         $isFirstBooking = $firstBookingId == $addCoupon->coupon_code;
+        $currentModule = Module::where('default_module', '1')->first();
 
-        return view('admin.addCoupons.edit', compact('addCoupon', 'isFirstBooking'));
+        return view('admin.addCoupons.edit', compact('addCoupon', 'isFirstBooking', 'currentModule'));
     }
 
     public function update(UpdateAddCouponRequest $request, AddCoupon $addCoupon)
     {
-        $request->validate([
-            'coupon_value' => [
-                'required',
-                'numeric',
-                'min:0',
-                'max:99',
-            ],
-            'coupon_type' => 'required|in:percentage',
-        ]);
+        $payload = $request->validated();
+        $payload['coupon_code'] = strtoupper(trim($payload['coupon_code']));
+        $payload['module'] = $request->input('module', $addCoupon->module);
 
-        $addCoupon->update($request->all());
+        $addCoupon->update($payload);
+
+        if ($request->hasFile('coupon_image_file')) {
+            $addCoupon
+                ->addMediaFromRequest('coupon_image_file')
+                ->toMediaCollection('coupon_image');
+        } elseif ($request->boolean('remove_coupon_image')) {
+            $addCoupon->clearMediaCollection('coupon_image');
+        }
+
         if ($request->has('is_first_booking')) {
             GeneralSetting::updateOrCreate(
                 ['meta_key' => 'first_booking_coupon'],
                 ['meta_value' => $addCoupon->coupon_code]
             );
+        } elseif (GeneralSetting::where('meta_key', 'first_booking_coupon')->value('meta_value') === $addCoupon->coupon_code) {
+            GeneralSetting::where('meta_key', 'first_booking_coupon')->delete();
         }
 
         return redirect()->route('admin.add-coupons.index');

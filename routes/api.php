@@ -14,10 +14,16 @@ Route::post('/paypal/webhook', [PaypalStrategy::class, 'handleWebhook'])
     ->name('paypal.webhook');
 
 Route::post('/generateToken', [TokenController::class, 'issueSanctumToken'])
+    ->middleware('throttle:token-issue')
     ->name('token.generate');
 // 'auth:sanctum'
 
-Route::group(['prefix' => 'v1', 'as' => 'api.', 'namespace' => 'Api\V1\Admin'], function () {
+Route::group([
+    'prefix' => 'v1',
+    'as' => 'api.',
+    'namespace' => 'Api\V1\Admin',
+    'middleware' => ['throttle:user-auth'],
+], function () {
     // App Users
     Route::post('/userRegister', 'AppUsersApiController@userRegister')->name('userRegister');
     Route::post('/otpVerification', 'AppUsersApiController@otpVerification');

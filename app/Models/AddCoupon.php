@@ -40,6 +40,7 @@ class AddCoupon extends Model implements HasMedia
         'coupon_value',
         'coupon_description',
         'status',
+        'module',
         'max_uses_per_user',
         'max_uses',
         'created_at',
@@ -56,6 +57,11 @@ class AddCoupon extends Model implements HasMedia
     {
         $this->addMediaConversion('thumb')->fit('crop', 50, 50);
         $this->addMediaConversion('preview')->fit('crop', 120, 120);
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('coupon_image')->singleFile();
     }
 
     public function getCouponExpiryDateAttribute($value)

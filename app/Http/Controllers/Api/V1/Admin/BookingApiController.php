@@ -566,6 +566,10 @@ class BookingApiController extends Controller
                 ->whereIn('status', ['Pending', 'Ongoing', 'Arrived', 'Accepted', 'Completed'])
                 ->count();
 
+            $totalUsedCount = Booking::where('coupon_code', $couponCode)
+                ->whereIn('status', ['Pending', 'Ongoing', 'Arrived', 'Accepted', 'Completed'])
+                ->count();
+
             if ($coupon->max_uses_per_user > 0 && $usedCount >= $coupon->max_uses_per_user) {
                 return $this->addErrorResponse(401, trans('global.coupon_already_used'), '');
             }
@@ -580,7 +584,7 @@ class BookingApiController extends Controller
                 return $this->addErrorResponse(401, trans('global.minimum_amount_required'), '');
             }
 
-            if (! is_null($coupon->max_uses) && $coupon->used_count >= $coupon->max_uses) {
+            if (! is_null($coupon->max_uses) && $totalUsedCount >= $coupon->max_uses) {
                 return $this->addErrorResponse(401, trans('global.coupon_usage_limit_reached'), '');
             }
         }
