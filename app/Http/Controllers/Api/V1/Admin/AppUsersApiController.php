@@ -329,9 +329,18 @@ class AppUsersApiController extends Controller
             $resultOtp = $this->validateOtpFromDB($request->phone, $request->phone_country, $request->otp_value);
             if ($resultOtp['status'] === 'success') {
 
-                $token = Str::random(120);
                 $customer = AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->first();
-                $customer->update(['otp_value' => '0', 'email_verify' => '1', 'phone_verify' => '1', 'status' => '1', 'verified' => '1']);
+                $customerColumns = array_flip(Schema::getColumnListing('app_users'));
+                $customerUpdates = [
+                    'otp_value' => '0',
+                    'email_verify' => '1',
+                    'phone_verify' => '1',
+                    'status' => '1',
+                ];
+                if (isset($customerColumns['verified'])) {
+                    $customerUpdates['verified'] = '1';
+                }
+                $customer->update($customerUpdates);
                 $module = $this->getModuleIdOrDefault($request);
                 $item = Item::where('userid_id', $customer->id)->first();
 

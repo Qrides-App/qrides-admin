@@ -437,6 +437,12 @@ class EnsureAuthSchema extends Command
             });
         }
 
+        if (! Schema::hasColumn('app_users', 'verified')) {
+            Schema::table('app_users', function (Blueprint $table) {
+                $table->boolean('verified')->default(false)->after('status');
+            });
+        }
+
         if (! Schema::hasColumn('app_users', 'document_verify')) {
             Schema::table('app_users', function (Blueprint $table) {
                 $table->boolean('document_verify')->default(false)->after('host_status');
