@@ -85,6 +85,39 @@
                                 </div>
                             </div>
 
+                            <div class="settings-card" style="margin-top: 24px;">
+                                <div class="settings-card__header">
+                                    <div>
+                                        <h3>OTP delivery channels</h3>
+                                        <p>Choose how rider and captain login/signup OTPs are delivered. Use email-only mode while DLT is pending, then re-enable mobile OTP later from here.</p>
+                                    </div>
+                                </div>
+
+                                <div class="mail-settings-grid">
+                                    <div class="form-group">
+                                        <label class="settings-switch">
+                                            <input type="checkbox" name="mobile_otp_enabled" value="1" {{ old('mobile_otp_enabled', $otpSettings['mobile_otp_enabled']) ? 'checked' : '' }}>
+                                            <span class="settings-switch__slider"></span>
+                                            <span class="settings-switch__label">Mobile OTP enabled</span>
+                                        </label>
+                                        <p class="help-block">Uses your configured SMS provider and DLT-compliant SMS templates.</p>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="settings-switch">
+                                            <input type="checkbox" name="email_otp_enabled" value="1" {{ old('email_otp_enabled', $otpSettings['email_otp_enabled']) ? 'checked' : '' }}>
+                                            <span class="settings-switch__slider"></span>
+                                            <span class="settings-switch__label">Email OTP enabled</span>
+                                        </label>
+                                        <p class="help-block">Sends OTP using the SMTP settings saved above.</p>
+                                    </div>
+                                </div>
+
+                                <div class="settings-callout">
+                                    <i class="fa fa-shield"></i>
+                                    <span>At least one OTP channel must stay enabled. If email-only mode is selected, users without a registered email will not be able to receive OTP.</span>
+                                </div>
+                            </div>
+
                             <div class="settings-actions">
                                 <button type="reset" class="btn btn-default settings-btn-secondary">Reset</button>
                                 <button type="submit" class="btn btn-primary settings-btn-primary">Save</button>

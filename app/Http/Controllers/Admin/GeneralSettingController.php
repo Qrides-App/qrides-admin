@@ -494,8 +494,21 @@ class GeneralSettingController extends Controller
             'general_default_phone_country',
             'general_logo',
         ])->pluck('meta_value', 'meta_key')->toArray();
+        $otpSettings = GeneralSetting::whereIn('meta_key', [
+            'mobile_otp_enabled',
+            'email_otp_enabled',
+        ])->pluck('meta_value', 'meta_key')->toArray();
 
-        return view('admin.generalSettings.email-setting.index', compact('mailSettings', 'branding'));
+        $otpSettings = [
+            'mobile_otp_enabled' => array_key_exists('mobile_otp_enabled', $otpSettings)
+                ? filter_var($otpSettings['mobile_otp_enabled'], FILTER_VALIDATE_BOOLEAN)
+                : true,
+            'email_otp_enabled' => array_key_exists('email_otp_enabled', $otpSettings)
+                ? filter_var($otpSettings['email_otp_enabled'], FILTER_VALIDATE_BOOLEAN)
+                : false,
+        ];
+
+        return view('admin.generalSettings.email-setting.index', compact('mailSettings', 'branding', 'otpSettings'));
     }
 
     public function emailSettingUpdate(Request $request)
@@ -506,6 +519,8 @@ class GeneralSettingController extends Controller
 
         $validated = $request->validate([
             'emailwizard_enabled' => 'nullable|boolean',
+            'mobile_otp_enabled' => 'nullable|boolean',
+            'email_otp_enabled' => 'nullable|boolean',
             'mailer_name' => 'required|string|max:120',
             'driver' => 'required|string|max:40',
             'host' => 'required|string|max:190',
@@ -516,8 +531,19 @@ class GeneralSettingController extends Controller
             'password' => 'nullable|string|max:255',
         ]);
 
+        $mobileOtpEnabled = $request->boolean('mobile_otp_enabled');
+        $emailOtpEnabled = $request->boolean('email_otp_enabled');
+
+        if (! $mobileOtpEnabled && ! $emailOtpEnabled) {
+            return redirect()->back()
+                ->withErrors(['email_otp_enabled' => 'Enable at least one OTP delivery channel.'])
+                ->withInput();
+        }
+
         $settingsToPersist = [
             'emailwizard_enabled' => $request->boolean('emailwizard_enabled') ? '1' : '0',
+            'mobile_otp_enabled' => $mobileOtpEnabled ? '1' : '0',
+            'email_otp_enabled' => $emailOtpEnabled ? '1' : '0',
             'emailwizard_mailer_name' => $validated['mailer_name'],
             'emailwizard_driver' => $validated['driver'],
             'host' => $validated['host'],

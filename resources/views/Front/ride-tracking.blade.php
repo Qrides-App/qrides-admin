@@ -216,7 +216,7 @@
                         <div class="tracking-list__item">
                             <label>Vehicle</label>
                             <p id="vehicleDetails">
-                                {{ trim(($snapshot['vehicle']['make'] ?? '') . ' ' . ($snapshot['vehicle']['model'] ?? '')) ?: 'Vehicle details unavailable' }}
+                                {{ trim($snapshot['vehicle']['model'] ?? '') ?: 'Vehicle details unavailable' }}
                                 @if (!empty($snapshot['vehicle']['number']))
                                     <br>{{ $snapshot['vehicle']['number'] }}
                                 @endif
@@ -276,7 +276,7 @@
             document.getElementById('shareExpiresAt').textContent = snapshot.share_expires_at || '--';
             document.getElementById('driverName').textContent = snapshot.driver.name || 'Driver assigned';
             document.getElementById('vehicleDetails').innerHTML =
-                `${[snapshot.vehicle.make, snapshot.vehicle.model].filter(Boolean).join(' ') || 'Vehicle details unavailable'}${snapshot.vehicle.number ? `<br>${snapshot.vehicle.number}` : ''}`;
+                `${snapshot.vehicle.model || 'Vehicle details unavailable'}${snapshot.vehicle.number ? `<br>${snapshot.vehicle.number}` : ''}`;
             document.getElementById('pickupAddress').textContent = snapshot.pickup.address || 'Unavailable';
             document.getElementById('dropoffAddress').textContent = snapshot.dropoff.address || 'Unavailable';
             document.getElementById('rideReference').textContent = snapshot.booking.ride_id || snapshot.booking.token || '--';

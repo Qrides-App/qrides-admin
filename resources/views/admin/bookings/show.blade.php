@@ -121,11 +121,11 @@
                             <table class="table table-bordered table-striped">
                                 <tbody>
                                     <tr>
-                                        <th>{{ trans('booking.type') }}/{{ trans('booking.make') }}/{{ trans('booking.model') }}</th>
+                                        <th>{{ trans('booking.type') }}/{{ trans('booking.model') }}</th>
                                         <td>
                                             <div class="admin-list-stack">
                                                 <strong>{{ $bookingData->item->item_Type->name ?? '-' }}</strong>
-                                                <span>{{ $bookingData->item->vehicleMake->name ?? '-' }} / {{ $bookingData->item->model ?? '-' }}</span>
+                                                <span>{{ $bookingData->item->model ?? '-' }}</span>
                                             </div>
                                         </td>
                                     </tr>

@@ -26,7 +26,7 @@ class ItemsApiController extends Controller
         $data = json_encode($request->all())."\n";
         $validator = Validator::make($request->all(), [
             'token' => 'required|exists:app_users,token',
-            'item_type_id' => 'required|exists:rental_item_types,id',
+            'item_type_id' => 'nullable|exists:rental_item_types,id',
             'item_rating' => 'nullable|numeric',
             'status' => 'nullable|string|max:255',
             'address' => 'nullable|string',
@@ -55,8 +55,16 @@ class ItemsApiController extends Controller
             return $this->addErrorResponse(404, trans('global.item_not_found'), '');
         }
 
+        $resolvedItemTypeId = $request->filled('item_type_id')
+            ? $request->item_type_id
+            : $item->item_type_id;
+
+        if (empty($resolvedItemTypeId)) {
+            return $this->addErrorResponse(422, trans('global.something_wrong'), 'Vehicle type is missing.');
+        }
+
         $itemData = [
-            'item_type_id' => $request->item_type_id,
+            'item_type_id' => $resolvedItemTypeId,
             'status' => $item->status,
             'place_id' => $request->place_id,
             'latitude' => $request->platitude,

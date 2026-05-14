@@ -26,6 +26,7 @@ use App\Models\DriverRechargePlan;
 use App\Models\GeneralSetting;
 use App\Models\HireBooking;
 use App\Models\Media;
+use App\Models\PendingAppUserRegistration;
 use App\Models\Modern\Item;
 use App\Models\Modern\ItemVehicle;
 use App\Models\Payout;
@@ -126,42 +127,79 @@ class AppUsersApiController extends Controller
             if (AppUser::withTrashed()->where('phone', $request->phone)->where('phone_country', $request->phone_country)->exists() || AppUser::withTrashed()->where('email', $email)->exists()) {
                 return $this->errorResponse(409, trans('global.user_alredy_exist'));
             } else {
-                $token = Str::random(120);
-                $customerData = [
-                    'phone' => $request->phone,
-                    'email' => $email,
-                    'first_name' => $request->first_name,
-                    'phone_country' => $request->phone_country,
-                    'fcm' => $request->fcm,
-                    'status' => 1,
-                    'default_country' => $request->default_country,
-                    'user_type' => $request->user_type,
-                    'token' => $token,
-                ];
-                $customer = AppUser::create($customerData);
+                $pendingConflict = PendingAppUserRegistration::query()
+                    ->where(function ($query) use ($request, $email) {
+                        $query->where(function ($phoneQuery) use ($request) {
+                            $phoneQuery->where('phone', $request->phone)
+                                ->where('phone_country', $request->phone_country);
+                        })->orWhere('email', $email);
+                    })
+                    ->first();
 
-                if ($request->user_type == 'driver') {
-
-                    $firestoreData = $this->generateDriverFirestoreData($customer);
-                    $firestoreDoc = $this->storeDriverInFirestore($firestoreData);
-                    // $firestoreDocId = $firestoreDoc->id(); for GRPC
-                    $firestoreDocId = basename($firestoreDoc);
-                    $customer->update(['firestore_id' => $firestoreDocId]);
-                    $customer['firestore_id'] = $firestoreDocId;
+                if ($pendingConflict && $pendingConflict->expires_at && $pendingConflict->expires_at->lt(Carbon::now())) {
+                    $pendingConflict->delete();
+                    $pendingConflict = null;
                 }
 
-                $otp = $this->generateOtp($request->phone, $request->phone_country);
-                $this->sendAllNotifications(['OTP' => $otp], $customer->id, 2);
-                $valuesArray = $customer->only(['first_name', 'last_name', 'email']);
-                $valuesArray['phone'] = $customer->phone_country.$customer->phone;
-                $settings = GeneralSetting::whereIn('meta_key', ['general_email'])->get()->keyBy('meta_key');
-                $general_email = $settings['general_email']->meta_value ?? null;
-                $valuesArray['support_email'] = $general_email;
-                $this->sendAllNotifications($valuesArray, $customer->id, 1);
-                $customer->update(['otp_value' => $otp]);
-                $customer['otp_value'] = '';
+                if (
+                    $pendingConflict &&
+                    (
+                        $pendingConflict->phone !== $request->phone ||
+                        $pendingConflict->phone_country !== $request->phone_country ||
+                        strtolower((string) $pendingConflict->email) !== $email
+                    )
+                ) {
+                    return $this->errorResponse(409, trans('global.user_alredy_exist'));
+                }
 
-                return $this->successResponse(200, trans('global.user_created_successfully'), $customer);
+                $pendingToken = $pendingConflict?->token ?: Str::random(120);
+                $pending = PendingAppUserRegistration::updateOrCreate(
+                    [
+                        'phone' => $request->phone,
+                        'phone_country' => $request->phone_country,
+                    ],
+                    [
+                        'first_name' => $request->first_name,
+                        'last_name' => $request->last_name,
+                        'email' => $email,
+                        'default_country' => $request->default_country,
+                        'user_type' => $request->user_type,
+                        'fcm' => $request->fcm,
+                        'device_id' => $request->device_id,
+                        'token' => $pendingToken,
+                        'expires_at' => Carbon::now()->addMinutes(10),
+                    ]
+                );
+
+                $otp = $this->generateOtp($request->phone, $request->phone_country);
+                $otpSendResult = $this->sendPendingRegistrationOtpNotifications($pending, $otp);
+                if (! $otpSendResult['ok']) {
+                    return $this->errorResponse(422, $otpSendResult['error']);
+                }
+                $pending->update([
+                    'otp_channel' => $otpSendResult['channel'],
+                    'otp_sent_at' => Carbon::now(),
+                    'expires_at' => Carbon::now()->addMinutes(10),
+                ]);
+
+                $responseData = [
+                    'first_name' => $pending->first_name,
+                    'last_name' => $pending->last_name,
+                    'email' => $pending->email,
+                    'phone' => $pending->phone,
+                    'phone_country' => $pending->phone_country,
+                    'default_country' => $pending->default_country,
+                    'user_type' => $pending->user_type,
+                    'token' => $pending->token,
+                    'otp_value' => '',
+                    'reset_token' => '',
+                    'status' => 'pending',
+                    'otp_delivery_channel' => $otpSendResult['channel'],
+                    'otp_target_masked' => $otpSendResult['target_masked'],
+                    'otp_delivery_hint' => $otpSendResult['hint'],
+                ];
+
+                return $this->successResponse(200, trans('global.OTP_sent_successfully'), $responseData);
             }
         } catch (\Exception $e) {
             return $this->errorResponse(401, trans('global.something_wrong'));
@@ -191,6 +229,270 @@ class AppUsersApiController extends Controller
         $this->logOtpForTesting('phone', $countryCode.$phoneNumber, $otp);
 
         return $otp;
+    }
+
+    protected function isMobileOtpEnabled(): bool
+    {
+        $raw = GeneralSetting::getMetaValue('mobile_otp_enabled');
+
+        if ($raw === null || $raw === '') {
+            return true;
+        }
+
+        return filter_var($raw, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    protected function isEmailOtpEnabled(): bool
+    {
+        $raw = GeneralSetting::getMetaValue('email_otp_enabled');
+
+        if ($raw === null || $raw === '') {
+            return false;
+        }
+
+        return filter_var($raw, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    protected function resolveAuthOtpChannels(): array
+    {
+        $mobile = $this->isMobileOtpEnabled();
+        $email = $this->isEmailOtpEnabled();
+
+        if (! $mobile && ! $email) {
+            $mobile = true;
+        }
+
+        return [
+            'mobile' => $mobile,
+            'email' => $email,
+        ];
+    }
+
+    protected function maskEmailForOtp(?string $email): string
+    {
+        $email = trim((string) $email);
+        if ($email === '' || ! str_contains($email, '@')) {
+            return '';
+        }
+
+        [$local, $domain] = explode('@', $email, 2);
+        $visible = substr($local, 0, 1);
+
+        return $visible.str_repeat('*', max(strlen($local) - 1, 1)).'@'.$domain;
+    }
+
+    protected function buildOtpDeliveryMeta($user, array $channels): array
+    {
+        if ($channels['email'] && ! $channels['mobile']) {
+            $maskedTarget = $this->maskEmailForOtp($user->email);
+
+            return [
+                'channel' => 'email',
+                'target_masked' => $maskedTarget,
+                'hint' => $maskedTarget !== ''
+                    ? 'Enter OTP sent to your registered email '.$maskedTarget
+                    : 'Enter OTP sent to your registered email',
+            ];
+        }
+
+        if ($channels['email'] && $channels['mobile']) {
+            $maskedTarget = $this->maskEmailForOtp($user->email);
+
+            return [
+                'channel' => 'email_and_mobile',
+                'target_masked' => $maskedTarget !== '' ? $maskedTarget : (string) $user->phone,
+                'hint' => $maskedTarget !== ''
+                    ? 'Enter OTP sent to your email '.$maskedTarget.' and phone number'
+                    : 'Enter OTP sent to your phone number',
+            ];
+        }
+
+        return [
+            'channel' => 'mobile',
+            'target_masked' => (string) $user->phone,
+            'hint' => 'Enter OTP sent to your phone number',
+        ];
+    }
+
+    protected function sendPendingRegistrationOtpNotifications(PendingAppUserRegistration $pending, string $otp): array
+    {
+        $channels = $this->resolveAuthOtpChannels();
+        $deliveryMeta = $this->buildOtpDeliveryMeta($pending, $channels);
+
+        if ($channels['email'] && empty($pending->email) && ! $channels['mobile']) {
+            return [
+                'ok' => false,
+                'error' => 'Email OTP is enabled, but this signup has no registered email address.',
+            ];
+        }
+
+        $delivered = false;
+        $errors = [];
+        $appName = trim((string) (GeneralSetting::getMetaValue('general_name') ?: config('app.name')));
+        $subject = ($appName !== '' ? $appName : 'QRides').' OTP Verification';
+        $smsMessage = 'Your OTP is '.$otp.'. It is valid for 10 minutes.';
+
+        if ($channels['mobile']) {
+            try {
+                $phone = ltrim((string) $pending->phone_country, '+').(string) $pending->phone;
+                $this->sendSMS($subject, $smsMessage, $phone);
+                $delivered = true;
+            } catch (\Throwable $exception) {
+                $errors[] = $exception->getMessage();
+            }
+        }
+
+        if ($channels['email'] && ! empty($pending->email)) {
+            $body = '
+                <h2 style="margin:0 0 16px;">OTP Verification</h2>
+                <p>Hello '.e(trim((string) ($pending->first_name ?: 'User'))).',</p>
+                <p>Your one time password is:</p>
+                <div style="font-size:24px;font-weight:700;letter-spacing:4px;margin:16px 0;">'.e($otp).'</div>
+                <p>This OTP is valid for 10 minutes.</p>
+                <p>If you did not request this, please ignore this email.</p>
+            ';
+
+            $mailResult = $this->sendMail($subject, $body, $pending->email);
+            if (str_starts_with($mailResult, 'Mail sent successfully')) {
+                $delivered = true;
+            } else {
+                $errors[] = $mailResult;
+            }
+        }
+
+        if (! $delivered) {
+            return [
+                'ok' => false,
+                'error' => count($errors) > 0
+                    ? 'OTP delivery failed. '.implode(' ', $errors)
+                    : 'OTP delivery failed. Please check SMS/SMTP configuration.',
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'channel' => $deliveryMeta['channel'],
+            'target_masked' => $deliveryMeta['target_masked'],
+            'hint' => $deliveryMeta['hint'],
+        ];
+    }
+
+    protected function createRealUserFromPendingSignup(PendingAppUserRegistration $pending, string $otpChannel): AppUser
+    {
+        $customerData = [
+            'phone' => $pending->phone,
+            'email' => strtolower((string) $pending->email),
+            'first_name' => $pending->first_name,
+            'last_name' => $pending->last_name,
+            'phone_country' => $pending->phone_country,
+            'fcm' => $pending->fcm,
+            'status' => 1,
+            'default_country' => $pending->default_country,
+            'user_type' => $pending->user_type,
+            'token' => Str::random(120),
+            'device_id' => $pending->device_id,
+            'email_verify' => in_array($otpChannel, ['email', 'email_and_mobile'], true) ? 1 : 0,
+            'phone_verify' => in_array($otpChannel, ['mobile', 'email_and_mobile'], true) ? 1 : 0,
+            'verified' => 1,
+            'otp_value' => '0',
+            'reset_token' => '0',
+        ];
+
+        if (Schema::hasColumn('app_users', 'otp_expires_at')) {
+            $customerData['otp_expires_at'] = null;
+        }
+
+        $customer = AppUser::create($customerData);
+
+        if ($pending->user_type === 'driver') {
+            $firestoreData = $this->generateDriverFirestoreData($customer);
+            $firestoreDoc = $this->storeDriverInFirestore($firestoreData);
+            $firestoreDocId = basename($firestoreDoc);
+            $customer->update(['firestore_id' => $firestoreDocId]);
+            $customer['firestore_id'] = $firestoreDocId;
+        }
+
+        try {
+            $valuesArray = $customer->only(['first_name', 'last_name', 'email']);
+            $valuesArray['phone'] = $customer->phone_country.$customer->phone;
+            $settings = GeneralSetting::whereIn('meta_key', ['general_email'])->get()->keyBy('meta_key');
+            $generalEmail = $settings['general_email']->meta_value ?? null;
+            $valuesArray['support_email'] = $generalEmail;
+            $this->sendAllNotifications($valuesArray, $customer->id, 1);
+        } catch (\Throwable $exception) {
+            Log::warning('Welcome notification failed after OTP verification.', [
+                'phone' => $pending->phone,
+                'phone_country' => $pending->phone_country,
+                'message' => $exception->getMessage(),
+            ]);
+        }
+
+        return $customer;
+    }
+
+    protected function sendAuthOtpNotifications(AppUser $user, string $otp, int $smsTemplateId = 2): array
+    {
+        $channels = $this->resolveAuthOtpChannels();
+        $deliveryMeta = $this->buildOtpDeliveryMeta($user, $channels);
+
+        if ($channels['email'] && empty($user->email) && ! $channels['mobile']) {
+            return [
+                'ok' => false,
+                'error' => 'Email OTP is enabled, but this account has no registered email address.',
+            ];
+        }
+
+        $delivered = false;
+        $errors = [];
+
+        if ($channels['mobile']) {
+            try {
+                $this->sendAllNotifications([
+                    'OTP' => $otp,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                ], $user->id, $smsTemplateId);
+                $delivered = true;
+            } catch (\Throwable $exception) {
+                $errors[] = $exception->getMessage();
+            }
+        }
+
+        if ($channels['email'] && ! empty($user->email)) {
+            $appName = trim((string) (GeneralSetting::getMetaValue('general_name') ?: config('app.name')));
+            $subject = ($appName !== '' ? $appName : 'QRides').' OTP Verification';
+            $body = '
+                <h2 style="margin:0 0 16px;">OTP Verification</h2>
+                <p>Hello '.e(trim((string) ($user->first_name ?: 'User'))).',</p>
+                <p>Your one time password is:</p>
+                <div style="font-size:24px;font-weight:700;letter-spacing:4px;margin:16px 0;">'.e($otp).'</div>
+                <p>This OTP is valid for 10 minutes.</p>
+                <p>If you did not request this, please ignore this email.</p>
+            ';
+
+            $mailResult = $this->sendMail($subject, $body, $user->email);
+            if (str_starts_with($mailResult, 'Mail sent successfully')) {
+                $delivered = true;
+            } else {
+                $errors[] = $mailResult;
+            }
+        }
+
+        if (! $delivered) {
+            return [
+                'ok' => false,
+                'error' => count($errors) > 0
+                    ? 'OTP delivery failed. '.implode(' ', $errors)
+                    : 'OTP delivery failed. Please check SMS/SMTP configuration.',
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'channel' => $deliveryMeta['channel'],
+            'target_masked' => $deliveryMeta['target_masked'],
+            'hint' => $deliveryMeta['hint'],
+        ];
     }
 
     protected function logOtpForTesting(string $channel, string $recipient, string $otp): void
@@ -268,7 +570,57 @@ class AppUsersApiController extends Controller
         return Item::create($data);
     }
 
-    public function validateOtpFromDB($phoneNumber, $countryCode, $inputOtp)
+    protected function prepareAuthenticatedUserPayload(AppUser $customer, Request $request): AppUser
+    {
+        $module = $this->getModuleIdOrDefault($request);
+        $remainingItems = $this->checkRemainingItems($customer->id, $module);
+        $customer['remaining_items'] = $remainingItems ?? 0;
+
+        $isDriverFlow = $request->user_type === 'driver' || $customer->user_type === 'driver';
+        if (! $isDriverFlow) {
+            return $customer;
+        }
+
+        $item = Item::where('userid_id', $customer->id)->first();
+        if (! $item) {
+            $item = $this->createPlaceholderDriverItem($customer, $module);
+        }
+
+        if ($item) {
+            $customer['item_id'] = $item->id;
+            $customer['item_type_id'] = $item->item_type_id;
+        }
+
+        $docunmentsFields = [
+            'driving_licence_front_status',
+            'driving_licence_back_status',
+            'aadhaar_front_status',
+            'aadhaar_back_status',
+            'pan_card_status',
+            'vehicle_insurance_doc_status',
+        ];
+
+        $metaStatuses = AppUserMeta::where('user_id', $customer->id)
+            ->whereIn('meta_key', $docunmentsFields)
+            ->pluck('meta_value', 'meta_key');
+
+        $statuses = [];
+        foreach ($docunmentsFields as $field) {
+            $statuses[] = $metaStatuses[$field] ?? '';
+        }
+
+        if (in_array('rejected', $statuses, true)) {
+            $customer['verification_document_status'] = 'rejected';
+        } elseif (count(array_filter($statuses, fn ($status) => $status !== 'approved')) > 0) {
+            $customer['verification_document_status'] = 'pending';
+        } else {
+            $customer['verification_document_status'] = 'approved';
+        }
+
+        return $customer;
+    }
+
+    public function validateOtpFromDB($phoneNumber, $countryCode, $inputOtp, bool $consumeOtp = true)
     {
 
         $otpRecord = DB::table('app_user_otps')
@@ -296,13 +648,16 @@ class AppUsersApiController extends Controller
 
         if ($otpRecord->otp_code === $inputOtp) {
 
-            DB::table('app_user_otps')
-                ->where('id', $otpRecord->id)
-                ->delete();
+            if ($consumeOtp) {
+                DB::table('app_user_otps')
+                    ->where('id', $otpRecord->id)
+                    ->delete();
+            }
 
             return [
                 'status' => trans('global.success'),
                 'message' => trans('global.OTP_varified'),
+                'otp_id' => $otpRecord->id,
             ];
         } else {
             return [
@@ -312,24 +667,52 @@ class AppUsersApiController extends Controller
         }
     }
 
+    protected function promotePendingRegistration(
+        PendingAppUserRegistration $pending,
+        Request $request,
+        ?int $otpRecordId = null
+    ): AppUser {
+        return DB::transaction(function () use ($pending, $request, $otpRecordId) {
+            $customer = $this->createRealUserFromPendingSignup(
+                $pending,
+                $pending->otp_channel ?: 'mobile'
+            );
+
+            $pending->delete();
+
+            if ($otpRecordId) {
+                DB::table('app_user_otps')
+                    ->where('id', $otpRecordId)
+                    ->delete();
+            }
+
+            return $this->prepareAuthenticatedUserPayload($customer->fresh(), $request);
+        });
+    }
+
     public function otpVerification(Request $request)
     {
-        // try {
-        $validator = Validator::make($request->all(), [
-            'phone' => ['required', 'numeric', 'min:9'],
-            'otp_value' => ['required'],
-            'phone_country' => ['required'],
-        ]);
+        try {
+            $validator = Validator::make($request->all(), [
+                'phone' => ['required', 'numeric', 'min:9'],
+                'otp_value' => ['required'],
+                'phone_country' => ['required'],
+            ]);
 
-        if ($validator->fails()) {
-            return $this->errorComputing($validator);
-        }
+            if ($validator->fails()) {
+                return $this->errorComputing($validator);
+            }
 
-        if (AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->exists()) {
-            $resultOtp = $this->validateOtpFromDB($request->phone, $request->phone_country, $request->otp_value);
-            if ($resultOtp['status'] === 'success') {
+            $customer = AppUser::where('phone', $request->phone)
+                ->where('phone_country', $request->phone_country)
+                ->first();
 
-                $customer = AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->first();
+            if ($customer) {
+                $resultOtp = $this->validateOtpFromDB($request->phone, $request->phone_country, $request->otp_value);
+                if ($resultOtp['status'] !== 'success') {
+                    return $this->errorResponse(401, trans('global.Wrong_OTP'));
+                }
+
                 $customerColumns = array_flip(Schema::getColumnListing('app_users'));
                 $customerUpdates = [
                     'otp_value' => '0',
@@ -341,31 +724,43 @@ class AppUsersApiController extends Controller
                     $customerUpdates['verified'] = '1';
                 }
                 $customer->update($customerUpdates);
-                $module = $this->getModuleIdOrDefault($request);
-                $item = Item::where('userid_id', $customer->id)->first();
 
-                if (! $item) {
-                    $item = $this->createPlaceholderDriverItem($customer, $module);
-                }
-
-                $customer['item_id'] = $item->id;
-
-                $remainingItems = $this->checkRemainingItems($customer->id, $module);
-
-                if ($remainingItems) {
-                    $customer['remaining_items'] = $remainingItems;
-                } else {
-                    $customer['remaining_items'] = 0;
-                }
+                $customer = $this->prepareAuthenticatedUserPayload($customer->fresh(), $request);
 
                 return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
-            } else {
+            }
+
+            $pending = PendingAppUserRegistration::where('phone', $request->phone)
+                ->where('phone_country', $request->phone_country)
+                ->first();
+
+            if (! $pending) {
+                return $this->errorResponse(404, trans('global.User_not_register'));
+            }
+
+            if ($pending->expires_at && $pending->expires_at->lt(Carbon::now())) {
+                $pending->delete();
+
+                return $this->errorResponse(401, trans('global.OTPhas_expired'));
+            }
+
+            $resultOtp = $this->validateOtpFromDB(
+                $request->phone,
+                $request->phone_country,
+                $request->otp_value,
+                false
+            );
+            if ($resultOtp['status'] !== 'success') {
                 return $this->errorResponse(401, trans('global.Wrong_OTP'));
             }
-        } else {
-            return $this->errorResponse(404, trans('global.User_not_register'));
-        }
-        try {
+
+            $customer = $this->promotePendingRegistration(
+                $pending,
+                $request,
+                $resultOtp['otp_id'] ?? null
+            );
+
+            return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
         } catch (\Exception $e) {
             return $this->errorResponse(401, trans('global.something_wrong'));
         }
@@ -564,114 +959,112 @@ class AppUsersApiController extends Controller
             'user_type' => $request->user_type,
         ]);
 
-        if (AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->exists()) {
+        $customer = AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->first();
+        if ($customer) {
             $resultOtp = $this->validateOtpFromDB($request->phone, $request->phone_country, $request->otp_value);
-            if ($resultOtp['status'] === 'success') {
-
-                $token = Str::random(120);
-                $customer = AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->first();
-                if ($customer->status != 1) {
-                    $this->logMobileLoginEvent('Mobile login blocked because account is inactive.', [
-                        'phone' => $request->phone,
-                        'phone_country' => $request->phone_country,
-                        'user_id' => $customer->id,
-                    ], 'warning');
-                    return $this->successResponse(200, trans('global.account_inactive'), $customer);
-                }
-
-                $loginUpdate = [
-                    'token' => $token,
-                    'reset_token' => 0,
-                ];
-                if (Schema::hasColumn('app_users', 'otp_expires_at')) {
-                    $loginUpdate['otp_expires_at'] = null;
-                }
-                $customer->update($loginUpdate);
-                if ($request->user_type == 'driver' and $customer->user_type == 'user') {
-                    $firestoreData = $this->generateDriverFirestoreData($customer);
-                    $firestoreDoc = $this->storeDriverInFirestore($firestoreData);
-                    //  $firestoreDocId = $firestoreDoc->id(); // For GRPC
-                    $firestoreDocId = basename($firestoreDoc);
-                    $customer->update(['firestore_id' => $firestoreDocId]);
-                    $customer['firestore_id'] = $firestoreDocId;
-                    $customer->update([
-                        'user_type' => 'driver',
-                        'host_status' => 2,
-                    ]);
-                }
-
-                $module = $this->getModuleIdOrDefault($request);
-                $remainingItems = $this->checkRemainingItems($customer->id, $module);
-
-                $customer['remaining_items'] = $remainingItems ?? 0;
-
-                if ($request->user_type == 'driver') {
-                    $item = Item::where('userid_id', $customer->id)->first();
-
-                    if (! $item) {
-                        $item = $this->createPlaceholderDriverItem($customer, $module);
-                    }
-
-                    if ($item) {
-                        $customer['item_id'] = $item->id;
-                        $customer['item_type_id'] = $item->item_type_id;
-                    }
-                }
-
-                $docunmentsFields = [
-                    'driving_licence_front_status',
-                    'driving_licence_back_status',
-                    'aadhaar_front_status',
-                    'aadhaar_back_status',
-                    'pan_card_status',
-                    'vehicle_insurance_doc_status',
-                ];
-
-                $metaStatuses = AppUserMeta::where('user_id', $customer->id)
-                    ->whereIn('meta_key', $docunmentsFields)
-                    ->pluck('meta_value', 'meta_key');
-
-                $statuses = [];
-                foreach ($docunmentsFields as $field) {
-                    $statuses[] = $metaStatuses[$field] ?? '';
-                }
-
-                if (in_array('rejected', $statuses)) {
-                    $finalStatus = 'rejected';
-                } elseif (count(array_filter($statuses, fn ($s) => $s != 'approved')) > 0) {
-                    $finalStatus = 'pending';
-                } else {
-                    $finalStatus = 'approved';
-                }
-
-                //   $customer['verification_document_status'] = $customer->document_verify == 1 ? 'approved' : 'pending';
-                $customer['verification_document_status'] = $finalStatus;
-
-                $this->logMobileLoginEvent('Mobile login completed successfully.', [
-                    'phone' => $request->phone,
-                    'phone_country' => $request->phone_country,
-                    'user_id' => $customer->id,
-                    'user_type' => $customer->user_type,
-                ]);
-
-                return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
-            } else {
-                $customer = AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->first();
+            if ($resultOtp['status'] !== 'success') {
                 $this->logMobileLoginEvent('Mobile login OTP validation failed.', [
                     'phone' => $request->phone,
                     'phone_country' => $request->phone_country,
                     'user_id' => optional($customer)->id,
                     'reason' => $resultOtp['message'] ?? 'unknown',
                 ], 'warning');
+
                 return $this->errorResponse(401, trans('global.Wrong_OTP'));
             }
-        } else {
-            $this->logMobileLoginEvent('Mobile login rejected because user was not found.', [
+
+            $token = Str::random(120);
+            if ($customer->status != 1) {
+                $this->logMobileLoginEvent('Mobile login blocked because account is inactive.', [
+                    'phone' => $request->phone,
+                    'phone_country' => $request->phone_country,
+                    'user_id' => $customer->id,
+                ], 'warning');
+                return $this->successResponse(200, trans('global.account_inactive'), $customer);
+            }
+
+            $loginUpdate = [
+                'token' => $token,
+                'reset_token' => 0,
+            ];
+            if (Schema::hasColumn('app_users', 'otp_expires_at')) {
+                $loginUpdate['otp_expires_at'] = null;
+            }
+            $customer->update($loginUpdate);
+            if ($request->user_type == 'driver' and $customer->user_type == 'user') {
+                $firestoreData = $this->generateDriverFirestoreData($customer);
+                $firestoreDoc = $this->storeDriverInFirestore($firestoreData);
+                //  $firestoreDocId = $firestoreDoc->id(); // For GRPC
+                $firestoreDocId = basename($firestoreDoc);
+                $customer->update(['firestore_id' => $firestoreDocId]);
+                $customer['firestore_id'] = $firestoreDocId;
+                $customer->update([
+                    'user_type' => 'driver',
+                    'host_status' => 2,
+                ]);
+                $customer->refresh();
+            }
+
+            $customer = $this->prepareAuthenticatedUserPayload($customer->fresh(), $request);
+
+            $this->logMobileLoginEvent('Mobile login completed successfully.', [
                 'phone' => $request->phone,
                 'phone_country' => $request->phone_country,
-            ], 'warning');
-            return $this->errorResponse(404, trans('global.User_not_register'));
+                'user_id' => $customer->id,
+                'user_type' => $customer->user_type,
+            ]);
+
+            return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
         }
+
+        $pending = PendingAppUserRegistration::where('phone', $request->phone)
+            ->where('phone_country', $request->phone_country)
+            ->first();
+
+        if ($pending) {
+            if ($pending->expires_at && $pending->expires_at->lt(Carbon::now())) {
+                $pending->delete();
+
+                return $this->errorResponse(401, trans('global.OTPhas_expired'));
+            }
+
+            $resultOtp = $this->validateOtpFromDB(
+                $request->phone,
+                $request->phone_country,
+                $request->otp_value,
+                false
+            );
+            if ($resultOtp['status'] !== 'success') {
+                $this->logMobileLoginEvent('Pending signup OTP validation failed during mobile login.', [
+                    'phone' => $request->phone,
+                    'phone_country' => $request->phone_country,
+                    'reason' => $resultOtp['message'] ?? 'unknown',
+                ], 'warning');
+
+                return $this->errorResponse(401, trans('global.Wrong_OTP'));
+            }
+
+            $customer = $this->promotePendingRegistration(
+                $pending,
+                $request,
+                $resultOtp['otp_id'] ?? null
+            );
+
+            $this->logMobileLoginEvent('Pending signup promoted during mobile login.', [
+                'phone' => $request->phone,
+                'phone_country' => $request->phone_country,
+                'user_id' => $customer->id,
+                'user_type' => $customer->user_type,
+            ]);
+
+            return $this->successResponse(200, trans('global.Login_Sucessfully'), $customer);
+        }
+
+        $this->logMobileLoginEvent('Mobile login rejected because user was not found.', [
+            'phone' => $request->phone,
+            'phone_country' => $request->phone_country,
+        ], 'warning');
+        return $this->errorResponse(404, trans('global.User_not_register'));
     }
 
     public function sendMobileLoginOtp(Request $request)
@@ -698,11 +1091,60 @@ class AppUsersApiController extends Controller
         $user = AppUser::where('phone', $request->input('phone'))->where('phone_country', $request->phone_country)->first();
 
         if (! $user) {
-            $this->logMobileLoginEvent('Mobile login OTP request rejected because user was not found.', [
-                'phone' => $request->phone,
-                'phone_country' => $request->phone_country,
-            ], 'warning');
-            return $this->addErrorResponse(400, trans('global.User_not_found'), '');
+            $pending = PendingAppUserRegistration::where('phone', $request->phone)
+                ->where('phone_country', $request->phone_country)
+                ->first();
+
+            if (! $pending) {
+                $this->logMobileLoginEvent('Mobile login OTP request rejected because user was not found.', [
+                    'phone' => $request->phone,
+                    'phone_country' => $request->phone_country,
+                ], 'warning');
+                return $this->addErrorResponse(400, trans('global.User_not_found'), '');
+            }
+
+            if ($pending->expires_at && $pending->expires_at->lt(Carbon::now())) {
+                $pending->delete();
+
+                return $this->addErrorResponse(410, trans('global.OTPhas_expired'), '');
+            }
+
+            $otp = $this->generateOtp($pending->phone, $pending->phone_country);
+            $this->logMobileLoginEvent('Pending signup OTP generated from login request.', [
+                'phone' => $pending->phone,
+                'phone_country' => $pending->phone_country,
+                'otp' => $otp,
+            ]);
+
+            $otpSendResult = $this->sendPendingRegistrationOtpNotifications($pending, $otp);
+            if (! $otpSendResult['ok']) {
+                return $this->addErrorResponse(422, $otpSendResult['error'], '');
+            }
+
+            $pending->update([
+                'otp_channel' => $otpSendResult['channel'],
+                'otp_sent_at' => Carbon::now(),
+                'expires_at' => Carbon::now()->addMinutes(10),
+            ]);
+
+            $filteredPending = [
+                'phone' => $pending->phone,
+                'phone_country' => $pending->phone_country,
+                'email' => $pending->email,
+                'reset_token' => '',
+                'token' => $pending->token,
+                'otp_delivery_channel' => $otpSendResult['channel'],
+                'otp_target_masked' => $otpSendResult['target_masked'],
+                'otp_delivery_hint' => $otpSendResult['hint'],
+                'status' => 'pending',
+            ];
+
+            return $this->successResponse(200, trans('global.OTP_sent_successfully'), $filteredPending);
+        }
+
+        $channels = $this->resolveAuthOtpChannels();
+        if ($channels['email'] && ! $channels['mobile'] && empty($user->email)) {
+            return $this->addErrorResponse(422, 'Email OTP is enabled, but no email is registered for this account.', '');
         }
 
         $otp = $this->generateOtp($user->phone, $user->phone_country);
@@ -713,15 +1155,14 @@ class AppUsersApiController extends Controller
             'otp' => $otp,
         ]);
 
-        $valuesArray = ['OTP' => $otp, 'first_name' => $user->first_name, 'last_name' => $user->last_name];
-        $template_id = 2;
-        try {
-            $this->sendAllNotifications($valuesArray, $user->id, $template_id);
-        } catch (\Throwable $exception) {
-            Log::warning('Login OTP notification failed; OTP was still generated.', [
+        $otpSendResult = $this->sendAuthOtpNotifications($user, $otp, 2);
+        if (! $otpSendResult['ok']) {
+            Log::warning('Login OTP delivery failed.', [
                 'user_id' => $user->id,
-                'message' => $exception->getMessage(),
+                'message' => $otpSendResult['error'],
             ]);
+
+            return $this->addErrorResponse(422, $otpSendResult['error'], '');
         }
 
         $otpUpdate = [
@@ -742,9 +1183,13 @@ class AppUsersApiController extends Controller
         $filteredUser = $user->only([
             'phone',
             'phone_country',
+            'email',
             'reset_token',
             'token',
         ]);
+        $filteredUser['otp_delivery_channel'] = $otpSendResult['channel'];
+        $filteredUser['otp_target_masked'] = $otpSendResult['target_masked'];
+        $filteredUser['otp_delivery_hint'] = $otpSendResult['hint'];
 
         return $this->successResponse(200, trans('global.OTP_sent_successfully'), $filteredUser);
     }
@@ -1094,10 +1539,18 @@ class AppUsersApiController extends Controller
             return $this->errorComputing($validator);
         }
 
-        if (AppUser::where('email', $request->email)->exists()) {
+        $email = strtolower((string) $request->email);
+        $hasPending = PendingAppUserRegistration::where('email', $email)
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', Carbon::now());
+            })
+            ->exists();
+
+        if (AppUser::where('email', $email)->exists() || $hasPending) {
 
             return $this->successResponse(200, trans('global.email_already_exists'), [
-                'email' => $request->email,
+                'email' => $email,
             ]);
         } else {
 
@@ -1117,7 +1570,15 @@ class AppUsersApiController extends Controller
             return $this->errorComputing($validator);
         }
 
-        if (AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->exists()) {
+        $hasPending = PendingAppUserRegistration::where('phone', $request->phone)
+            ->where('phone_country', $request->phone_country)
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', Carbon::now());
+            })
+            ->exists();
+
+        if (AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->exists() || $hasPending) {
             return $this->successResponse(200, trans('global.Phone_number_is_avilable'), ['phone' => $request->phone]);
         } else {
 
@@ -1150,18 +1611,53 @@ class AppUsersApiController extends Controller
             ->first();
 
         if (! $user) {
-            $otp = $this->generateOtp($request->phone, $request->phone_country);
-            $this->logMobileLoginEvent('Resend OTP generated without matched user record.', [
-                'phone' => $request->phone,
-                'phone_country' => $request->phone_country,
+            $pending = PendingAppUserRegistration::where('phone', $request->phone)
+                ->where('phone_country', $request->phone_country)
+                ->first();
+
+            if (! $pending) {
+                return $this->addErrorResponse(400, trans('global.User_not_found'), '');
+            }
+
+            if ($pending->expires_at && $pending->expires_at->lt(Carbon::now())) {
+                $pending->delete();
+
+                return $this->addErrorResponse(410, trans('global.OTPhas_expired'), '');
+            }
+
+            $otp = $this->generateOtp($pending->phone, $pending->phone_country);
+            $this->logMobileLoginEvent('Resend OTP generated for pending signup.', [
+                'phone' => $pending->phone,
+                'phone_country' => $pending->phone_country,
                 'otp' => $otp,
             ], 'warning');
 
+            $otpSendResult = $this->sendPendingRegistrationOtpNotifications($pending, $otp);
+            if (! $otpSendResult['ok']) {
+                return $this->addErrorResponse(422, $otpSendResult['error'], '');
+            }
+
+            $pending->update([
+                'otp_channel' => $otpSendResult['channel'],
+                'otp_sent_at' => Carbon::now(),
+                'expires_at' => Carbon::now()->addMinutes(10),
+            ]);
+
             return $this->successResponse(200, trans('global.OTP_sent_successfully'), [
                 'otp_value' => '',
-                'phone' => $request->phone,
-                'phone_country' => $request->phone_country,
+                'phone' => $pending->phone,
+                'phone_country' => $pending->phone_country,
+                'email' => $pending->email,
+                'otp_delivery_channel' => $otpSendResult['channel'],
+                'otp_target_masked' => $otpSendResult['target_masked'],
+                'otp_delivery_hint' => $otpSendResult['hint'],
+                'status' => 'pending',
             ]);
+        }
+
+        $channels = $this->resolveAuthOtpChannels();
+        if ($channels['email'] && ! $channels['mobile'] && empty($user->email)) {
+            return $this->addErrorResponse(422, 'Email OTP is enabled, but no email is registered for this account.', '');
         }
 
         $otp = $this->generateOtp($user->phone, $user->phone_country);
@@ -1172,25 +1668,23 @@ class AppUsersApiController extends Controller
             'otp' => $otp,
         ]);
 
-        $valuesArray = [
-            'OTP' => $otp,
-            'first_name' => $user->first_name ?? '',
-            'last_name' => $user->last_name ?? '',
-        ];
-        $template_id = 2;
-        try {
-            $this->sendAllNotifications($valuesArray, $user->id, $template_id);
-        } catch (\Throwable $exception) {
-            Log::warning('Resend login OTP notification failed; OTP was still generated.', [
+        $otpSendResult = $this->sendAuthOtpNotifications($user, $otp, 2);
+        if (! $otpSendResult['ok']) {
+            Log::warning('Resend login OTP delivery failed.', [
                 'user_id' => $user->id,
-                'message' => $exception->getMessage(),
+                'message' => $otpSendResult['error'],
             ]);
+
+            return $this->addErrorResponse(422, $otpSendResult['error'], '');
         }
 
-        $user->update([
+        $otpUpdate = [
             'reset_token' => $otp,
-            'otp_expires_at' => Carbon::now()->addMinutes(5),
-        ]);
+        ];
+        if (Schema::hasColumn('app_users', 'otp_expires_at')) {
+            $otpUpdate['otp_expires_at'] = Carbon::now()->addMinutes(5);
+        }
+        $user->update($otpUpdate);
 
         $this->logMobileLoginEvent('Resend login OTP stored successfully.', [
             'phone' => $user->phone,
@@ -1202,6 +1696,10 @@ class AppUsersApiController extends Controller
             'otp_value' => '',
             'phone' => $user->phone,
             'phone_country' => $user->phone_country,
+            'email' => $user->email,
+            'otp_delivery_channel' => $otpSendResult['channel'],
+            'otp_target_masked' => $otpSendResult['target_masked'],
+            'otp_delivery_hint' => $otpSendResult['hint'],
         ];
 
         return $this->successResponse(200, trans('global.OTP_sent_successfully'), $responseData);
@@ -2769,7 +3267,7 @@ class AppUsersApiController extends Controller
     public function getDriverForHire(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'token' => 'required|exists:app_users,token',
+            'token' => 'nullable|string',
             'driver_id' => 'required|string',
         ]);
 
@@ -2777,7 +3275,7 @@ class AppUsersApiController extends Controller
             return $this->errorComputing($validator);
         }
 
-        $riderId = $this->checkUserByToken($request->token);
+        $riderId = $this->resolveApiUserId($request);
         if (! $riderId) {
             return $this->addErrorResponse(419, trans('global.token_not_match'), '');
         }
@@ -2835,7 +3333,7 @@ class AppUsersApiController extends Controller
     public function bookHireByQr(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'token' => 'required|exists:app_users,token',
+            'token' => 'nullable|string',
             'driver_id' => 'required|string',
             'duration_hours' => 'nullable|numeric|min:1|max:720',
             'duration_key' => 'nullable|string|max:30',
@@ -2849,7 +3347,7 @@ class AppUsersApiController extends Controller
             return $this->errorComputing($validator);
         }
 
-        $userId = $this->checkUserByToken($request->token);
+        $userId = $this->resolveApiUserId($request);
         if (! $userId) {
             return $this->addErrorResponse(419, trans('global.token_not_match'), '');
         }
@@ -2989,6 +3487,21 @@ class AppUsersApiController extends Controller
         ];
 
         return $this->addSuccessResponse(200, 'Hire booked successfully', $data);
+    }
+
+    private function resolveApiUserId(Request $request): ?int
+    {
+        $authUser = Auth::guard('sanctum')->user();
+        if ($authUser instanceof AppUser && $authUser->id) {
+            return (int) $authUser->id;
+        }
+
+        $legacyToken = trim((string) $request->input('token', ''));
+        if ($legacyToken === '') {
+            return null;
+        }
+
+        return $this->checkUserByToken($legacyToken);
     }
 
     private function getHireDurationPricingConfig(): array

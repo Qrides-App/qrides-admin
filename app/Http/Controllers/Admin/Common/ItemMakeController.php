@@ -130,7 +130,10 @@ class ItemMakeController extends Controller
         $permissionrealRoute = str_replace('-', '_', $realRoute);
         abort_if(Gate::denies($permissionrealRoute.'_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $catData = VehicleMake::create($request->all());
+        $payload = $request->all();
+        $payload['description'] = $request->input('description') ?? '';
+
+        $catData = VehicleMake::create($payload);
 
         if ($request->input('image', false)) {
             $catData->addMedia(storage_path('tmp/uploads/'.basename($request->input('image'))))->toMediaCollection('image');
@@ -142,7 +145,7 @@ class ItemMakeController extends Controller
         $itemTypeId = $request->input('item_type');
         $makeId = $catData->id;
 
-        $itemTypes = $request->input('item_types');
+        $itemTypes = $request->input('item_types', []);
         foreach ($itemTypes as $typeId) {
             MakeTypeRelation::create([
                 'make_id' => $makeId,
@@ -177,7 +180,10 @@ class ItemMakeController extends Controller
     {
 
         $makeData = VehicleMake::where('id', $catID)->first();
-        $makeData->update($request->all());
+        $payload = $request->all();
+        $payload['description'] = $request->input('description') ?? '';
+
+        $makeData->update($payload);
         $realRoute = explode('.', Route::currentRouteName())[1] ?? null;
         if ($request->input('image', false)) {
             if (! $makeData->image || $request->input('image') !== $makeData->image->file_name) {

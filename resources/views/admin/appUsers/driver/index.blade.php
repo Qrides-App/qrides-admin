@@ -280,15 +280,14 @@
                                                     <td>
                                                         @if($appUser->item)
                                                                                 <div class="text-muted small">
-                                                                                    <strong>{{ trans('vehicle.make') }}:</strong>
-                                                                                    {{ $appUser->item->vehicleMake->name ?? 'N/A'
-                                                                                                                                                                                                                                                                                    }}<br>
-                                                                                    <strong>{{ trans('vehicle.model') }}::</strong>
+                                                                                    <strong>{{ trans('menu.vehicle_type') }}:</strong>
+                                                                                    {{ $appUser->item->item_Type->name ?? 'N/A' }}<br>
+                                                                                    <strong>{{ trans('vehicle.model') }}:</strong>
                                                                                     {{ $appUser->item->model ?? 'N/A'
                                                                                                                                                                                                                                                                                     }}<br>
-                                                                                    <strong>{{ trans('vehicle.vehicle_number') }}::</strong> {{
+                                                                                    <strong>{{ trans('vehicle.vehicle_number') }}:</strong> {{
                                                             $appUser->item->registration_number ?? 'N/A' }}<br>
-                                                                                    <strong>{{ trans('vehicle.vehicle_year') }}::</strong> {{
+                                                                                    <strong>{{ trans('vehicle.vehicle_year') }}:</strong> {{
                                                             $appUser->item->itemVehicle->year ?? 'N/A' }}
                                                                                 </div>
                                                         @else
