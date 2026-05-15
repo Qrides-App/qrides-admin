@@ -119,7 +119,10 @@ class ItemMakeController extends Controller
         $storeCKEditorImageRoute = 'admin.'.$realRoute.'.storeCKEditorImages';
         $title = $this->getTheModuleTitle($realRoute);
 
-        $itemTypes = ItemType::all();
+        $itemTypes = ItemType::where('module', $module)
+            ->where('status', '1')
+            ->orderBy('name')
+            ->get();
 
         return view('admin.common.make.create', compact('module', 'storeRoute', 'storeMediaRoute', 'storeCKEditorImageRoute', 'title', 'permissionrealRoute', 'itemTypes'));
     }
@@ -129,9 +132,11 @@ class ItemMakeController extends Controller
         $realRoute = explode('.', Route::currentRouteName())[1] ?? null;
         $permissionrealRoute = str_replace('-', '_', $realRoute);
         abort_if(Gate::denies($permissionrealRoute.'_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $module = $this->getTheModule($realRoute);
 
         $payload = $request->all();
         $payload['description'] = $request->input('description') ?? '';
+        $payload['module'] = $module;
 
         $catData = VehicleMake::create($payload);
 
@@ -161,6 +166,7 @@ class ItemMakeController extends Controller
         $realRoute = explode('.', Route::currentRouteName())[1] ?? null;
         $permissionrealRoute = str_replace('-', '_', $realRoute);
         abort_if(Gate::denies($permissionrealRoute.'_edit'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $module = $this->getTheModule($realRoute);
 
         $catIData = VehicleMake::where('id', $catID)->first();
         $updateRoute = 'admin.'.$realRoute.'.update';
@@ -168,7 +174,10 @@ class ItemMakeController extends Controller
         $storeCKEditorImageRoute = 'admin.'.$realRoute.'.storeCKEditorImages';
         $title = $this->getTheModuleTitle($realRoute);
 
-        $itemTypes = ItemType::all();
+        $itemTypes = ItemType::where('module', $module)
+            ->where('status', '1')
+            ->orderBy('name')
+            ->get();
         $MakeTypeRelation = MakeTypeRelation::where('make_id', $catID)->first();
 
         $selectedItemTypes = MakeTypeRelation::where('make_id', $catID)->pluck('type_id')->toArray();
@@ -178,13 +187,15 @@ class ItemMakeController extends Controller
 
     public function update(Request $request, $catID)
     {
+        $realRoute = explode('.', Route::currentRouteName())[1] ?? null;
+        $module = $this->getTheModule($realRoute);
 
         $makeData = VehicleMake::where('id', $catID)->first();
         $payload = $request->all();
         $payload['description'] = $request->input('description') ?? '';
+        $payload['module'] = $module;
 
         $makeData->update($payload);
-        $realRoute = explode('.', Route::currentRouteName())[1] ?? null;
         if ($request->input('image', false)) {
             if (! $makeData->image || $request->input('image') !== $makeData->image->file_name) {
                 if ($makeData->image) {
