@@ -12,6 +12,7 @@
                         <form method="POST" action="{{ route($updateRoute, [$ItemType->id]) }}" enctype="multipart/form-data">
                             @method('PUT')
                             @csrf
+                            <input type="hidden" name="module" value="{{ $ItemType->module }}">
                             <div class="form-group {{ $errors->has('name') ? 'has-error' : '' }}">
                                 <label class="required" for="name">{{ trans('global.name') }}</label>
                                 <input class="form-control" type="text" name="name" id="name"

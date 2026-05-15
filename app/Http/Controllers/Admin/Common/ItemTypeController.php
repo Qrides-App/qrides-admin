@@ -125,6 +125,7 @@ class ItemTypeController extends Controller
         $realRoute = explode('.', Route::currentRouteName())[1] ?? null;
         $permissionrealRoute = str_replace('-', '_', $realRoute);
         abort_if(Gate::denies($permissionrealRoute.'_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $module = $this->getTheModule($realRoute);
 
         // $ItemType = ItemType::create($request->all());
         $request->validate([
@@ -141,6 +142,7 @@ class ItemTypeController extends Controller
             'name' => $request->name,
             'description' => $request->description,
             'status' => $request->status,
+            'module' => $module,
         ]);
 
         // Store ItemCityFare data
@@ -179,6 +181,8 @@ class ItemTypeController extends Controller
 
     public function update(Request $request, $itemType)
     {
+        $realRoute = explode('.', Route::currentRouteName())[1] ?? null;
+        $module = $this->getTheModule($realRoute);
 
         $request->validate([
             'recommended_fare' => 'required|numeric|min:0',
@@ -187,8 +191,10 @@ class ItemTypeController extends Controller
         ]);
 
         $ItemType = ItemType::where('id', $itemType)->first();
-        $realRoute = explode('.', Route::currentRouteName())[1] ?? null;
-        $ItemType->update($request->all());
+        $ItemType->update(array_merge(
+            $request->except(['_token', '_method']),
+            ['module' => $module]
+        ));
 
         if ($request->input('image', false)) {
             if (! $ItemType->image || $request->input('image') !== $ItemType->image->file_name) {
