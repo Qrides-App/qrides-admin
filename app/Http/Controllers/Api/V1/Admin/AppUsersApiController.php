@@ -155,6 +155,7 @@ class AppUsersApiController extends Controller
                                 ->where('phone_country', $request->phone_country);
                         })->orWhere('email', $email);
                     })
+                    ->where('user_type', $request->user_type)
                     ->first();
 
                 if ($pendingConflict && $pendingConflict->expires_at && $pendingConflict->expires_at->lt(Carbon::now())) {
@@ -167,7 +168,8 @@ class AppUsersApiController extends Controller
                     (
                         $pendingConflict->phone !== $request->phone ||
                         $pendingConflict->phone_country !== $request->phone_country ||
-                        strtolower((string) $pendingConflict->email) !== $email
+                        strtolower((string) $pendingConflict->email) !== $email ||
+                        (string) $pendingConflict->user_type !== (string) $request->user_type
                     )
                 ) {
                     return $this->errorResponse(409, trans('global.user_alredy_exist'));
@@ -468,10 +470,6 @@ class AppUsersApiController extends Controller
             (string) ($user->verified ?? '0') === '1' ||
             (string) ($user->phone_verify ?? '0') === '1' ||
             (string) ($user->email_verify ?? '0') === '1') {
-            return false;
-        }
-
-        if (! empty($user->token)) {
             return false;
         }
 

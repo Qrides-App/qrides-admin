@@ -305,8 +305,13 @@ class LocationController extends Controller
         $realRoute = explode('.', Route::currentRouteName())[1] ?? null;
         $permissionrealRoute = str_replace('-', '_', $realRoute);
         abort_if(Gate::denies($permissionrealRoute.'_create'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $module = $this->getTheModule($realRoute);
 
-        $city = City::create($request->all());
+        $payload = $request->all();
+        $payload['module'] = $module;
+        $payload['country_code'] = strtoupper((string) $request->input('country_code'));
+
+        $city = City::create($payload);
 
         if ($request->input('image', false)) {
             $city->addMedia(storage_path('tmp/uploads/'.basename($request->input('image'))))->toMediaCollection('image');
@@ -536,9 +541,13 @@ class LocationController extends Controller
 
     public function update(UpdateCityRequest $request, $city)
     {
-        $city = City::where('id', $city)->first();
-        $city->update($request->all());
         $realRoute = explode('.', Route::currentRouteName())[1] ?? null;
+        $module = $this->getTheModule($realRoute);
+        $city = City::where('id', $city)->first();
+        $payload = $request->all();
+        $payload['module'] = $module;
+        $payload['country_code'] = strtoupper((string) $request->input('country_code'));
+        $city->update($payload);
 
         if ($request->input('image', false)) {
             if (! $city->image || $request->input('image') !== $city->image->file_name) {

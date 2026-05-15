@@ -19,6 +19,17 @@ class StoreCityRequest extends FormRequest
                 'string',
                 'required',
             ],
+            'country_code' => [
+                'string',
+                'required',
+                'size:2',
+            ],
+            'latitude' => [
+                'required',
+            ],
+            'longtitude' => [
+                'required',
+            ],
             'status' => [
                 'required',
             ],
