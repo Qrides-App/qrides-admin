@@ -25,6 +25,18 @@ class MyAccountController extends Controller
 {
     use BookingAvailableTrait, EmailTrait, MediaUploadingTrait, MiscellaneousTrait, NotificationTrait, OTPTrait, ResponseTrait, SMSTrait;
 
+    protected function isMobileOtpEnabled(): bool
+    {
+        $raw = GeneralSetting::getMetaValue('mobile_otp_enabled');
+
+        if (is_null($raw)) {
+            return true;
+        }
+
+        return filter_var($raw, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE)
+            ?? in_array(strtolower((string) $raw), ['1', 'yes', 'on', 'enabled'], true);
+    }
+
     public function getCurrentProfile(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -206,11 +218,23 @@ class MyAccountController extends Controller
             }
         }
 
+        if (! $this->isMobileOtpEnabled()) {
+            $responseData = [
+                'phone' => $request->input('phone'),
+                'phone_country' => $request->input('phone_country'),
+                'otp' => '',
+                'otp_required' => false,
+            ];
+
+            return $this->addSuccessResponse(200, trans('global.mobile_number_updated_successfully'), $responseData);
+        }
+
         $otp = $this->generateOtp($request->phone, $request->phone_country);
         $responseData = [
             'phone' => $request->input('phone'),
             'phone_country' => $request->input('phone_country'),
             'otp' => '',
+            'otp_required' => true,
         ];
 
         $valuesArray = ['OTP' => $otp, 'temp_phone' => $request->input('phone_country').$request->input('phone')];
@@ -268,12 +292,13 @@ class MyAccountController extends Controller
 
     public function changeMobileNumber(Request $request)
     {
+        $mobileOtpEnabled = $this->isMobileOtpEnabled();
 
         $validator = Validator::make($request->all(), [
             'token' => 'required',
             'phone' => 'required|min:8|max:12',
             'phone_country' => 'required',
-            'otp_value' => 'required',
+            'otp_value' => $mobileOtpEnabled ? 'required' : 'nullable',
             'default_country' => 'nullable|string',
             'email' => 'nullable|email',
 
@@ -293,8 +318,13 @@ class MyAccountController extends Controller
             return $this->addErrorResponse(400, trans('global.mobile_number_same_as_current'), '');
         }
 
-        $resultOtp = $this->validateOtpFromDB($request->phone, $request->phone_country, $request->otp_value);
-        if ($resultOtp['status'] === 'success') {
+        $otpValidated = ! $mobileOtpEnabled;
+        if ($mobileOtpEnabled) {
+            $resultOtp = $this->validateOtpFromDB($request->phone, $request->phone_country, $request->otp_value);
+            $otpValidated = $resultOtp['status'] === 'success';
+        }
+
+        if ($otpValidated) {
             $appUserColumns = array_flip(Schema::getColumnListing('app_users'));
             $updateData = array_intersect_key([
                 'phone' => $request->input('phone'),
