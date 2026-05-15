@@ -942,6 +942,7 @@ class AppUsersApiController extends Controller
             'phone' => ['required', 'numeric', 'min:9'],
             'otp_value' => ['required'],
             'phone_country' => ['required'],
+            'user_type' => ['required'],
         ]);
 
         if ($validator->fails()) {
@@ -959,7 +960,10 @@ class AppUsersApiController extends Controller
             'user_type' => $request->user_type,
         ]);
 
-        $customer = AppUser::where('phone', $request->phone)->where('phone_country', $request->phone_country)->first();
+        $customer = AppUser::where('phone', $request->phone)
+            ->where('phone_country', $request->phone_country)
+            ->where('user_type', $request->user_type)
+            ->first();
         if ($customer) {
             $resultOtp = $this->validateOtpFromDB($request->phone, $request->phone_country, $request->otp_value);
             if ($resultOtp['status'] !== 'success') {
@@ -991,20 +995,6 @@ class AppUsersApiController extends Controller
                 $loginUpdate['otp_expires_at'] = null;
             }
             $customer->update($loginUpdate);
-            if ($request->user_type == 'driver' and $customer->user_type == 'user') {
-                $firestoreData = $this->generateDriverFirestoreData($customer);
-                $firestoreDoc = $this->storeDriverInFirestore($firestoreData);
-                //  $firestoreDocId = $firestoreDoc->id(); // For GRPC
-                $firestoreDocId = basename($firestoreDoc);
-                $customer->update(['firestore_id' => $firestoreDocId]);
-                $customer['firestore_id'] = $firestoreDocId;
-                $customer->update([
-                    'user_type' => 'driver',
-                    'host_status' => 2,
-                ]);
-                $customer->refresh();
-            }
-
             $customer = $this->prepareAuthenticatedUserPayload($customer->fresh(), $request);
 
             $this->logMobileLoginEvent('Mobile login completed successfully.', [
@@ -1019,6 +1009,7 @@ class AppUsersApiController extends Controller
 
         $pending = PendingAppUserRegistration::where('phone', $request->phone)
             ->where('phone_country', $request->phone_country)
+            ->where('user_type', $request->user_type)
             ->first();
 
         if ($pending) {
@@ -1072,6 +1063,7 @@ class AppUsersApiController extends Controller
         $validator = Validator::make($request->all(), [
             'phone' => 'required|numeric',
             'phone_country' => 'required',
+            'user_type' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -1088,11 +1080,15 @@ class AppUsersApiController extends Controller
             'phone_country' => $request->phone_country,
         ]);
 
-        $user = AppUser::where('phone', $request->input('phone'))->where('phone_country', $request->phone_country)->first();
+        $user = AppUser::where('phone', $request->input('phone'))
+            ->where('phone_country', $request->phone_country)
+            ->where('user_type', $request->user_type)
+            ->first();
 
         if (! $user) {
             $pending = PendingAppUserRegistration::where('phone', $request->phone)
                 ->where('phone_country', $request->phone_country)
+                ->where('user_type', $request->user_type)
                 ->first();
 
             if (! $pending) {
@@ -1591,6 +1587,7 @@ class AppUsersApiController extends Controller
         $validator = Validator::make($request->all(), [
             'phone' => ['required', 'numeric'],
             'phone_country' => ['required'],
+            'user_type' => ['required'],
         ]);
 
         if ($validator->fails()) {
@@ -1608,11 +1605,13 @@ class AppUsersApiController extends Controller
         ]);
         $user = AppUser::where('phone', $request->phone)
             ->where('phone_country', $request->phone_country)
+            ->where('user_type', $request->user_type)
             ->first();
 
         if (! $user) {
             $pending = PendingAppUserRegistration::where('phone', $request->phone)
                 ->where('phone_country', $request->phone_country)
+                ->where('user_type', $request->user_type)
                 ->first();
 
             if (! $pending) {
