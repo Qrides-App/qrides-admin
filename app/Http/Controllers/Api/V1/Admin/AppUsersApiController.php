@@ -124,9 +124,30 @@ class AppUsersApiController extends Controller
                 return $this->errorComputing($validator);
             }
             $email = strtolower($request->email);
-            if (AppUser::withTrashed()->where('phone', $request->phone)->where('phone_country', $request->phone_country)->exists() || AppUser::withTrashed()->where('email', $email)->exists()) {
+            $existingUsers = AppUser::withTrashed()
+                ->where(function ($query) use ($request, $email) {
+                    $query->where(function ($phoneQuery) use ($request) {
+                        $phoneQuery->where('phone', $request->phone)
+                            ->where('phone_country', $request->phone_country);
+                    })->orWhere('email', $email);
+                })
+                ->get();
+
+            $recoverableUser = null;
+            foreach ($existingUsers as $existingUser) {
+                if ($this->isRecoverablePendingSignup($existingUser, $request, $email)) {
+                    $recoverableUser = $existingUser;
+                    continue;
+                }
+
                 return $this->errorResponse(409, trans('global.user_alredy_exist'));
-            } else {
+            }
+
+            if ($recoverableUser) {
+                $this->convertRecoverableSignupToPending($recoverableUser, $request, $email);
+            }
+
+            {
                 $pendingConflict = PendingAppUserRegistration::query()
                     ->where(function ($query) use ($request, $email) {
                         $query->where(function ($phoneQuery) use ($request) {
@@ -428,6 +449,69 @@ class AppUsersApiController extends Controller
         }
 
         return $customer;
+    }
+
+    protected function isRecoverablePendingSignup(AppUser $user, Request $request, string $normalizedEmail): bool
+    {
+        if ($user->trashed()) {
+            return false;
+        }
+
+        if ((string) $user->phone !== (string) $request->phone ||
+            (string) $user->phone_country !== (string) $request->phone_country ||
+            strtolower((string) $user->email) !== $normalizedEmail ||
+            (string) $user->user_type !== (string) $request->user_type) {
+            return false;
+        }
+
+        if ((string) $user->status === '1' ||
+            (string) ($user->verified ?? '0') === '1' ||
+            (string) ($user->phone_verify ?? '0') === '1' ||
+            (string) ($user->email_verify ?? '0') === '1') {
+            return false;
+        }
+
+        if (! empty($user->token)) {
+            return false;
+        }
+
+        return ! $user->items()->exists()
+            && ! $user->metadata()->exists()
+            && ! $user->bookings()->exists()
+            && ! $user->hostBookings()->exists()
+            && ! $user->wallets()->exists()
+            && ! $user->vendorWallets()->exists()
+            && ! $user->supportTickets()->exists()
+            && ! $user->payouts()->exists();
+    }
+
+    protected function convertRecoverableSignupToPending(AppUser $user, Request $request, string $normalizedEmail): PendingAppUserRegistration
+    {
+        return DB::transaction(function () use ($user, $request, $normalizedEmail) {
+            $pending = PendingAppUserRegistration::updateOrCreate(
+                [
+                    'phone' => $request->phone,
+                    'phone_country' => $request->phone_country,
+                ],
+                [
+                    'first_name' => $request->first_name,
+                    'last_name' => $request->last_name,
+                    'email' => $normalizedEmail,
+                    'default_country' => $request->default_country,
+                    'user_type' => $request->user_type,
+                    'fcm' => $request->fcm,
+                    'device_id' => $request->device_id,
+                    'token' => $user->reset_token ?: Str::random(120),
+                    'otp_channel' => null,
+                    'otp_sent_at' => null,
+                    'expires_at' => Carbon::now()->addMinutes(10),
+                ]
+            );
+
+            $user->forceDelete();
+
+            return $pending;
+        });
     }
 
     protected function sendAuthOtpNotifications(AppUser $user, string $otp, int $smsTemplateId = 2): array
